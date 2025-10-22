@@ -1,0 +1,20 @@
+{
+  "name": "basic-top-down-example",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Basic top-down game example using THREE Play engine",
+  "main": "index.html",
+  "scripts": {
+    "dev": "live-server --port=3000 --open=/examples/basic-top-down",
+    "build-engine": "cd ../.. && npm run build"
+  },
+  "dependencies": {
+    "@newkrok/three-play": "file:../..",
+    "three": "^0.180.0",
+    "@newkrok/three-particles": "^1.0.0",
+    "@newkrok/three-utils": "^1.0.0"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Basic Top-Down Game - THREE Play Example</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #000;
+        font-family: Arial, sans-serif;
+      }
+
+      #gameContainer {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+      }
+
+      #ui {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        color: white;
+        z-index: 100;
+        font-size: 14px;
+      }
+
+      #instructions {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        color: white;
+        z-index: 100;
+        font-size: 12px;
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="demo" />
+    <div class="ui">
+      <div class="apples">
+        <span id="apple-count">0</span>
+      </div>
+      <div class="score-wrapper">
+        <span id="score">0</span>
+      </div>
+
+      <div id="stamina-ui">
+        <div id="stamina-container">
+          <div id="stamina-bar-wrapper">
+            <div id="stamina-bar"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="game-clock">
+        <span id="clock-text">06:00</span>
+      </div>
+    </div>
+
+    <div class="tutorial-overlay" id="tutorial" style="display: none">
+      <div class="tutorial-content">
+        <h2>Controls</h2>
+        <ul>
+          <li>
+            Movement: <span class="key">W</span><span class="key">A</span
+            ><span class="key">S</span><span class="key">D</span>
+            or
+            <span class="key up">⬆</span><span class="key down">⬆</span
+            ><span class="key left">⬆</span><span class="key right">⬆</span>
+          </li>
+
+          <li>Run: <span class="key">Shift</span></li>
+          <li>Throw an apple: <span class="key">Space</span></li>
+        </ul>
+        <p class="goal">Collect apples and throw them at your enemies!</p>
+        <p class="goal">Watch your stamina, needed for running and throwing!</p>
+        <button id="startBtn">Start Game</button>
+      </div>
+    </div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://esm.sh/three",
+          "@newkrok/three-play": "../../dist/index.js",
+          "@newkrok/three-particles": "https://esm.sh/@newkrok/three-particles",
+          "@newkrok/three-utils": "https://esm.sh/@newkrok/three-utils"
+        }
+      }
+    </script>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

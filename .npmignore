@@ -1,5 +1,6 @@
 # Development files
 src/
+examples/
 .github/
 .husky/
 
