@@ -1,12 +1,10 @@
 {
-    "entryPoints": [
-        "src/index.ts"
-    ],
-    "out": "docs",
-    "excludePrivate": true,
-    "includeVersion": true,
-    "name": "@newkrok/three-play",
-    "readme": "README.md",
-    "theme": "default",
-    "excludeExternals": true
+  "entryPoints": ["src/index.ts"],
+  "out": "docs",
+  "excludePrivate": true,
+  "includeVersion": true,
+  "name": "@newkrok/three-play",
+  "readme": "README.md",
+  "theme": "default",
+  "excludeExternals": true
 }
