@@ -8,6 +8,9 @@ yarn-error.log*
 dist/
 build/
 *.tsbuildinfo
+src/*.js
+src/*.d.ts
+src/*.d.ts.map
 
 # Documentation (generated)
 docs/

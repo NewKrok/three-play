@@ -20,6 +20,19 @@ import {
 import * as THREE from "three";
 import { GameEngine, log, VERSION } from "@newkrok/three-play";
 
+/**
+ * @typedef {Object} GameState
+ * @property {number} collectedApples
+ * @property {number} score  
+ * @property {number} health
+ * @property {number} stamina
+ */
+
+/**
+ * @typedef {Object} Keys
+ * @property {boolean} [key]
+ */
+
 // Initialize THREE Play engine
 log(`Starting game with THREE Play v${VERSION}`);
 const gameEngine = new GameEngine();
@@ -492,7 +505,7 @@ const crateEffects = [
   { ammo: { min: 10, max: 25 } },
   { speedBonus: { min: 1.2, max: 1.5 } },
   { damageBonus: { min: 1.5, max: 3.0 } }
-]
+];
 
 let composer;
 let ambientLight;
@@ -513,10 +526,11 @@ const correctedDir = new THREE.Vector3();
 const rotationTargetQuaternion = new THREE.Quaternion();
 const dummy = new THREE.Object3D();
 
+/** @type {GameState} */
 const gameState = {
   collectedApples: 0,
   score: 0,
-  healt: MAX_HEALTH / 2,
+  health: MAX_HEALTH / 2,
   stamina: MAX_STAMINA
 };
 
@@ -564,6 +578,13 @@ labelRenderer.domElement.style.position = "absolute";
 labelRenderer.domElement.style.top = "0px";
 document.body.appendChild(labelRenderer.domElement);
 
+/**
+ * Show floating label at position
+ * @param {Object} params
+ * @param {string} params.text
+ * @param {THREE.Vector3} params.position
+ * @param {number} [params.duration=1000]
+ */
 const showFloatingLabel = ({ text, position, duration = 1000 }) => {
   const div = document.createElement("div");
   div.textContent = text;

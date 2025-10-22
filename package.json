@@ -43,8 +43,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint src",
-    "dev:examples": "npm run build && live-server --port=3000 --open=/examples",
-    "dev:basic-top-down": "npm run build && live-server --port=3000 --open=/examples/basic-top-down",
+    "dev:basic-top-down": "cd examples/basic-top-down && npm run dev",
     "prepare": "husky"
   },
   "peerDependencies": {
@@ -67,7 +66,6 @@
     "eslint-plugin-prettier": "^5.2.3",
     "husky": "^9.1.7",
     "jest": "^30.2.0",
-    "live-server": "^1.2.2",
     "madge": "^8.0.0",
     "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
