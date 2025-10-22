@@ -1,0 +1,83 @@
+{
+  "name": "@newkrok/three-play",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "A Three.js-based game engine for creating interactive 3D experiences",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NewKrok/three-play.git"
+  },
+  "keywords": [
+    "three.js",
+    "3d",
+    "game-engine",
+    "webgl",
+    "typescript",
+    "gaming",
+    "interactive"
+  ],
+  "author": "Istvan Krisztian Somoracz",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/NewKrok/three-play/issues"
+  },
+  "homepage": "https://github.com/NewKrok/three-play#readme",
+  "scripts": {
+    "build": "rimraf dist && tsc && webpack --config webpack.config.js",
+    "docs": "typedoc",
+    "prepublishOnly": "npm run build && npm run docs",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src",
+    "prepare": "husky"
+  },
+  "peerDependencies": {
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.26.0",
+    "@babel/preset-typescript": "^7.26.0",
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.8.1",
+    "@types/three": "^0.180.0",
+    "@typescript-eslint/eslint-plugin": "^8.21.0",
+    "@typescript-eslint/parser": "^8.21.0",
+    "babel-jest": "^30.2.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-prettier": "^5.2.3",
+    "husky": "^9.1.7",
+    "jest": "^30.2.0",
+    "madge": "^8.0.0",
+    "prettier": "^3.4.2",
+    "rimraf": "^6.0.1",
+    "terser-webpack-plugin": "^5.3.11",
+    "three": "^0.180.0",
+    "ts-jest": "^29.2.5",
+    "ts-loader": "^9.5.2",
+    "ts-node": "^10.9.2",
+    "typedoc": "^0.28.1",
+    "typedoc-plugin-markdown": "^4.2.12",
+    "typescript": "^5.7.3",
+    "webpack": "^5.97.1",
+    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack-cli": "^6.0.1"
+  }
+}
