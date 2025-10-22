@@ -1,29 +1,29 @@
 import {
   updateParticleSystems,
-  createParticleSystem
-} from "https://esm.sh/@newkrok/three-particles";
-import { GeomUtils } from "https://esm.sh/@newkrok/three-utils";
-import { EffectComposer } from "https://esm.sh/three/examples/jsm/postprocessing/EffectComposer.js";
-import { RenderPass } from "https://esm.sh/three/examples/jsm/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "https://esm.sh/three/examples/jsm/postprocessing/UnrealBloomPass.js";
-import { SSAOPass } from "https://esm.sh/three/examples/jsm/postprocessing/SSAOPass.js";
-import { OutputPass } from "https://esm.sh/three/addons/postprocessing/OutputPass.js";
-import { ShaderPass } from "https://esm.sh/three/examples/jsm/postprocessing/ShaderPass.js";
-import { FXAAShader } from "https://esm.sh/three/examples/jsm/shaders/FXAAShader.js";
+  createParticleSystem,
+} from 'https://esm.sh/@newkrok/three-particles';
+import { GeomUtils } from 'https://esm.sh/@newkrok/three-utils';
+import { EffectComposer } from 'https://esm.sh/three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://esm.sh/three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'https://esm.sh/three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { SSAOPass } from 'https://esm.sh/three/examples/jsm/postprocessing/SSAOPass.js';
+import { OutputPass } from 'https://esm.sh/three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'https://esm.sh/three/examples/jsm/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'https://esm.sh/three/examples/jsm/shaders/FXAAShader.js';
 import { FBXLoader } from 'https://esm.sh/three/examples/jsm/loaders/FBXLoader';
 import * as SkeletonUtils from 'https://esm.sh/three/examples/jsm/utils/SkeletonUtils.js';
 import {
   CSS2DRenderer,
-  CSS2DObject
-} from "https://esm.sh/three/examples/jsm/renderers/CSS2DRenderer.js";
+  CSS2DObject,
+} from 'https://esm.sh/three/examples/jsm/renderers/CSS2DRenderer.js';
 
-import * as THREE from "three";
-import { GameEngine, log, VERSION } from "@newkrok/three-play";
+import * as THREE from 'three';
+import { GameEngine, log, VERSION } from '@newkrok/three-play';
 
 /**
  * @typedef {Object} GameState
  * @property {number} collectedApples
- * @property {number} score  
+ * @property {number} score
  * @property {number} health
  * @property {number} stamina
  */
@@ -236,15 +236,15 @@ const runningEffect = {
   startSize: { min: 5, max: 7 },
   startOpacity: { min: 1, max: 1 },
   gravity: 0,
-  simulationSpace: "WORLD",
+  simulationSpace: 'WORLD',
   maxParticles: 10,
   emission: { rateOverTime: 0, rateOverDistance: 2 },
   shape: {
-    shape: "CONE",
+    shape: 'CONE',
     cone: { angle: 16.8097, radius: 0.5 },
-    rectangle: { scale: { x: 0.5, y: 1.8 } }
+    rectangle: { scale: { x: 0.5, y: 1.8 } },
   },
-  renderer: { blending: "THREE.AdditiveBlending" },
+  renderer: { blending: 'THREE.AdditiveBlending' },
   sizeOverLifetime: {
     isActive: true,
     lifetimeCurve: {
@@ -255,9 +255,9 @@ const runningEffect = {
         { x: 0.5433, y: 0.385, percentage: 0.5433 },
         { x: 0.7099, y: 0.5516 },
         { x: 0.8333, y: 0.6333 },
-        { x: 1, y: 0.7, percentage: 1 }
-      ]
-    }
+        { x: 1, y: 0.7, percentage: 1 },
+      ],
+    },
   },
   opacityOverLifetime: {
     isActive: true,
@@ -269,36 +269,36 @@ const runningEffect = {
         { x: 0.5, y: 0.25, percentage: 0.5 },
         { x: 0.6666, y: 0.3332 },
         { x: 0.8333, y: 0.1665 },
-        { x: 1, y: 0, percentage: 1 }
-      ]
-    }
+        { x: 1, y: 0, percentage: 1 },
+      ],
+    },
   },
   noise: { isActive: true, strength: 0.3, positionAmount: 0.278 },
   _editorData: {
-    textureId: "CLOUD",
+    textureId: 'CLOUD',
     simulation: {
-      movements: "CIRCLE",
+      movements: 'CIRCLE',
       movementSpeed: 3.9,
-      rotation: "FOLLOW_THE_MOVEMENT",
-      rotationSpeed: 0
+      rotation: 'FOLLOW_THE_MOVEMENT',
+      rotationSpeed: 0,
     },
     showLocalAxes: true,
     showWorldAxes: false,
     frustumCulled: true,
     terrain: {
-      textureId: "WIREFRAME",
-      movements: "DISABLED",
+      textureId: 'WIREFRAME',
+      movements: 'DISABLED',
       movementSpeed: 1,
-      rotation: "DISABLED",
-      rotationSpeed: 1
+      rotation: 'DISABLED',
+      rotationSpeed: 1,
     },
     metadata: {
-      name: "Untitled-2",
+      name: 'Untitled-2',
       createdAt: 1759099361252,
       modifiedAt: 1759099361252,
-      editorVersion: "2.1.0"
-    }
-  }
+      editorVersion: '2.1.0',
+    },
+  },
 };
 const dustEffect = {
   transform: { position: { y: 2 } },
@@ -311,21 +311,25 @@ const dustEffect = {
     min: {
       r: 0.8901960784313725,
       g: 0.8901960784313725,
-      b: 0.8901960784313725
+      b: 0.8901960784313725,
     },
-    max: { r: 0.5725490196078431, g: 0.5725490196078431, b: 0.5647058823529412 }
+    max: {
+      r: 0.5725490196078431,
+      g: 0.5725490196078431,
+      b: 0.5647058823529412,
+    },
   },
   gravity: 0.21,
-  simulationSpace: "WORLD",
+  simulationSpace: 'WORLD',
   maxParticles: 500,
   emission: { rateOverTime: 100 },
   shape: {
-    shape: "BOX",
+    shape: 'BOX',
     sphere: { radius: 2.9127 },
     rectangle: { scale: { x: 7.682, y: 7.504 } },
-    box: { scale: { x: 40, y: 4, z: 40 } }
+    box: { scale: { x: 40, y: 4, z: 40 } },
   },
-  renderer: { blending: "THREE.NormalBlending" },
+  renderer: { blending: 'THREE.NormalBlending' },
   sizeOverLifetime: {
     isActive: true,
     lifetimeCurve: {
@@ -336,9 +340,9 @@ const dustEffect = {
         { x: 0.5, y: 1, percentage: 0.5 },
         { x: 1, y: 1 },
         { x: 1, y: 1 },
-        { x: 1, y: 0, percentage: 1 }
-      ]
-    }
+        { x: 1, y: 0, percentage: 1 },
+      ],
+    },
   },
   opacityOverLifetime: {
     isActive: true,
@@ -350,9 +354,9 @@ const dustEffect = {
         { x: 0.5, y: 1, percentage: 0.5 },
         { x: 0.8333, y: 1 },
         { x: 0.6666, y: 0 },
-        { x: 1, y: 0, percentage: 1 }
-      ]
-    }
+        { x: 1, y: 0, percentage: 1 },
+      ],
+    },
   },
   rotationOverLifetime: { isActive: true, min: -170.2, max: 231.9 },
   noise: {
@@ -360,33 +364,33 @@ const dustEffect = {
     useRandomOffset: true,
     strength: 0.13,
     frequency: 0.206,
-    positionAmount: -0.072
+    positionAmount: -0.072,
   },
   _editorData: {
-    textureId: "GRADIENT_POINT",
+    textureId: 'GRADIENT_POINT',
     simulation: {
-      movements: "DISABLED",
+      movements: 'DISABLED',
       movementSpeed: 1,
-      rotation: "DISABLED",
-      rotationSpeed: 1
+      rotation: 'DISABLED',
+      rotationSpeed: 1,
     },
     showLocalAxes: false,
     showWorldAxes: false,
     frustumCulled: true,
     terrain: {
-      textureId: "WIREFRAME",
-      movements: "DISABLED",
+      textureId: 'WIREFRAME',
+      movements: 'DISABLED',
       movementSpeed: 1,
-      rotation: "DISABLED",
-      rotationSpeed: 1
+      rotation: 'DISABLED',
+      rotationSpeed: 1,
     },
     metadata: {
-      name: "Untitled-2",
+      name: 'Untitled-2',
       createdAt: 1759484443116,
       modifiedAt: 1759484443116,
-      editorVersion: "2.1.0"
-    }
-  }
+      editorVersion: '2.1.0',
+    },
+  },
 };
 const splashEffect = {
   transform: { rotation: { x: -90 } },
@@ -402,20 +406,20 @@ const splashEffect = {
     max: {
       r: 0.7764705882352941,
       g: 0.06274509803921569,
-      b: 0.06274509803921569
-    }
+      b: 0.06274509803921569,
+    },
   },
   gravity: 1.46,
   maxParticles: 10,
   emission: { rateOverTime: 30 },
-  shape: { shape: "CONE", cone: { angle: 35.6975, radius: 0.0001 } },
+  shape: { shape: 'CONE', cone: { angle: 35.6975, radius: 0.0001 } },
   sizeOverLifetime: {
     lifetimeCurve: {
       bezierPoints: [
         { x: 0, y: 0, percentage: 0 },
-        { x: 1, y: 1, percentage: 1 }
-      ]
-    }
+        { x: 1, y: 1, percentage: 1 },
+      ],
+    },
   },
   opacityOverLifetime: {
     isActive: true,
@@ -427,45 +431,47 @@ const splashEffect = {
         { x: 0.8033, y: 0.88, percentage: 0.8033 },
         { x: 0.9699, y: 0.7133 },
         { x: 0.8333, y: 0.1665 },
-        { x: 1, y: 0, percentage: 1 }
-      ]
-    }
+        { x: 1, y: 0, percentage: 1 },
+      ],
+    },
   },
   rotationOverLifetime: { isActive: true, min: -342.5, max: 299 },
   textureSheetAnimation: {
-    timeMode: "FPS",
+    timeMode: 'FPS',
     fps: 0,
-    startFrame: { min: 0, max: 10 }
+    startFrame: { min: 0, max: 10 },
   },
   _editorData: {
-    textureId: "GRADIENT_POINT",
+    textureId: 'GRADIENT_POINT',
     simulation: {
-      movements: "DISABLED",
+      movements: 'DISABLED',
       movementSpeed: 1,
-      rotation: "DISABLED",
-      rotationSpeed: 1
+      rotation: 'DISABLED',
+      rotationSpeed: 1,
     },
     showLocalAxes: false,
     showWorldAxes: false,
     frustumCulled: true,
     terrain: {
-      textureId: "WIREFRAME",
-      movements: "DISABLED",
+      textureId: 'WIREFRAME',
+      movements: 'DISABLED',
       movementSpeed: 1,
-      rotation: "DISABLED",
-      rotationSpeed: 1
+      rotation: 'DISABLED',
+      rotationSpeed: 1,
     },
     metadata: {
-      name: "Untitled-2",
+      name: 'Untitled-2',
       createdAt: 1759529399202,
       modifiedAt: 1759529399202,
-      editorVersion: "2.1.0"
-    }
-  }
+      editorVersion: '2.1.0',
+    },
+  },
 };
 
 const WALK_SPEED = 5;
 const RUN_SPEED = 10;
+const ROLL_SPEED = 5;
+const FAST_ROLL_SPEED = 10;
 const WATER_SPEED_MULTIPLIER = 0.4;
 const WATER_SPEED_LEVEL = 7.8;
 const ENEMY_SPEED = 5;
@@ -481,7 +487,7 @@ const TREE_COLLISION_RADIUS = 1.5;
 const CRATE_COLLISION_RADIUS = 1.2;
 const MIN_APPLES_PER_TREE = 2;
 const MAX_APPLES_PER_TREE = 6;
-const ENEMY_COUNT = 0;
+const ENEMY_COUNT = 20;
 const APPLE_HIT_RADIUS = 1;
 const APPLE_PUSH_FORCE = 25;
 const MAX_STAMINA = 10.0;
@@ -496,15 +502,15 @@ const startingPosition = new THREE.Vector3(88, 0, 132);
 
 const appleEffects = [
   { health: { min: 5, max: 10 } },
-  { stamina: { min: 5, max: 30 } }
-]
+  { stamina: { min: 5, max: 30 } },
+];
 
 const crateEffects = [
   { health: { min: 50, max: 100 } },
   { stamina: { min: 25, max: 50 } },
   { ammo: { min: 10, max: 25 } },
   { speedBonus: { min: 1.2, max: 1.5 } },
-  { damageBonus: { min: 1.5, max: 3.0 } }
+  { damageBonus: { min: 1.5, max: 3.0 } },
 ];
 
 let composer;
@@ -516,7 +522,10 @@ let trees = [];
 let apples = [];
 let crates = [];
 let lastThrowTime = 0;
+let lastRollTime = 0;
+let isRolling = false;
 const throwCooldown = 250;
+const rollCooldown = 500;
 const gravity = new THREE.Vector3(0, -9.8, 0);
 const throwStrength = 15;
 const throwSpread = 0.2;
@@ -531,51 +540,51 @@ const gameState = {
   collectedApples: 0,
   score: 0,
   health: MAX_HEALTH / 2,
-  stamina: MAX_STAMINA
+  stamina: MAX_STAMINA,
 };
 
-const tutorial = document.getElementById("tutorial");
-const startBtn = document.getElementById("startBtn");
+const tutorial = document.getElementById('tutorial');
+const startBtn = document.getElementById('startBtn');
 
-startBtn.addEventListener("click", () => {
-  tutorial.classList.add("hidden");
+startBtn.addEventListener('click', () => {
+  tutorial.classList.add('hidden');
 
   setTimeout(() => tutorial.remove(), 400);
 });
 
 const updateAppleCount = () => {
-  const apples = document.querySelector(".apples");
-  const countEl = document.getElementById("apple-count");
+  const apples = document.querySelector('.apples');
+  const countEl = document.getElementById('apple-count');
   countEl.textContent = gameState.collectedApples;
 
-  apples.classList.add("updated");
-  setTimeout(() => apples.classList.remove("updated"), 300);
+  apples.classList.add('updated');
+  setTimeout(() => apples.classList.remove('updated'), 300);
 };
 
 const updateScore = () => {
-  const scoreWrapper = document.querySelector(".score-wrapper");
-  const scoreEl = document.getElementById("score");
+  const scoreWrapper = document.querySelector('.score-wrapper');
+  const scoreEl = document.getElementById('score');
   scoreEl.textContent = gameState.score;
 
-  scoreWrapper.classList.add("updated");
-  setTimeout(() => scoreWrapper.classList.remove("updated"), 300);
+  scoreWrapper.classList.add('updated');
+  setTimeout(() => scoreWrapper.classList.remove('updated'), 300);
 };
 
 const updateStaminaUi = () => {
-  const bar = document.getElementById("stamina-bar");
-  const container = document.getElementById("stamina-container");
+  const bar = document.getElementById('stamina-bar');
+  const container = document.getElementById('stamina-container');
 
   const pct = Math.max(0, Math.min(1, gameState.stamina / MAX_STAMINA));
   const pctInt = Math.round(pct * 100);
 
   bar.style.transform = `scaleX(${pct})`;
-  bar.style.setProperty("--s", pct);
+  bar.style.setProperty('--s', pct);
 };
 
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.setSize(window.innerWidth, window.innerHeight);
-labelRenderer.domElement.style.position = "absolute";
-labelRenderer.domElement.style.top = "0px";
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0px';
 document.body.appendChild(labelRenderer.domElement);
 
 /**
@@ -586,22 +595,22 @@ document.body.appendChild(labelRenderer.domElement);
  * @param {number} [params.duration=1000]
  */
 const showFloatingLabel = ({ text, position, duration = 1000 }) => {
-  const div = document.createElement("div");
+  const div = document.createElement('div');
   div.textContent = text;
-  div.style.color = "yellow";
-  div.style.fontSize = "20px";
-  div.style.fontFamily = "sans-serif";
-  div.style.fontWeight = "bold";
-  div.style.pointerEvents = "none";
-  div.style.transition = "opacity 1s ease-out";
-  div.style.opacity = "1";
+  div.style.color = 'yellow';
+  div.style.fontSize = '20px';
+  div.style.fontFamily = 'sans-serif';
+  div.style.fontWeight = 'bold';
+  div.style.pointerEvents = 'none';
+  div.style.transition = 'opacity 1s ease-out';
+  div.style.opacity = '1';
 
   const label = new CSS2DObject(div);
   label.position.copy(position);
   scene.add(label);
 
   setTimeout(() => {
-    div.style.opacity = "0";
+    div.style.opacity = '0';
     setTimeout(() => {
       scene.remove(label);
     }, 1000);
@@ -613,33 +622,42 @@ const createCharacterAssets = () => {
   let animations = {};
   let loaded = false;
   let loadingPromise = null;
-  
+
   const loadFBX = (url) => {
     return new Promise((resolve, reject) => {
       const loader = new FBXLoader();
       loader.load(url, resolve, undefined, reject);
     });
   };
-  
+
   const load = async () => {
     if (loadingPromise) return loadingPromise;
     if (loaded) return;
     loadingPromise = (async () => {
-      try { 
-        const [idleAnim, walkAnim, runAnim, zombieWalkAnim, zombieRunAnim] = await Promise.all([
-          loadFBX('https://newkrok.com/external-assets/models/simple/idle.fbx'),
-          loadFBX('https://newkrok.com/external-assets/models/simple/walk.fbx'),
-          loadFBX('https://newkrok.com/external-assets/models/simple/run.fbx'),
-          loadFBX('https://newkrok.com/external-assets/models/simple/zombie-walk.fbx'),
-          loadFBX('https://newkrok.com/external-assets/models/simple/zombie-run.fbx')
+      try {
+        const [
+          idleAnim,
+          walkAnim,
+          runAnim,
+          rollAnim,
+          zombieWalkAnim,
+          zombieRunAnim,
+        ] = await Promise.all([
+          loadFBX('assets/models/idle.fbx'),
+          loadFBX('assets/models/animations/walk.fbx'),
+          loadFBX('assets/models/animations/run.fbx'),
+          loadFBX('assets/models/animations/roll.fbx'),
+          loadFBX('assets/models/animations/zombie-walk.fbx'),
+          loadFBX('assets/models/animations/zombie-run.fbx'),
         ]);
         model = idleAnim;
         animations.idle = idleAnim.animations[0];
         animations.walk = walkAnim.animations[0];
         animations.run = runAnim.animations[0];
+        animations.roll = rollAnim.animations[0];
         animations.zombieWalk = zombieWalkAnim.animations[0];
         animations.zombieRun = zombieRunAnim.animations[0];
-        
+
         const enableShadows = (model) => {
           model.traverse((child) => {
             if (child.isMesh) {
@@ -651,53 +669,60 @@ const createCharacterAssets = () => {
             }
           });
         };
-        [idleAnim, walkAnim, runAnim, zombieWalkAnim, zombieRunAnim].forEach(enableShadows);
-        
+        [idleAnim, walkAnim, runAnim, zombieWalkAnim, zombieRunAnim].forEach(
+          enableShadows,
+        );
+
         loaded = true;
       } catch (error) {
         throw error;
       }
     })();
-    
+
     return loadingPromise;
   };
-  
+
   const createInstance = () => {
     if (!loaded) {
       return null;
     }
-    
+
     const instance = SkeletonUtils.clone(model);
     const wrapper = new THREE.Group();
     instance.rotation.y = Math.PI / 2;
     wrapper.add(instance);
-    
+
     const mixer = new THREE.AnimationMixer(instance);
     const actions = {
       idle: mixer.clipAction(animations.idle),
       walk: mixer.clipAction(animations.walk),
       run: mixer.clipAction(animations.run),
+      roll: mixer.clipAction(animations.roll),
       zombieWalk: mixer.clipAction(animations.zombieWalk),
       zombieRun: mixer.clipAction(animations.zombieRun),
     };
     actions.idle.play();
-    
+
     return { model: wrapper, mixer, actions };
   };
-  
+
   const isLoaded = () => loaded;
-  
+
   return {
     load,
     createInstance,
-    isLoaded
+    isLoaded,
   };
-}
+};
 
 const characterAssets = createCharacterAssets();
 await characterAssets.load();
 
-const createCinematicCameraController = (camera, sequence = [], onComplete = null) => {
+const createCinematicCameraController = (
+  camera,
+  sequence = [],
+  onComplete = null,
+) => {
   let currentIndex = 0;
   let currentTime = 0;
   let playing = false;
@@ -739,14 +764,24 @@ const createCinematicCameraController = (camera, sequence = [], onComplete = nul
 
     let lookTarget;
     if (step.lookAtFrom && step.lookAtTo) {
-      lookTarget = new THREE.Vector3().lerpVectors(step.lookAtFrom, step.lookAtTo, smoothT);
+      lookTarget = new THREE.Vector3().lerpVectors(
+        step.lookAtFrom,
+        step.lookAtTo,
+        smoothT,
+      );
     } else if (step.lookAt) {
       lookTarget = step.lookAt;
     } else if (step.to && step.from) {
-      const forward = new THREE.Vector3().subVectors(step.to, step.from).normalize();
+      const forward = new THREE.Vector3()
+        .subVectors(step.to, step.from)
+        .normalize();
       lookTarget = new THREE.Vector3().addVectors(camera.position, forward);
     } else {
-      lookTarget = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z - 1);
+      lookTarget = new THREE.Vector3(
+        camera.position.x,
+        camera.position.y,
+        camera.position.z - 1,
+      );
     }
 
     const targetQuat = new THREE.Quaternion();
@@ -784,15 +819,13 @@ const createCinematicCameraController = (camera, sequence = [], onComplete = nul
     update,
     isPlaying,
   };
-}
+};
 
 async function loadHeightmap(url) {
   const loader = new THREE.TextureLoader();
   const texture = await new Promise((resolve, reject) => {
-    loader.load(
-      url,
-      resolve,
-      (err) => reject(new Error("Failed to load texture: " + err))
+    loader.load(url, resolve, (err) =>
+      reject(new Error('Failed to load texture: ' + err)),
     );
   });
 
@@ -810,9 +843,11 @@ async function loadHeightmap(url) {
     heights[j] = data[i] / 255;
   }
 
-  return {heightmap: heights, heightMapTexture: texture};
+  return { heightmap: heights, heightMapTexture: texture };
 }
-const { heightmap, heightMapTexture } = await loadHeightmap("https://newkrok.com/external-assets/heightmap-island-256.webp");
+const { heightmap, heightMapTexture } = await loadHeightmap(
+  'https://newkrok.com/external-assets/heightmap-island-256.webp',
+);
 const resolutionRatio = {
   width: WORLD_WIDTH / (HEIGHT_MAP_RESOLUTION - 1),
   depth: WORLD_HEIGHT / (HEIGHT_MAP_RESOLUTION - 1),
@@ -831,7 +866,7 @@ const getHeightFromPosition = (position) => {
   const roundedPosition = roundPosition(position);
   const convertedPosition = {
     x: roundedPosition.x * resolutionRatio.width,
-    z: roundedPosition.z * resolutionRatio.depth
+    z: roundedPosition.z * resolutionRatio.depth,
   };
 
   const pLT = {
@@ -840,7 +875,7 @@ const getHeightFromPosition = (position) => {
     y:
       heightmap[
         positionToHeightMapIndex(roundedPosition.x, roundedPosition.z)
-      ] || position.y
+      ] || position.y,
   };
   const pRT = {
     x: convertedPosition.x + resolutionRatio.width,
@@ -848,7 +883,7 @@ const getHeightFromPosition = (position) => {
     y:
       heightmap[
         positionToHeightMapIndex(roundedPosition.x + 1, roundedPosition.z)
-      ] || position.y
+      ] || position.y,
   };
   const pLB = {
     x: convertedPosition.x,
@@ -856,7 +891,7 @@ const getHeightFromPosition = (position) => {
     y:
       heightmap[
         positionToHeightMapIndex(roundedPosition.x, roundedPosition.z + 1)
-      ] || position.y
+      ] || position.y,
   };
   const pRB = {
     x: convertedPosition.x + resolutionRatio.width,
@@ -864,7 +899,7 @@ const getHeightFromPosition = (position) => {
     y:
       heightmap[
         positionToHeightMapIndex(roundedPosition.x + 1, roundedPosition.z + 1)
-      ] || position.y
+      ] || position.y,
   };
 
   const triangleCheckA = GeomUtils.isPointInATriangle(position, pLT, pRT, pLB);
@@ -894,16 +929,16 @@ const createWorld = (target) => {
     60,
     window.innerWidth / window.innerHeight,
     1,
-    100
+    100,
   );
 
   const renderTarget = new THREE.WebGLRenderTarget(
     window.innerWidth,
-    window.innerHeight
+    window.innerHeight,
   );
   renderTarget.depthTexture = new THREE.DepthTexture(
     window.innerWidth,
-    window.innerHeight
+    window.innerHeight,
   );
   renderTarget.depthTexture.format = THREE.DepthFormat;
   renderTarget.depthTexture.type = THREE.UnsignedShortType;
@@ -916,7 +951,7 @@ const createWorld = (target) => {
     scene,
     camera,
     window.innerWidth,
-    window.innerHeight
+    window.innerHeight,
   );
   ssaoPass.kernelRadius = 16;
   ssaoPass.minDistance = 0.005;
@@ -928,14 +963,14 @@ const createWorld = (target) => {
     new THREE.Vector2(window.innerWidth, window.innerHeight),
     0.5,
     0.4,
-    0.85
+    0.85,
   );
   composer.addPass(bloomPass);
 
   const fxaaPass = new ShaderPass(FXAAShader);
-  fxaaPass.material.uniforms["resolution"].value.set(
+  fxaaPass.material.uniforms['resolution'].value.set(
     1 / window.innerWidth,
-    1 / window.innerHeight
+    1 / window.innerHeight,
   );
   composer.addPass(fxaaPass);
 
@@ -949,9 +984,9 @@ const createWorld = (target) => {
     composer.setSize(window.innerWidth, window.innerHeight);
     ssaoPass.setSize(window.innerWidth, window.innerHeight);
     camera.updateProjectionMatrix();
-    fxaaPass.material.uniforms["resolution"].value.set(
+    fxaaPass.material.uniforms['resolution'].value.set(
       1 / window.innerWidth,
-      1 / window.innerHeight
+      1 / window.innerHeight,
     );
     composer.render();
   };
@@ -972,9 +1007,9 @@ const createWorld = (target) => {
   directionalLight.shadow.mapSize.width = 4096;
   directionalLight.shadow.mapSize.height = 4096;
   scene.add(directionalLight);
-  
+
   const grassTexture = new THREE.TextureLoader().load(
-    "https://raw.githubusercontent.com/NewKrok/three-game-demo/refs/heads/master/public/assets/textures/grass-flower-tint-01-base-basecolor.webp"
+    'https://raw.githubusercontent.com/NewKrok/three-game-demo/refs/heads/master/public/assets/textures/grass-flower-tint-01-base-basecolor.webp',
   );
   grassTexture.encoding = THREE.sRGBEncoding;
   grassTexture.wrapS = THREE.MirroredRepeatWrapping;
@@ -983,39 +1018,41 @@ const createWorld = (target) => {
   grassTexture.repeat.y = WORLD_HEIGHT / 4;
 
   const material = new THREE.MeshStandardMaterial({
-    map: grassTexture
+    map: grassTexture,
   });
-  
+
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uWaterLevel = { value: WATER_LEVEL };
     shader.uniforms.uSandBlendDistance = { value: 1.0 };
 
-    shader.vertexShader = 'varying vec3 vWorldPosition;\nvarying vec2 vUvCustom;\n' + shader.vertexShader;
-  
+    shader.vertexShader =
+      'varying vec3 vWorldPosition;\nvarying vec2 vUvCustom;\n' +
+      shader.vertexShader;
+
     shader.vertexShader = shader.vertexShader.replace(
       '#include <worldpos_vertex>',
-      terrainVertexShader
+      terrainVertexShader,
     );
 
     shader.fragmentShader = terrainFragmentShaderPart1 + shader.fragmentShader;
 
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <color_fragment>',
-      terrainFragmentShaderPart2
+      terrainFragmentShaderPart2,
     );
   };
-    
+
   const geometry = new THREE.PlaneGeometry(
     WORLD_WIDTH,
     WORLD_HEIGHT,
     HEIGHT_MAP_RESOLUTION - 1,
-    HEIGHT_MAP_RESOLUTION - 1
+    HEIGHT_MAP_RESOLUTION - 1,
   );
   const vertices = geometry.attributes.position.array;
   for (let i = 0, j = 0, l = vertices.length / 3; i < l; i++, j += 3) {
     vertices[j + 2] = heightmap[i] * ELEVATION_RATIO;
   }
-  
+
   geometry.rotateX(-Math.PI / 2);
   geometry.attributes.position.needsUpdate = true;
   geometry.computeVertexNormals();
@@ -1029,7 +1066,7 @@ const createWorld = (target) => {
 
   return { renderer, scene, camera };
 };
-const { renderer, scene, camera } = createWorld("#demo");
+const { renderer, scene, camera } = createWorld('#demo');
 
 const clock = new THREE.Clock();
 const cycleData = {
@@ -1037,37 +1074,37 @@ const cycleData = {
   pauseStartTime: 0,
   totalPauseTime: 0,
   elapsed: 0,
-  delta: 0
+  delta: 0,
 };
 
 const getPositionByHeight = (minHeight) => {
   let attempts = 0;
   const maxAttempts = 10;
-  
+
   while (attempts < maxAttempts) {
     attempts++;
-    
+
     const x = Math.random() * WORLD_WIDTH;
     const z = Math.random() * WORLD_HEIGHT;
     const y = getHeightFromPosition(new THREE.Vector3(x, 0, z));
-    
-    if (y > minHeight) return {x, y,z };
+
+    if (y > minHeight) return { x, y, z };
   }
-  
+
   return null;
-}
+};
 
 async function createCharacter({ bodyColor, dressColor, position }) {
   const character = characterAssets.createInstance();
   character.model.position.copy(position);
   scene.add(character.model);
-  
+
   const { instance: runningEffectInstance } = createParticleSystem(
     runningEffect,
-    cycleData.now
+    cycleData.now,
   );
   character.model.add(runningEffectInstance);
-  
+
   /*character.updateMatrixWorld(true);
   const exporter = new GLTFExporter();
   exporter.parse(
@@ -1084,29 +1121,33 @@ async function createCharacter({ bodyColor, dressColor, position }) {
   );*/
 
   return character;
-};
+}
 const character = await createCharacter({
   position: startingPosition,
   bodyColor: 0xf7c59f,
-  dressColor: 0x1d84b5
+  dressColor: 0x1d84b5,
 });
 const { instance: dustEffectInstance } = createParticleSystem(
   dustEffect,
-  cycleData.now
+  cycleData.now,
 );
 character.model.add(dustEffectInstance);
 units.push(character);
 
-const createEnemies = (count) => {
+const createEnemies = async (count) => {
   for (let i = 0; i < count; i++) {
-    const position = getPositionByHeight(8);
-    if (!position) continue;
-    const enemy = createCharacter({
+    //const position = getPositionByHeight(8);
+    //if (!position) continue;
+    const position = startingPosition.clone();
+    position.x += 10 + i * 1.5 - Math.floor(i / 5) * (5 * 1.5);
+    position.z += -10 + Math.floor(i / 5) * 2;
+    position.y = getHeightFromPosition(position);
+    const enemy = await createCharacter({
       position,
       bodyColor: 0x6da34d,
-      dressColor: 0x2b2b2b
+      dressColor: 0x2b2b2b,
     });
-   units.push(enemy);
+    units.push(enemy);
   }
 };
 createEnemies(ENEMY_COUNT);
@@ -1116,23 +1157,23 @@ const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x895129 });
 const trunkMesh = new THREE.InstancedMesh(
   trunkGeometry,
   trunkMaterial,
-  TREE_COUNT
+  TREE_COUNT,
 );
 trunkMesh.castShadow = true;
 trunkMesh.receiveShadow = true;
 scene.add(trunkMesh);
 const leafGeometry = new THREE.SphereGeometry(1, 16, 16);
 const leafTexture = new THREE.TextureLoader().load(
-  "https://raw.githubusercontent.com/NewKrok/three-game-demo/refs/heads/master/public/assets/textures/grass-flower-tint-01-base-basecolor.webp"
+  'https://raw.githubusercontent.com/NewKrok/three-game-demo/refs/heads/master/public/assets/textures/grass-flower-tint-01-base-basecolor.webp',
 );
 const leafMaterial = new THREE.MeshStandardMaterial({
   color: 0x00ff00,
-  map: leafTexture
+  map: leafTexture,
 });
 const leafMesh = new THREE.InstancedMesh(
   leafGeometry,
   leafMaterial,
-  TREE_COUNT
+  TREE_COUNT,
 );
 leafMesh.castShadow = true;
 leafMesh.receiveShadow = true;
@@ -1143,7 +1184,7 @@ const appleMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
 const appleMesh = new THREE.InstancedMesh(
   appleGeometry,
   appleMaterial,
-  TREE_COUNT * MAX_APPLES_PER_TREE * 2
+  TREE_COUNT * MAX_APPLES_PER_TREE * 2,
 );
 appleMesh.castShadow = true;
 appleMesh.receiveShadow = true;
@@ -1155,8 +1196,8 @@ for (let i = 0; i < TREE_COUNT; i++) {
   const scale = 1 + Math.random();
   const position = getPositionByHeight(9);
   if (!position) continue;
-  
-  const {x, z} = position;
+
+  const { x, z } = position;
   const y = position.y - 0.5 * scale;
 
   dummy.position.set(x, y + 1 * scale, z);
@@ -1164,7 +1205,11 @@ for (let i = 0; i < TREE_COUNT; i++) {
   dummy.scale.set(scale, scale, scale);
   dummy.updateMatrix();
   trunkMesh.setMatrixAt(i, dummy.matrix);
-  const tree = { isActive: true, position: dummy.position.clone(), appleIndices: null };
+  const tree = {
+    isActive: true,
+    position: dummy.position.clone(),
+    appleIndices: null,
+  };
   trees.push(tree);
 
   dummy.position.set(x, y + 1.5 * scale + 1 * scale, z);
@@ -1209,7 +1254,7 @@ const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
 const rockMesh = new THREE.InstancedMesh(
   rockGeometry,
   rockMaterial,
-  ROCK_COUNT
+  ROCK_COUNT,
 );
 rockMesh.castShadow = true;
 rockMesh.receiveShadow = true;
@@ -1217,13 +1262,13 @@ scene.add(rockMesh);
 for (let i = 0; i < ROCK_COUNT; i++) {
   const position = getPositionByHeight(7);
   if (!position) continue;
-  const {x, y, z} = position;
-  
+  const { x, y, z } = position;
+
   dummy.position.set(x, y, z);
   dummy.rotation.set(
     Math.random() * Math.PI,
     Math.random() * Math.PI,
-    Math.random() * Math.PI
+    Math.random() * Math.PI,
   );
   const scale = 0.5 + Math.random();
   dummy.scale.set(scale, scale, scale);
@@ -1233,14 +1278,15 @@ for (let i = 0; i < ROCK_COUNT; i++) {
 rockMesh.instanceMatrix.needsUpdate = true;
 
 const crateGeometry = new THREE.BoxGeometry(1, 1, 1);
-const crateMaterial = new THREE.MeshStandardMaterial({ map: new THREE.TextureLoader().load(
-    "https://newkrok.com/external-assets/crate-256.webp"
-  )
+const crateMaterial = new THREE.MeshStandardMaterial({
+  map: new THREE.TextureLoader().load(
+    'https://newkrok.com/external-assets/crate-256.webp',
+  ),
 });
 const crateMesh = new THREE.InstancedMesh(
   crateGeometry,
   crateMaterial,
-  CRATE_COUNT
+  CRATE_COUNT,
 );
 crateMesh.castShadow = true;
 crateMesh.receiveShadow = true;
@@ -1248,17 +1294,22 @@ scene.add(crateMesh);
 for (let i = 0; i < CRATE_COUNT; i++) {
   const position = getPositionByHeight(WATER_LEVEL);
   if (!position) continue;
-  const {x, y, z} = position;
-  
+  const { x, y, z } = position;
+
   dummy.position.set(x, y + 0.5, z);
   dummy.rotation.set(0, 0, 0);
   dummy.scale.set(1, 1, 1);
   dummy.updateMatrix();
   crateMesh.setMatrixAt(i, dummy.matrix);
-  
+
   const effect = crateEffects[Math.floor(Math.random() * crateEffects.length)];
-  
-  const crate = { isActive: true, position: dummy.position.clone(), effect, index: i };
+
+  const crate = {
+    isActive: true,
+    position: dummy.position.clone(),
+    effect,
+    index: i,
+  };
   crates.push(crate);
 }
 crateMesh.instanceMatrix.needsUpdate = true;
@@ -1273,8 +1324,8 @@ const removeCrate = (index) => {
 const createKeyListeners = () => {
   const onKeyDown = (event) => (keys[event.code] = true);
   const onKeyUp = (event) => (keys[event.code] = false);
-  document.addEventListener("keydown", onKeyDown);
-  document.addEventListener("keyup", onKeyUp);
+  document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keyup', onKeyUp);
 };
 createKeyListeners();
 
@@ -1283,67 +1334,84 @@ const updateCamera = () => {
     new THREE.Vector3(
       character.model.position.x,
       character.model.position.y + DISTANCE_FROM_CAMERA,
-      character.model.position.z + 8
+      character.model.position.z + 8,
     ),
-    cycleData.delta * 5
+    cycleData.delta * 5,
   );
   camera.lookAt(character.model.position);
 };
 
-const handleTerrainHeight = ({model : unit}) => {
-  const terrainHeight = getHeightFromPosition(new THREE.Vector3(unit.position.x, 0, unit.position.z));
+const handleTerrainHeight = ({ model: unit }) => {
+  const terrainHeight = getHeightFromPosition(
+    new THREE.Vector3(unit.position.x, 0, unit.position.z),
+  );
   if (terrainHeight < WATER_LEVEL - 0.5) {
     const direction = new THREE.Vector3()
       .subVectors(unit.userData.oldPos, unit.position)
       .normalize();
-    
+
     unit.position.x = unit.userData.oldPos.x;
-    if (getHeightFromPosition(new THREE.Vector3(unit.position.x, 0, unit.position.z)) < WATER_LEVEL - 0.5) {
+    if (
+      getHeightFromPosition(
+        new THREE.Vector3(unit.position.x, 0, unit.position.z),
+      ) <
+      WATER_LEVEL - 0.5
+    ) {
       unit.position.z = unit.userData.oldPos.z;
-      if (getHeightFromPosition(new THREE.Vector3(unit.position.x, 0, unit.position.z)) < WATER_LEVEL - 0.5) {
+      if (
+        getHeightFromPosition(
+          new THREE.Vector3(unit.position.x, 0, unit.position.z),
+        ) <
+        WATER_LEVEL - 0.5
+      ) {
         unit.position.copy(unit.userData.oldPos);
       }
     }
   }
-}
+};
 
 const applyCharacterRotation = () => {
-  if (keys["KeyA"] || keys["ArrowLeft"]) direction = Math.PI;
-  if (keys["KeyD"] || keys["ArrowRight"]) direction = 0;
-  if (keys["KeyW"] || keys["ArrowUp"]) direction = Math.PI / 2;
-  if (keys["KeyS"] || keys["ArrowDown"]) direction = -Math.PI / 2;
-  if ((keys["KeyA"] || keys["ArrowLeft"]) && (keys["KeyW"] || keys["ArrowUp"]))
+  if (keys['KeyA'] || keys['ArrowLeft']) direction = Math.PI;
+  if (keys['KeyD'] || keys['ArrowRight']) direction = 0;
+  if (keys['KeyW'] || keys['ArrowUp']) direction = Math.PI / 2;
+  if (keys['KeyS'] || keys['ArrowDown']) direction = -Math.PI / 2;
+  if ((keys['KeyA'] || keys['ArrowLeft']) && (keys['KeyW'] || keys['ArrowUp']))
     direction = Math.PI - Math.PI / 4;
   if (
-    (keys["KeyA"] || keys["ArrowLeft"]) &&
-    (keys["KeyS"] || keys["ArrowDown"])
+    (keys['KeyA'] || keys['ArrowLeft']) &&
+    (keys['KeyS'] || keys['ArrowDown'])
   )
     direction = Math.PI + Math.PI / 4;
-  if ((keys["KeyD"] || keys["ArrowRight"]) && (keys["KeyW"] || keys["ArrowUp"]))
+  if ((keys['KeyD'] || keys['ArrowRight']) && (keys['KeyW'] || keys['ArrowUp']))
     direction = Math.PI / 4;
   if (
-    (keys["KeyD"] || keys["ArrowRight"]) &&
-    (keys["KeyS"] || keys["ArrowDown"])
+    (keys['KeyD'] || keys['ArrowRight']) &&
+    (keys['KeyS'] || keys['ArrowDown'])
   )
     direction = Math.PI + (Math.PI / 4) * 3;
   rotationTargetQuaternion.setFromAxisAngle(
     new THREE.Vector3(0, 1, 0),
-    direction
+    direction,
   );
-  character.model.quaternion.slerp(rotationTargetQuaternion, cycleData.delta * 10);
+  character.model.quaternion.slerp(
+    rotationTargetQuaternion,
+    cycleData.delta * 10,
+  );
 };
 const applyCharacterMovement = () => {
-  const isMoving =
-    keys["KeyA"] ||
-    keys["KeyS"] ||
-    keys["KeyD"] ||
-    keys["KeyW"] ||
-    keys["ArrowLeft"] ||
-    keys["ArrowDown"] ||
-    keys["ArrowRight"] ||
-    keys["ArrowUp"];
+  if (isRolling) return;
 
-  const isRunningKey = keys["ShiftLeft"];
+  const isMoving =
+    keys['KeyA'] ||
+    keys['KeyS'] ||
+    keys['KeyD'] ||
+    keys['KeyW'] ||
+    keys['ArrowLeft'] ||
+    keys['ArrowDown'] ||
+    keys['ArrowRight'] ||
+    keys['ArrowUp'];
+
+  const isRunningKey = keys['ShiftLeft'];
   let isRunning = false;
 
   if (isMoving && isRunningKey) {
@@ -1362,30 +1430,28 @@ const applyCharacterMovement = () => {
     correctedDir.set(
       charactersWorldDirection.z,
       0,
-      -charactersWorldDirection.x
+      -charactersWorldDirection.x,
     );
     character.model.userData.oldPos = character.model.position.clone();
     character.model.position.addScaledVector(
       correctedDir,
-      ((isRunning ? RUN_SPEED : WALK_SPEED)
-        * (character.model.position.y < WATER_SPEED_LEVEL ? WATER_SPEED_MULTIPLIER : 1))
-        * cycleData.delta
+      (isRunning ? RUN_SPEED : WALK_SPEED) *
+        (character.model.position.y < WATER_SPEED_LEVEL
+          ? WATER_SPEED_MULTIPLIER
+          : 1) *
+        cycleData.delta,
     );
     character.actions.idle.stop();
-    if (isRunning)
-    {
+    if (isRunning) {
       character.actions.walk.stop();
       character.actions.run.play();
-    }
-    else
-    {
+    } else {
       character.actions.walk.play();
       character.actions.run.stop();
     }
+
     handleTerrainHeight(character);
-  }
-  else
-  {
+  } else {
     character.actions.idle.play();
     character.actions.walk.stop();
     character.actions.run.stop();
@@ -1406,7 +1472,7 @@ const updateLight = () => {
   directionalLight.position.set(
     character.model.position.x + Math.cos(angle) * radius,
     character.model.position.y + Math.sin(angle) * radius + 20,
-    character.model.position.z - 40
+    character.model.position.z - 40,
   );
   directionalLight.target.position.copy(character.model.position);
   directionalLight.target.updateMatrixWorld();
@@ -1432,15 +1498,15 @@ const updateLight = () => {
   const hours = Math.floor(totalHours);
   const minutes = Math.floor((totalHours - hours) * 60);
 
-  const hStr = String(hours).padStart(2, "0");
-  const mStr = String(minutes).padStart(2, "0");
+  const hStr = String(hours).padStart(2, '0');
+  const mStr = String(minutes).padStart(2, '0');
 
-  const clockEl = document.getElementById("clock-text");
+  const clockEl = document.getElementById('clock-text');
   if (clockEl) clockEl.textContent = `${hStr}:${mStr}`;
 };
 const updateUnits = () => {
   units.forEach((_unit, index) => {
-    const {model: unit, mixer} = _unit;
+    const { model: unit, mixer } = _unit;
     mixer.update(cycleData.delta);
     if (unit.knockbackVelocity) {
       unit.position.addScaledVector(unit.knockbackVelocity, cycleData.delta);
@@ -1448,53 +1514,62 @@ const updateUnits = () => {
       if (unit.knockbackVelocity.lengthSq() < 0.0001)
         unit.knockbackVelocity.set(0, 0, 0);
     }
-
     for (const tree of trees) {
       const { position, appleIndices, isActive } = tree;
-      
+
       const dist = unit.position.distanceTo(position);
       if (dist < TREE_COLLISION_RADIUS) {
         const away = unit.position.clone().sub(position).normalize();
-        unit.position.addScaledVector(away, (TREE_COLLISION_RADIUS - dist) * 0.2);
+        unit.position.addScaledVector(
+          away,
+          (TREE_COLLISION_RADIUS - dist) * 0.2,
+        );
         if (unit === character.model && appleIndices && isActive) {
           tree.isActive = false;
           removeApplesFromTree(appleIndices);
           showFloatingLabel({
             text: `+${appleIndices.length} apples`,
-            position: character.model.position
+            position: character.model.position,
           });
           gameState.collectedApples += appleIndices.length;
 
-          const effect = appleEffects[Math.floor(Math.random() * appleEffects.length)];
-          if (effect.stamina)
-          {
-            gameState.stamina += Math.floor(Math.random() * (effect.stamina.max - effect.stamina.min + 1)) + effect.stamina.min;
+          const effect =
+            appleEffects[Math.floor(Math.random() * appleEffects.length)];
+          if (effect.stamina) {
+            gameState.stamina +=
+              Math.floor(
+                Math.random() * (effect.stamina.max - effect.stamina.min + 1),
+              ) + effect.stamina.min;
             gameState.stamina = Math.min(gameState.stamina, MAX_STAMINA);
+          } else {
+            gameState.health +=
+              Math.floor(
+                Math.random() * (effect.health.max - effect.health.min + 1),
+              ) + effect.health.min;
           }
-          else
-          {
-            gameState.health += Math.floor(Math.random() * (effect.health.max - effect.health.min + 1)) + effect.health.min
-          }
-          
+
           updateAppleCount();
           tree.appleIndices = null;
         }
       }
     }
-    
+
     for (const crate of crates) {
       const { position, effect, index, isActive } = crate;
       if (!isActive) continue;
-      
+
       const dist = unit.position.distanceTo(position);
       if (dist < CRATE_COLLISION_RADIUS) {
         const away = unit.position.clone().sub(position).normalize();
-        unit.position.addScaledVector(away, (CRATE_COLLISION_RADIUS - dist) * 0.2);
+        unit.position.addScaledVector(
+          away,
+          (CRATE_COLLISION_RADIUS - dist) * 0.2,
+        );
         if (unit === character.model && isActive) {
           crate.isActive = false;
           showFloatingLabel({
             text: effect,
-            position: character.model.position
+            position: character.model.position,
           });
           removeCrate(index);
           /*showFloatingLabel({
@@ -1505,10 +1580,10 @@ const updateUnits = () => {
         }
       }
     }
-   
+
     if (unit === character.model) return;
-    
-    if (!unit.userData.target) unit.userData.target = {};
+
+    /* if (!unit.userData.target) unit.userData.target = {};
     if (
       unit.userData.target[index] === undefined ||
       unit.userData.target[index] === null
@@ -1516,22 +1591,22 @@ const updateUnits = () => {
       unit.userData.target[index] = new THREE.Vector3(
         Math.min(
           Math.max(unit.position.x + (Math.random() * 20 - 10), 0),
-          WORLD_WIDTH
+          WORLD_WIDTH,
         ),
         0,
         Math.min(
           Math.max(unit.position.z + (Math.random() * 20 - 10), 0),
-          WORLD_HEIGHT
-        )
+          WORLD_HEIGHT,
+        ),
       );
     }
     const direction = new THREE.Vector3()
-    .subVectors(unit.userData.target[index], unit.position)
-    .normalize();
+      .subVectors(unit.userData.target[index], unit.position)
+      .normalize();
 
     unit.position.addScaledVector(direction, ENEMY_SPEED * cycleData.delta);
     unit.userData.oldPos = unit.position.clone();
-    
+
     handleTerrainHeight(_unit);
     const adjustQuat = new THREE.Quaternion();
     adjustQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
@@ -1543,14 +1618,14 @@ const updateUnits = () => {
     unit.userData.target[index].y = unit.position.y;
     if (unit.position.distanceTo(unit.userData.target[index]) < 0.5) {
       unit.userData.target[index] = null;
-    }
+    }*/
   });
 
   for (let i = 0; i < units.length; i++) {
-    const e1 = units[i];
+    const e1 = units[i].model;
 
     for (let j = i + 1; j < units.length; j++) {
-      const e2 = units[j];
+      const e2 = units[j].model;
 
       const dist = e1.position.distanceTo(e2.position);
       const minDist = 1;
@@ -1568,7 +1643,8 @@ const updateUnits = () => {
 
 const updateCharactersYPosition = () => {
   units.forEach(
-    ({model: unit}) => (unit.position.y = getHeightFromPosition(unit.position))
+    ({ model: unit }) =>
+      (unit.position.y = getHeightFromPosition(unit.position)),
   );
 };
 
@@ -1600,7 +1676,7 @@ const throwApple = () => {
         velocity: getThrowVelocity(),
         life: 5,
         instanceId: i,
-        inactive: false
+        inactive: false,
       };
       apple.position.y += 0.5;
       apples[i] = apple;
@@ -1612,14 +1688,14 @@ const throwApple = () => {
 
 const getSplashText = () => {
   const texts = [
-    "Splash!",
-    "Pow!",
-    "Thud!",
-    "Smash!",
-    "Bam!",
-    "Whack!",
-    "Bonk!",
-    "Kaboom!"
+    'Splash!',
+    'Pow!',
+    'Thud!',
+    'Smash!',
+    'Bam!',
+    'Whack!',
+    'Bonk!',
+    'Kaboom!',
   ];
   return texts[Math.floor(Math.random() * texts.length)];
 };
@@ -1629,7 +1705,7 @@ const updateApples = () => {
     if (apple && !apple.inactive) {
       apple.velocity.add(gravity.clone().multiplyScalar(cycleData.delta));
       apple.position.add(
-        apple.velocity.clone().multiplyScalar(cycleData.delta)
+        apple.velocity.clone().multiplyScalar(cycleData.delta),
       );
       updateAppleInstance(apple.instanceId, apple.position);
 
@@ -1637,10 +1713,8 @@ const updateApples = () => {
       apple.life -= cycleData.delta;
 
       const addAppleExplosion = (position) => {
-        const {
-          instance: splashEffectInstance,
-          dispose
-        } = createParticleSystem(splashEffect, cycleData.now);
+        const { instance: splashEffectInstance, dispose } =
+          createParticleSystem(splashEffect, cycleData.now);
         splashEffectInstance.position.copy(position);
         scene.add(splashEffectInstance);
         setTimeout(dispose, 1000);
@@ -1648,7 +1722,7 @@ const updateApples = () => {
 
       if (apple.position.y <= terrainHeight) addAppleExplosion(apple.position);
 
-      for (let {model: unit} of units) {
+      for (let { model: unit } of units) {
         if (unit === character.model) continue;
         const dist = apple.position.distanceTo(unit.position);
         if (dist < APPLE_HIT_RADIUS) {
@@ -1684,16 +1758,45 @@ const updateApples = () => {
 };
 
 const updateAppleThrowRoutine = () => {
-  if (keys["Space"]) {
+  if (keys['Space']) {
     const now = performance.now();
-    if (
-      now - lastThrowTime > throwCooldown &&
-      gameState.collectedApples > 0
-    ) {
+    if (now - lastThrowTime > throwCooldown && gameState.collectedApples > 0) {
       gameState.collectedApples--;
       updateAppleCount();
       throwApple();
       lastThrowTime = now;
+    }
+  }
+};
+
+const updateRollRoutine = () => {
+  const now = performance.now();
+  if (keys['KeyR'] && !isRolling) {
+    if (now - lastRollTime > rollCooldown) {
+      isRolling = true;
+      character.actions.idle.stop();
+      character.actions.walk.stop();
+      character.actions.run.stop();
+      character.actions.roll.play();
+      lastRollTime = now;
+    }
+  } else if (isRolling) {
+    const rollAction = character.actions.roll;
+    if (lastRollTime + rollAction.getClip().duration * 1000 <= now) {
+      isRolling = false;
+      character.actions.idle.play();
+      character.actions.walk.stop();
+      character.actions.run.stop();
+      character.actions.roll.stop();
+    } else {
+      const forward = new THREE.Vector3(1, 0, 0);
+      forward.applyQuaternion(character.model.quaternion);
+      character.model.userData.oldPos = character.model.position.clone();
+      character.model.position.addScaledVector(
+        forward,
+        (keys['ShiftLeft'] ? FAST_ROLL_SPEED : ROLL_SPEED) * cycleData.delta,
+      );
+      handleTerrainHeight(character);
     }
   }
 };
@@ -1729,7 +1832,7 @@ const createWater = () => {
   const geom = new THREE.PlaneGeometry(WORLD_WIDTH, WORLD_HEIGHT, 64, 64);
   const mesh = new THREE.Mesh(geom, material);
 
-  return {mesh, uniforms};
+  return { mesh, uniforms };
 };
 
 const waters = [];
@@ -1741,31 +1844,30 @@ water.mesh.position.z = WORLD_HEIGHT / 2;
 scene.add(water.mesh);
 waters.push(water);
 const updateWaters = () => {
-  waters.forEach(
-    ({uniforms}) => uniforms.uTime.value += cycleData.delta
-  );
+  waters.forEach(({ uniforms }) => (uniforms.uTime.value += cycleData.delta));
 };
 
-const cinamaticCameraController = createCinematicCameraController(
-  camera,
-  [
-    {
-      from: new THREE.Vector3(startingPosition.x + 150, 40, startingPosition.z + 50),
-      to: new THREE.Vector3(startingPosition.x - 10, 12, startingPosition.z),
-      lookAt: new THREE.Vector3(250, 20, 200),
-      duration: 4,
-    },
-    {
-      to: new THREE.Vector3(
-        character.model.position.x,
-        character.model.position.y + DISTANCE_FROM_CAMERA,
-        character.model.position.z + 8
-      ),
-      lookAt: character.model.position,
-      duration: 2,
-    },
-  ]
-);
+const cinamaticCameraController = createCinematicCameraController(camera, [
+  {
+    from: new THREE.Vector3(
+      startingPosition.x + 150,
+      40,
+      startingPosition.z + 50,
+    ),
+    to: new THREE.Vector3(startingPosition.x - 10, 12, startingPosition.z),
+    lookAt: new THREE.Vector3(250, 20, 200),
+    duration: 4,
+  },
+  {
+    to: new THREE.Vector3(
+      character.model.position.x,
+      character.model.position.y + DISTANCE_FROM_CAMERA,
+      character.model.position.z + 8,
+    ),
+    lookAt: character.model.position,
+    duration: 2,
+  },
+]);
 
 camera.lookAt(150, 20, 200);
 cinamaticCameraController.play();
@@ -1777,19 +1879,19 @@ const animate = () => {
   cycleData.elapsed = clock.getElapsedTime();
 
   updateParticleSystems(cycleData);
-  if (!cinamaticCameraController.isPlaying())
-  {
+  if (!cinamaticCameraController.isPlaying()) {
     updateCamera();
     updateCharacter();
   }
   updateUnits();
   updateCharactersYPosition();
   updateAppleThrowRoutine();
+  updateRollRoutine();
   updateApples();
   updateLight();
   updateStaminaUi();
   updateWaters();
-  
+
   cinamaticCameraController.update(cycleData.delta);
 
   composer.render();
