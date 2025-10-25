@@ -11,7 +11,7 @@ import type {
   WorldConfig,
   WorldInstance,
   UpdateCallback,
-} from '../../types/world';
+} from '../../types/world.js';
 
 /**
  * Creates default post-processing passes
