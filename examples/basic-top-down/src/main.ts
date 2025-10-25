@@ -18,7 +18,7 @@ import {
 } from 'https://esm.sh/three/examples/jsm/renderers/CSS2DRenderer.js';
 
 import * as THREE from 'three';
-import { GameEngine, log, VERSION } from '@newkrok/three-play';
+import { createWorld } from '@newkrok/three-play';
 
 /**
  * @typedef {Object} GameState
@@ -34,8 +34,7 @@ import { GameEngine, log, VERSION } from '@newkrok/three-play';
  */
 
 // Initialize THREE Play engine
-log(`Starting game with THREE Play v${VERSION}`);
-const gameEngine = new GameEngine();
+console.log('Starting game with THREE Play engine');
 
 const terrainFragmentShaderPart1 = `
   uniform float uWaterLevel;
@@ -513,9 +512,6 @@ const crateEffects = [
   { damageBonus: { min: 1.5, max: 3.0 } },
 ];
 
-let composer;
-let ambientLight;
-let directionalLight;
 let direction = 0;
 let units = [];
 let trees = [];
@@ -932,161 +928,97 @@ const getHeightFromPosition = (position) => {
   return 0;
 };
 
-const createWorld = (target) => {
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
-  document.querySelector(target).appendChild(renderer.domElement);
+// Create THREE Play world instance
+const worldInstance = createWorld({
+  world: {
+    size: {
+      x: WORLD_WIDTH,
+      y: WORLD_HEIGHT,
+    },
+  },
+  render: {
+    useComposer: true,
+  },
+  light: {
+    ambient: {
+      color: 0xffffff,
+      intensity: 0.9,
+    },
+    directional: {
+      color: 0xffffff,
+      intensity: 0.5,
+    },
+  },
+});
 
-  const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0xccddee, 0.005);
-  const camera = new THREE.PerspectiveCamera(
-    60,
-    window.innerWidth / window.innerHeight,
-    1,
-    100,
+// Get references to Three.js components
+const renderer = worldInstance.getRenderer();
+const scene = worldInstance.getScene();
+const camera = worldInstance.getCamera();
+const composer = worldInstance.getComposer();
+let ambientLight = worldInstance.getAmbientLight();
+let directionalLight = worldInstance.getDirectionalLight();
+
+// Append renderer to DOM
+document.querySelector('#demo').appendChild(renderer.domElement);
+
+// Add terrain to the scene
+const grassTexture = new THREE.TextureLoader().load(
+  'https://raw.githubusercontent.com/NewKrok/three-game-demo/refs/heads/master/public/assets/textures/grass-flower-tint-01-base-basecolor.webp',
+);
+grassTexture.colorSpace = THREE.SRGBColorSpace;
+grassTexture.wrapS = THREE.MirroredRepeatWrapping;
+grassTexture.wrapT = THREE.MirroredRepeatWrapping;
+grassTexture.repeat.x = WORLD_WIDTH / 4;
+grassTexture.repeat.y = WORLD_HEIGHT / 4;
+
+const material = new THREE.MeshStandardMaterial({
+  map: grassTexture,
+});
+
+material.onBeforeCompile = (shader) => {
+  shader.uniforms.uWaterLevel = { value: WATER_LEVEL };
+  shader.uniforms.uSandBlendDistance = { value: 1.0 };
+
+  shader.vertexShader =
+    'varying vec3 vWorldPosition;\nvarying vec2 vUvCustom;\n' +
+    shader.vertexShader;
+
+  shader.vertexShader = shader.vertexShader.replace(
+    '#include <worldpos_vertex>',
+    terrainVertexShader,
   );
 
-  const renderTarget = new THREE.WebGLRenderTarget(
-    window.innerWidth,
-    window.innerHeight,
+  shader.fragmentShader = terrainFragmentShaderPart1 + shader.fragmentShader;
+
+  shader.fragmentShader = shader.fragmentShader.replace(
+    '#include <color_fragment>',
+    terrainFragmentShaderPart2,
   );
-  renderTarget.depthTexture = new THREE.DepthTexture(
-    window.innerWidth,
-    window.innerHeight,
-  );
-  renderTarget.depthTexture.format = THREE.DepthFormat;
-  renderTarget.depthTexture.type = THREE.UnsignedShortType;
-
-  composer = new EffectComposer(renderer, renderTarget);
-  const renderPass = new RenderPass(scene, camera);
-  composer.addPass(renderPass);
-
-  const ssaoPass = new SSAOPass(
-    scene,
-    camera,
-    window.innerWidth,
-    window.innerHeight,
-  );
-  ssaoPass.kernelRadius = 16;
-  ssaoPass.minDistance = 0.005;
-  ssaoPass.maxDistance = 0.1;
-  ssaoPass.output = SSAOPass.OUTPUT.Default;
-  composer.addPass(ssaoPass);
-
-  const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.5,
-    0.4,
-    0.85,
-  );
-  composer.addPass(bloomPass);
-
-  const fxaaPass = new ShaderPass(FXAAShader);
-  fxaaPass.material.uniforms['resolution'].value.set(
-    1 / window.innerWidth,
-    1 / window.innerHeight,
-  );
-  composer.addPass(fxaaPass);
-
-  const outputPass = new OutputPass();
-  composer.addPass(outputPass);
-
-  const setCanvasSize = () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    composer.setSize(window.innerWidth, window.innerHeight);
-    ssaoPass.setSize(window.innerWidth, window.innerHeight);
-    camera.updateProjectionMatrix();
-    fxaaPass.material.uniforms['resolution'].value.set(
-      1 / window.innerWidth,
-      1 / window.innerHeight,
-    );
-    composer.render();
-  };
-  setCanvasSize();
-  window.onresize = setCanvasSize;
-
-  ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
-  scene.add(ambientLight);
-  directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-  directionalLight.castShadow = true;
-  directionalLight.shadow.bias = -0.001;
-  directionalLight.shadow.camera.left = -20;
-  directionalLight.shadow.camera.right = 20;
-  directionalLight.shadow.camera.top = 20;
-  directionalLight.shadow.camera.bottom = -20;
-  directionalLight.shadow.camera.near = 0.5;
-  directionalLight.shadow.camera.far = 200;
-  directionalLight.shadow.mapSize.width = 4096;
-  directionalLight.shadow.mapSize.height = 4096;
-  scene.add(directionalLight);
-
-  const grassTexture = new THREE.TextureLoader().load(
-    'https://raw.githubusercontent.com/NewKrok/three-game-demo/refs/heads/master/public/assets/textures/grass-flower-tint-01-base-basecolor.webp',
-  );
-  grassTexture.encoding = THREE.sRGBEncoding;
-  grassTexture.wrapS = THREE.MirroredRepeatWrapping;
-  grassTexture.wrapT = THREE.MirroredRepeatWrapping;
-  grassTexture.repeat.x = WORLD_WIDTH / 4;
-  grassTexture.repeat.y = WORLD_HEIGHT / 4;
-
-  const material = new THREE.MeshStandardMaterial({
-    map: grassTexture,
-  });
-
-  material.onBeforeCompile = (shader) => {
-    shader.uniforms.uWaterLevel = { value: WATER_LEVEL };
-    shader.uniforms.uSandBlendDistance = { value: 1.0 };
-
-    shader.vertexShader =
-      'varying vec3 vWorldPosition;\nvarying vec2 vUvCustom;\n' +
-      shader.vertexShader;
-
-    shader.vertexShader = shader.vertexShader.replace(
-      '#include <worldpos_vertex>',
-      terrainVertexShader,
-    );
-
-    shader.fragmentShader = terrainFragmentShaderPart1 + shader.fragmentShader;
-
-    shader.fragmentShader = shader.fragmentShader.replace(
-      '#include <color_fragment>',
-      terrainFragmentShaderPart2,
-    );
-  };
-
-  const geometry = new THREE.PlaneGeometry(
-    WORLD_WIDTH,
-    WORLD_HEIGHT,
-    HEIGHT_MAP_RESOLUTION - 1,
-    HEIGHT_MAP_RESOLUTION - 1,
-  );
-  const vertices = geometry.attributes.position.array;
-  for (let i = 0, j = 0, l = vertices.length / 3; i < l; i++, j += 3) {
-    vertices[j + 2] = heightmap[i] * ELEVATION_RATIO;
-  }
-
-  geometry.rotateX(-Math.PI / 2);
-  geometry.attributes.position.needsUpdate = true;
-  geometry.computeVertexNormals();
-
-  const plane = new THREE.Mesh(geometry, material);
-  plane.castShadow = true;
-  plane.receiveShadow = true;
-  plane.position.x = WORLD_WIDTH / 2;
-  plane.position.z = WORLD_HEIGHT / 2;
-  scene.add(plane);
-
-  return { renderer, scene, camera };
 };
-const { renderer, scene, camera } = createWorld('#demo');
 
-const clock = new THREE.Clock();
+const geometry = new THREE.PlaneGeometry(
+  WORLD_WIDTH,
+  WORLD_HEIGHT,
+  HEIGHT_MAP_RESOLUTION - 1,
+  HEIGHT_MAP_RESOLUTION - 1,
+);
+const vertices = geometry.attributes.position.array;
+for (let i = 0, j = 0, l = vertices.length / 3; i < l; i++, j += 3) {
+  vertices[j + 2] = heightmap[i] * ELEVATION_RATIO;
+}
+
+geometry.rotateX(-Math.PI / 2);
+geometry.attributes.position.needsUpdate = true;
+geometry.computeVertexNormals();
+
+const plane = new THREE.Mesh(geometry, material);
+plane.castShadow = true;
+plane.receiveShadow = true;
+plane.position.x = WORLD_WIDTH / 2;
+plane.position.z = WORLD_HEIGHT / 2;
+scene.add(plane);
+
 const cycleData = {
   now: 0,
   pauseStartTime: 0,
@@ -1589,7 +1521,7 @@ const updateUnits = () => {
       }
     }
 
-    const elapsedTime = clock.getElapsedTime();
+    const elapsedTime = cycleData.elapsed;
 
     if (unit === character.model) return;
 
@@ -1622,7 +1554,7 @@ const updateUnits = () => {
 
     unit.userData.target.y = unit.position.y;
     if (unit.position.distanceTo(unit.userData.target) < 1) {
-      unit.userData.resumeTime = clock.getElapsedTime() + Math.random() * 3;
+      unit.userData.resumeTime = cycleData.elapsed + Math.random() * 3;
     }
   });
 
@@ -1877,11 +1809,12 @@ const cinamaticCameraController = createCinematicCameraController(camera, [
 camera.lookAt(150, 20, 200);
 cinamaticCameraController.play();
 
-const animate = () => {
-  const rawDelta = clock.getDelta();
+// Use THREE Play's update system
+worldInstance.onUpdate((deltaTime, elapsedTime) => {
+  // Update cycle data for compatibility
   cycleData.now = Date.now() - cycleData.totalPauseTime;
-  cycleData.delta = rawDelta > 0.1 ? 0.1 : rawDelta;
-  cycleData.elapsed = clock.getElapsedTime();
+  cycleData.delta = deltaTime > 0.1 ? 0.1 : deltaTime;
+  cycleData.elapsed = elapsedTime;
 
   updateParticleSystems(cycleData);
   if (!cinamaticCameraController.isPlaying()) {
@@ -1898,9 +1831,10 @@ const animate = () => {
   updateWaters();
 
   cinamaticCameraController.update(cycleData.delta);
-
-  composer.render();
+  
+  // Render CSS2D labels
   labelRenderer.render(scene, camera);
-  requestAnimationFrame(animate);
-};
-animate();
+});
+
+// Start the THREE Play update loop
+worldInstance.start();
