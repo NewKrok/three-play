@@ -6,6 +6,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { DisposeUtils } from '@newkrok/three-utils';
 import type {
   WorldConfig,
   WorldInstance,
@@ -63,76 +64,6 @@ const createDefaultPasses = (
   passes.push(outputPass);
 
   return passes;
-};
-
-/**
- * Recursively dispose Three.js objects to free memory
- * @param obj - Three.js object to dispose
- */
-const disposeObject = (obj: any) => {
-  if (!obj) return;
-
-  // Dispose geometry
-  if (obj.geometry) {
-    obj.geometry.dispose();
-  }
-
-  // Dispose material(s)
-  if (obj.material) {
-    if (Array.isArray(obj.material)) {
-      obj.material.forEach((material: any) => {
-        disposeMaterial(material);
-      });
-    } else {
-      disposeMaterial(obj.material);
-    }
-  }
-
-  // Dispose texture
-  if (obj.texture) {
-    obj.texture.dispose();
-  }
-
-  // Dispose render target
-  if (obj.renderTarget) {
-    obj.renderTarget.dispose();
-  }
-
-  // Recursively dispose children
-  if (obj.children) {
-    [...obj.children].forEach((child: any) => {
-      disposeObject(child);
-    });
-  }
-};
-
-/**
- * Dispose material and its textures
- * @param material - Three.js material to dispose
- */
-const disposeMaterial = (material: any) => {
-  if (!material) return;
-
-  // Dispose all material textures
-  Object.keys(material).forEach((key) => {
-    const value = material[key];
-    if (
-      value &&
-      typeof value === 'object' &&
-      value.dispose &&
-      typeof value.dispose === 'function'
-    ) {
-      // Check if it's a texture
-      if (value.isTexture) {
-        value.dispose();
-      }
-    }
-  });
-
-  // Dispose the material itself
-  if (material.dispose) {
-    material.dispose();
-  }
 };
 
 /**
@@ -463,8 +394,8 @@ const createWorld = (config: WorldConfig): WorldInstance => {
         window.removeEventListener('resize', setCanvasSize);
       }
 
-      // Dispose scene and all its children
-      disposeObject(scene);
+      // Dispose scene and all its children using three-utils deepDispose
+      DisposeUtils.deepDispose(scene);
 
       // Dispose composer and its render targets
       if (composer) {

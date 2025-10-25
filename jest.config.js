@@ -8,7 +8,7 @@ export default {
   moduleNameMapper: {
     '^(.+)\\.js$': '$1',
   },
-  transformIgnorePatterns: ['node_modules/(?!three)'],
+  transformIgnorePatterns: ['node_modules/(?!three|@newkrok)'],
   roots: ['<rootDir>/src'],
   moduleFileExtensions: ['ts', 'js'],
   testMatch: ['**/__tests__/**/*.test.ts'],
