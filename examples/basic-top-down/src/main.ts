@@ -3,13 +3,6 @@ import {
   createParticleSystem,
 } from 'https://esm.sh/@newkrok/three-particles';
 import { GeomUtils } from 'https://esm.sh/@newkrok/three-utils';
-import { EffectComposer } from 'https://esm.sh/three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'https://esm.sh/three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'https://esm.sh/three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { SSAOPass } from 'https://esm.sh/three/examples/jsm/postprocessing/SSAOPass.js';
-import { OutputPass } from 'https://esm.sh/three/addons/postprocessing/OutputPass.js';
-import { ShaderPass } from 'https://esm.sh/three/examples/jsm/postprocessing/ShaderPass.js';
-import { FXAAShader } from 'https://esm.sh/three/examples/jsm/shaders/FXAAShader.js';
 import { FBXLoader } from 'https://esm.sh/three/examples/jsm/loaders/FBXLoader';
 import * as SkeletonUtils from 'https://esm.sh/three/examples/jsm/utils/SkeletonUtils.js';
 import {
@@ -966,7 +959,7 @@ document.querySelector('#demo').appendChild(renderer.domElement);
 const grassTexture = new THREE.TextureLoader().load(
   'https://raw.githubusercontent.com/NewKrok/three-game-demo/refs/heads/master/public/assets/textures/grass-flower-tint-01-base-basecolor.webp',
 );
-grassTexture.colorSpace = THREE.SRGBColorSpace;
+grassTexture.encoding = THREE.sRGBEncoding;
 grassTexture.wrapS = THREE.MirroredRepeatWrapping;
 grassTexture.wrapT = THREE.MirroredRepeatWrapping;
 grassTexture.repeat.x = WORLD_WIDTH / 4;
@@ -1831,7 +1824,7 @@ worldInstance.onUpdate((deltaTime, elapsedTime) => {
   updateWaters();
 
   cinamaticCameraController.update(cycleData.delta);
-  
+
   // Render CSS2D labels
   labelRenderer.render(scene, camera);
 });
