@@ -76,6 +76,16 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   const useComposer = config.render?.useComposer ?? true;
   const customPasses = config.render?.customPasses;
 
+  // Get light configuration with defaults
+  const ambientLightConfig = {
+    color: config.light?.ambient?.color ?? 0xffffff,
+    intensity: config.light?.ambient?.intensity ?? 0.9,
+  };
+  const directionalLightConfig = {
+    color: config.light?.directional?.color ?? 0xffffff,
+    intensity: config.light?.directional?.intensity ?? 0.5,
+  };
+
   // Create renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.shadowMap.enabled = true;
@@ -160,11 +170,17 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   setCanvasSize();
   window.addEventListener('resize', setCanvasSize);
 
-  // Add basic lighting
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+  // Add lighting with configuration
+  const ambientLight = new THREE.AmbientLight(
+    ambientLightConfig.color,
+    ambientLightConfig.intensity,
+  );
   scene.add(ambientLight);
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+  const directionalLight = new THREE.DirectionalLight(
+    directionalLightConfig.color,
+    directionalLightConfig.intensity,
+  );
   directionalLight.castShadow = true;
   directionalLight.shadow.bias = -0.001;
   directionalLight.shadow.camera.left = -20;
@@ -216,6 +232,22 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     getComposer(): EffectComposer | null {
       return composer;
+    },
+
+    /**
+     * Get the ambient light
+     * @returns The ambient light instance
+     */
+    getAmbientLight(): THREE.AmbientLight {
+      return ambientLight;
+    },
+
+    /**
+     * Get the directional light
+     * @returns The directional light instance
+     */
+    getDirectionalLight(): THREE.DirectionalLight {
+      return directionalLight;
     },
   };
 };

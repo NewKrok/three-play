@@ -15,6 +15,16 @@ export type WorldConfig = {
     useComposer?: boolean;
     customPasses?: Pass[];
   };
+  light?: {
+    ambient?: {
+      color?: THREE.ColorRepresentation;
+      intensity?: number;
+    };
+    directional?: {
+      color?: THREE.ColorRepresentation;
+      intensity?: number;
+    };
+  };
 };
 
 /**
@@ -26,4 +36,6 @@ export type WorldInstance = {
   getCamera(): THREE.PerspectiveCamera;
   getRenderer(): THREE.WebGLRenderer;
   getComposer(): any | null; // EffectComposer type or null if useComposer is false
+  getAmbientLight(): THREE.AmbientLight;
+  getDirectionalLight(): THREE.DirectionalLight;
 };

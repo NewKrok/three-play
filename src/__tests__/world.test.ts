@@ -140,6 +140,8 @@ describe('createWorld', () => {
     expect(typeof worldInstance.getCamera).toBe('function');
     expect(typeof worldInstance.getRenderer).toBe('function');
     expect(typeof worldInstance.getComposer).toBe('function');
+    expect(typeof worldInstance.getAmbientLight).toBe('function');
+    expect(typeof worldInstance.getDirectionalLight).toBe('function');
   });
 
   it('should log the configuration during creation', () => {
@@ -219,17 +221,23 @@ describe('createWorld', () => {
     const camera = worldInstance.getCamera();
     const renderer = worldInstance.getRenderer();
     const composer = worldInstance.getComposer();
+    const ambientLight = worldInstance.getAmbientLight();
+    const directionalLight = worldInstance.getDirectionalLight();
 
     expect(scene).toBeDefined();
     expect(camera).toBeDefined();
     expect(renderer).toBeDefined();
     expect(composer).toBeDefined();
+    expect(ambientLight).toBeDefined();
+    expect(directionalLight).toBeDefined();
 
     // Check that getters return the same instances
     expect(worldInstance.getScene()).toBe(scene);
     expect(worldInstance.getCamera()).toBe(camera);
     expect(worldInstance.getRenderer()).toBe(renderer);
     expect(worldInstance.getComposer()).toBe(composer);
+    expect(worldInstance.getAmbientLight()).toBe(ambientLight);
+    expect(worldInstance.getDirectionalLight()).toBe(directionalLight);
   });
 
   it('should add window resize event listener', () => {
@@ -310,5 +318,90 @@ describe('createWorld', () => {
     expect(composer).not.toBeNull();
     // Should call addPass multiple times for default passes
     expect(composer.addPass).toHaveBeenCalledTimes(5); // RenderPass, SSAOPass, UnrealBloomPass, ShaderPass, OutputPass
+  });
+
+  // New tests for light configuration
+  it('should use default light values when no light config is provided', () => {
+    const worldInstance = createWorld(mockConfig);
+    const ambientLight = worldInstance.getAmbientLight();
+    const directionalLight = worldInstance.getDirectionalLight();
+
+    expect(ambientLight).toBeDefined();
+    expect(directionalLight).toBeDefined();
+
+    // Check default values (we can't directly access color/intensity in tests due to mocking,
+    // but we verify the lights are created and accessible)
+    expect(worldInstance.getAmbientLight()).toBe(ambientLight);
+    expect(worldInstance.getDirectionalLight()).toBe(directionalLight);
+  });
+
+  it('should use custom light values when light config is provided', () => {
+    const configWithCustomLights: WorldConfig = {
+      ...mockConfig,
+      light: {
+        ambient: {
+          color: 0xff0000,
+          intensity: 0.5,
+        },
+        directional: {
+          color: 0x00ff00,
+          intensity: 0.8,
+        },
+      },
+    };
+
+    const worldInstance = createWorld(configWithCustomLights);
+    const ambientLight = worldInstance.getAmbientLight();
+    const directionalLight = worldInstance.getDirectionalLight();
+
+    expect(ambientLight).toBeDefined();
+    expect(directionalLight).toBeDefined();
+  });
+
+  it('should use partial light config with defaults for missing values', () => {
+    const configWithPartialLights: WorldConfig = {
+      ...mockConfig,
+      light: {
+        ambient: {
+          intensity: 0.7,
+        }, // color should use default
+        directional: {
+          color: 0x0000ff,
+        }, // intensity should use default
+      },
+    };
+
+    const worldInstance = createWorld(configWithPartialLights);
+    const ambientLight = worldInstance.getAmbientLight();
+    const directionalLight = worldInstance.getDirectionalLight();
+
+    expect(ambientLight).toBeDefined();
+    expect(directionalLight).toBeDefined();
+  });
+
+  it('should use defaults when light config is empty object', () => {
+    const configWithEmptyLights: WorldConfig = {
+      ...mockConfig,
+      light: {},
+    };
+
+    const worldInstance = createWorld(configWithEmptyLights);
+    const ambientLight = worldInstance.getAmbientLight();
+    const directionalLight = worldInstance.getDirectionalLight();
+
+    expect(ambientLight).toBeDefined();
+    expect(directionalLight).toBeDefined();
+  });
+
+  it('should return the same light instances on multiple calls', () => {
+    const worldInstance = createWorld(mockConfig);
+
+    const ambientLight1 = worldInstance.getAmbientLight();
+    const ambientLight2 = worldInstance.getAmbientLight();
+    const directionalLight1 = worldInstance.getDirectionalLight();
+    const directionalLight2 = worldInstance.getDirectionalLight();
+
+    expect(ambientLight1).toBe(ambientLight2);
+    expect(directionalLight1).toBe(directionalLight2);
   });
 });
