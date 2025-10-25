@@ -6,7 +6,11 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import type { WorldConfig, WorldInstance } from '../../types/world';
+import type {
+  WorldConfig,
+  WorldInstance,
+  UpdateCallback,
+} from '../../types/world';
 
 /**
  * Creates default post-processing passes
@@ -85,6 +89,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
     color: config.light?.directional?.color ?? 0xffffff,
     intensity: config.light?.directional?.intensity ?? 0.5,
   };
+
+  // Get update configuration with defaults
+  const autoStart = config.update?.autoStart ?? false;
+  const initialCallback = config.update?.onUpdate;
 
   // Create renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -193,6 +201,51 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   directionalLight.shadow.mapSize.height = 4096;
   scene.add(directionalLight);
 
+  // Update loop system
+  const clock = new THREE.Clock();
+  const updateCallbacks = new Set<UpdateCallback>();
+  let animationFrameId: number | null = null;
+  let isRunning = false;
+  let isPaused = false;
+
+  // Add initial callback if provided
+  if (initialCallback) {
+    updateCallbacks.add(initialCallback);
+  }
+
+  // Update loop function
+  const updateLoop = () => {
+    if (!isRunning || isPaused) return;
+
+    const deltaTime = clock.getDelta();
+    const elapsedTime = clock.getElapsedTime();
+
+    // Call all update callbacks
+    updateCallbacks.forEach((callback) => {
+      try {
+        callback(deltaTime, elapsedTime);
+      } catch (error) {
+        console.error('Error in update callback:', error);
+      }
+    });
+
+    // Render the scene
+    if (composer) {
+      composer.render();
+    } else {
+      renderer.render(scene, camera);
+    }
+
+    animationFrameId = requestAnimationFrame(updateLoop);
+  };
+
+  // Start the loop automatically if configured
+  if (autoStart) {
+    isRunning = true;
+    clock.start();
+    updateLoop();
+  }
+
   return {
     /**
      * Get the world configuration in read-only mode
@@ -248,6 +301,53 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     getDirectionalLight(): THREE.DirectionalLight {
       return directionalLight;
+    },
+
+    /**
+     * Start the update loop
+     */
+    start(): void {
+      if (isRunning) return;
+
+      isRunning = true;
+      isPaused = false;
+      clock.start();
+      updateLoop();
+    },
+
+    /**
+     * Pause the update loop
+     */
+    pause(): void {
+      isPaused = true;
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+    },
+
+    /**
+     * Resume the update loop
+     */
+    resume(): void {
+      if (!isRunning || !isPaused) return;
+
+      isPaused = false;
+      updateLoop();
+    },
+
+    /**
+     * Subscribe to update events
+     * @param callback - Function to call on each update
+     * @returns Unsubscribe function
+     */
+    onUpdate(callback: UpdateCallback): () => void {
+      updateCallbacks.add(callback);
+
+      // Return unsubscribe function
+      return () => {
+        updateCallbacks.delete(callback);
+      };
     },
   };
 };

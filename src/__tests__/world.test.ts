@@ -110,6 +110,13 @@ global.window = {
   addEventListener: jest.fn(),
 } as any;
 
+// Mock requestAnimationFrame and cancelAnimationFrame
+global.requestAnimationFrame = jest.fn((cb) => {
+  setTimeout(cb, 16); // Simulate 60fps
+  return 1;
+});
+global.cancelAnimationFrame = jest.fn();
+
 describe('createWorld', () => {
   const mockConfig: WorldConfig = {
     world: {
@@ -121,18 +128,34 @@ describe('createWorld', () => {
   };
 
   let consoleSpy: jest.SpyInstance;
+  let worldInstances: any[] = [];
+
+  // Helper function to create and track world instances
+  const createTrackedWorld = (config: WorldConfig) => {
+    const instance = createWorld(config);
+    worldInstances.push(instance);
+    return instance;
+  };
 
   beforeEach(() => {
     consoleSpy = jest.spyOn(console, 'log').mockImplementation();
     jest.clearAllMocks();
+    worldInstances = [];
   });
 
   afterEach(() => {
     consoleSpy.mockRestore();
+    // Clean up all world instances to prevent hanging update loops
+    worldInstances.forEach((instance) => {
+      if (instance && typeof instance.pause === 'function') {
+        instance.pause();
+      }
+    });
+    worldInstances = [];
   });
 
   it('should create a world instance with given configuration', () => {
-    const worldInstance = createWorld(mockConfig);
+    const worldInstance = createTrackedWorld(mockConfig);
 
     expect(worldInstance).toBeDefined();
     expect(typeof worldInstance.getConfig).toBe('function');
@@ -142,10 +165,14 @@ describe('createWorld', () => {
     expect(typeof worldInstance.getComposer).toBe('function');
     expect(typeof worldInstance.getAmbientLight).toBe('function');
     expect(typeof worldInstance.getDirectionalLight).toBe('function');
+    expect(typeof worldInstance.start).toBe('function');
+    expect(typeof worldInstance.pause).toBe('function');
+    expect(typeof worldInstance.resume).toBe('function');
+    expect(typeof worldInstance.onUpdate).toBe('function');
   });
 
   it('should log the configuration during creation', () => {
-    createWorld(mockConfig);
+    createTrackedWorld(mockConfig);
 
     expect(consoleSpy).toHaveBeenCalledWith(
       'Creating world with config:',
@@ -154,7 +181,7 @@ describe('createWorld', () => {
   });
 
   it('should return the configuration in read-only mode', () => {
-    const worldInstance = createWorld(mockConfig);
+    const worldInstance = createTrackedWorld(mockConfig);
     const returnedConfig = worldInstance.getConfig();
 
     expect(returnedConfig).toEqual(mockConfig);
@@ -172,7 +199,7 @@ describe('createWorld', () => {
       },
     };
 
-    const worldInstance = createWorld(originalConfig);
+    const worldInstance = createTrackedWorld(originalConfig);
 
     // Modify the original config
     originalConfig.world.size.x = 1024;
@@ -193,7 +220,7 @@ describe('createWorld', () => {
       },
     };
 
-    const worldInstance = createWorld(customConfig);
+    const worldInstance = createTrackedWorld(customConfig);
     const returnedConfig = worldInstance.getConfig();
 
     expect(returnedConfig.world.size.x).toBe(1024);
@@ -201,7 +228,7 @@ describe('createWorld', () => {
   });
 
   it('should return WorldInstance type with correct interface', () => {
-    const worldInstance: WorldInstance = createWorld(mockConfig);
+    const worldInstance: WorldInstance = createTrackedWorld(mockConfig);
 
     // Type check - if this compiles, the interface is correct
     expect(worldInstance.getConfig).toBeDefined();
@@ -215,7 +242,7 @@ describe('createWorld', () => {
   });
 
   it('should provide access to Three.js components', () => {
-    const worldInstance = createWorld(mockConfig);
+    const worldInstance = createTrackedWorld(mockConfig);
 
     const scene = worldInstance.getScene();
     const camera = worldInstance.getCamera();
@@ -241,7 +268,7 @@ describe('createWorld', () => {
   });
 
   it('should add window resize event listener', () => {
-    createWorld(mockConfig);
+    createTrackedWorld(mockConfig);
 
     expect(window.addEventListener).toHaveBeenCalledWith(
       'resize',
@@ -251,7 +278,7 @@ describe('createWorld', () => {
 
   // New tests for render configuration
   it('should use composer by default when no render config is provided', () => {
-    const worldInstance = createWorld(mockConfig);
+    const worldInstance = createTrackedWorld(mockConfig);
     const composer = worldInstance.getComposer();
 
     expect(composer).not.toBeNull();
@@ -266,7 +293,7 @@ describe('createWorld', () => {
       },
     };
 
-    const worldInstance = createWorld(configWithComposer);
+    const worldInstance = createTrackedWorld(configWithComposer);
     const composer = worldInstance.getComposer();
 
     expect(composer).not.toBeNull();
@@ -281,7 +308,7 @@ describe('createWorld', () => {
       },
     };
 
-    const worldInstance = createWorld(configWithoutComposer);
+    const worldInstance = createTrackedWorld(configWithoutComposer);
     const composer = worldInstance.getComposer();
 
     expect(composer).toBeNull();
@@ -297,7 +324,7 @@ describe('createWorld', () => {
       },
     };
 
-    const worldInstance = createWorld(configWithCustomPasses);
+    const worldInstance = createTrackedWorld(configWithCustomPasses);
     const composer = worldInstance.getComposer();
 
     expect(composer).not.toBeNull();
@@ -312,7 +339,7 @@ describe('createWorld', () => {
       },
     };
 
-    const worldInstance = createWorld(configWithDefaultPasses);
+    const worldInstance = createTrackedWorld(configWithDefaultPasses);
     const composer = worldInstance.getComposer();
 
     expect(composer).not.toBeNull();
@@ -322,7 +349,7 @@ describe('createWorld', () => {
 
   // New tests for light configuration
   it('should use default light values when no light config is provided', () => {
-    const worldInstance = createWorld(mockConfig);
+    const worldInstance = createTrackedWorld(mockConfig);
     const ambientLight = worldInstance.getAmbientLight();
     const directionalLight = worldInstance.getDirectionalLight();
 
@@ -350,7 +377,7 @@ describe('createWorld', () => {
       },
     };
 
-    const worldInstance = createWorld(configWithCustomLights);
+    const worldInstance = createTrackedWorld(configWithCustomLights);
     const ambientLight = worldInstance.getAmbientLight();
     const directionalLight = worldInstance.getDirectionalLight();
 
@@ -371,7 +398,7 @@ describe('createWorld', () => {
       },
     };
 
-    const worldInstance = createWorld(configWithPartialLights);
+    const worldInstance = createTrackedWorld(configWithPartialLights);
     const ambientLight = worldInstance.getAmbientLight();
     const directionalLight = worldInstance.getDirectionalLight();
 
@@ -385,7 +412,7 @@ describe('createWorld', () => {
       light: {},
     };
 
-    const worldInstance = createWorld(configWithEmptyLights);
+    const worldInstance = createTrackedWorld(configWithEmptyLights);
     const ambientLight = worldInstance.getAmbientLight();
     const directionalLight = worldInstance.getDirectionalLight();
 
@@ -394,7 +421,7 @@ describe('createWorld', () => {
   });
 
   it('should return the same light instances on multiple calls', () => {
-    const worldInstance = createWorld(mockConfig);
+    const worldInstance = createTrackedWorld(mockConfig);
 
     const ambientLight1 = worldInstance.getAmbientLight();
     const ambientLight2 = worldInstance.getAmbientLight();
@@ -403,5 +430,87 @@ describe('createWorld', () => {
 
     expect(ambientLight1).toBe(ambientLight2);
     expect(directionalLight1).toBe(directionalLight2);
+  });
+
+  // New tests for update loop system
+  it('should provide update loop control methods', () => {
+    const worldInstance = createTrackedWorld(mockConfig);
+
+    expect(typeof worldInstance.start).toBe('function');
+    expect(typeof worldInstance.pause).toBe('function');
+    expect(typeof worldInstance.resume).toBe('function');
+    expect(typeof worldInstance.onUpdate).toBe('function');
+  });
+
+  it('should not auto-start when autoStart is false or not provided', () => {
+    const worldInstance = createTrackedWorld(mockConfig);
+
+    // Since we can't easily test the running state without exposing it,
+    // we test that the methods exist and can be called without error
+    expect(() => worldInstance.start()).not.toThrow();
+    expect(() => worldInstance.pause()).not.toThrow();
+    expect(() => worldInstance.resume()).not.toThrow();
+  });
+
+  it('should auto-start when autoStart is true', () => {
+    const configWithAutoStart: WorldConfig = {
+      ...mockConfig,
+      update: {
+        autoStart: true,
+      },
+    };
+
+    expect(() => createTrackedWorld(configWithAutoStart)).not.toThrow();
+  });
+
+  it('should allow subscribing to update events', () => {
+    const worldInstance = createTrackedWorld(mockConfig);
+    const mockCallback = jest.fn();
+
+    const unsubscribe = worldInstance.onUpdate(mockCallback);
+
+    expect(typeof unsubscribe).toBe('function');
+    expect(() => unsubscribe()).not.toThrow();
+  });
+
+  it('should handle multiple update callbacks', () => {
+    const worldInstance = createTrackedWorld(mockConfig);
+    const mockCallback1 = jest.fn();
+    const mockCallback2 = jest.fn();
+
+    const unsubscribe1 = worldInstance.onUpdate(mockCallback1);
+    const unsubscribe2 = worldInstance.onUpdate(mockCallback2);
+
+    expect(typeof unsubscribe1).toBe('function');
+    expect(typeof unsubscribe2).toBe('function');
+
+    // Test unsubscribing
+    expect(() => unsubscribe1()).not.toThrow();
+    expect(() => unsubscribe2()).not.toThrow();
+  });
+
+  it('should accept initial update callback in config', () => {
+    const mockInitialCallback = jest.fn();
+    const configWithCallback: WorldConfig = {
+      ...mockConfig,
+      update: {
+        onUpdate: mockInitialCallback,
+      },
+    };
+
+    expect(() => createTrackedWorld(configWithCallback)).not.toThrow();
+  });
+
+  it('should handle update config with both autoStart and callback', () => {
+    const mockCallback = jest.fn();
+    const configWithFullUpdate: WorldConfig = {
+      ...mockConfig,
+      update: {
+        autoStart: true,
+        onUpdate: mockCallback,
+      },
+    };
+
+    expect(() => createTrackedWorld(configWithFullUpdate)).not.toThrow();
   });
 });

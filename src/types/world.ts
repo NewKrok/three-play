@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
 
 /**
+ * Update callback function type
+ */
+export type UpdateCallback = (deltaTime: number, elapsedTime: number) => void;
+
+/**
  * Configuration type for world creation
  */
 export type WorldConfig = {
@@ -25,6 +30,10 @@ export type WorldConfig = {
       intensity?: number;
     };
   };
+  update?: {
+    autoStart?: boolean;
+    onUpdate?: UpdateCallback;
+  };
 };
 
 /**
@@ -38,4 +47,8 @@ export type WorldInstance = {
   getComposer(): any | null; // EffectComposer type or null if useComposer is false
   getAmbientLight(): THREE.AmbientLight;
   getDirectionalLight(): THREE.DirectionalLight;
+  start(): void;
+  pause(): void;
+  resume(): void;
+  onUpdate(callback: UpdateCallback): () => void; // Returns unsubscribe function
 };
