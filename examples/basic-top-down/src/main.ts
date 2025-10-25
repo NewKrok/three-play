@@ -619,6 +619,7 @@ const showFloatingLabel = ({ text, position, duration = 1000 }) => {
 
 const createCharacterAssets = () => {
   let model = null;
+  let zombieModel = null;
   let animations = {};
   let loaded = false;
   let loadingPromise = null;
@@ -636,27 +637,34 @@ const createCharacterAssets = () => {
     loadingPromise = (async () => {
       try {
         const [
-          idleAnim,
+          humanIdleAnim,
+          zombieIdleAnim,
           walkAnim,
           runAnim,
           rollAnim,
           zombieWalkAnim,
           zombieRunAnim,
+          zombieAttackAnim,
         ] = await Promise.all([
-          loadFBX('assets/models/idle.fbx'),
-          loadFBX('assets/models/animations/walk.fbx'),
-          loadFBX('assets/models/animations/run.fbx'),
-          loadFBX('assets/models/animations/roll.fbx'),
-          loadFBX('assets/models/animations/zombie-walk.fbx'),
-          loadFBX('assets/models/animations/zombie-run.fbx'),
+          loadFBX('assets/models/extra-low-poly-human/idle.fbx'),
+          loadFBX('assets/models/extra-low-poly-zombie/idle.fbx'),
+          loadFBX('assets/models/extra-low-poly-animations/walk.fbx'),
+          loadFBX('assets/models/extra-low-poly-animations/run.fbx'),
+          loadFBX('assets/models/extra-low-poly-animations/roll.fbx'),
+          loadFBX('assets/models/extra-low-poly-animations/zombie-walk.fbx'),
+          loadFBX('assets/models/extra-low-poly-animations/zombie-run.fbx'),
+          loadFBX('assets/models/extra-low-poly-animations/zombie-attack.fbx'),
         ]);
-        model = idleAnim;
-        animations.idle = idleAnim.animations[0];
+        model = humanIdleAnim;
+        zombieModel = zombieIdleAnim;
+        animations.idle = humanIdleAnim.animations[0];
+        animations.zombieIdle = zombieIdleAnim.animations[0];
         animations.walk = walkAnim.animations[0];
         animations.run = runAnim.animations[0];
         animations.roll = rollAnim.animations[0];
         animations.zombieWalk = zombieWalkAnim.animations[0];
         animations.zombieRun = zombieRunAnim.animations[0];
+        animations.zombieAttack = zombieAttackAnim.animations[0];
 
         const enableShadows = (model) => {
           model.traverse((child) => {
@@ -669,9 +677,16 @@ const createCharacterAssets = () => {
             }
           });
         };
-        [idleAnim, walkAnim, runAnim, zombieWalkAnim, zombieRunAnim].forEach(
-          enableShadows,
-        );
+        [
+          humanIdleAnim,
+          zombieIdleAnim,
+          walkAnim,
+          runAnim,
+          rollAnim,
+          zombieWalkAnim,
+          zombieRunAnim,
+          zombieAttackAnim,
+        ].forEach(enableShadows);
 
         loaded = true;
       } catch (error) {
@@ -682,24 +697,27 @@ const createCharacterAssets = () => {
     return loadingPromise;
   };
 
-  const createInstance = () => {
+  const createInstance = (isZombie = false) => {
     if (!loaded) {
       return null;
     }
 
-    const instance = SkeletonUtils.clone(model);
+    const instance = SkeletonUtils.clone(isZombie ? zombieModel : model);
     const wrapper = new THREE.Group();
     instance.rotation.y = Math.PI / 2;
     wrapper.add(instance);
 
     const mixer = new THREE.AnimationMixer(instance);
     const actions = {
-      idle: mixer.clipAction(animations.idle),
-      walk: mixer.clipAction(animations.walk),
-      run: mixer.clipAction(animations.run),
+      idle: mixer.clipAction(
+        isZombie ? animations.zombieIdle : animations.idle,
+      ),
+      walk: mixer.clipAction(
+        isZombie ? animations.zombieWalk : animations.walk,
+      ),
+      run: mixer.clipAction(isZombie ? animations.zombieRun : animations.run),
       roll: mixer.clipAction(animations.roll),
-      zombieWalk: mixer.clipAction(animations.zombieWalk),
-      zombieRun: mixer.clipAction(animations.zombieRun),
+      attack: mixer.clipAction(animations.zombieAttack),
     };
     actions.idle.play();
 
@@ -1094,8 +1112,8 @@ const getPositionByHeight = (minHeight) => {
   return null;
 };
 
-async function createCharacter({ bodyColor, dressColor, position }) {
-  const character = characterAssets.createInstance();
+async function createCharacter({ isZombie = false, position }) {
+  const character = characterAssets.createInstance(isZombie);
   character.model.position.copy(position);
   scene.add(character.model);
 
@@ -1124,8 +1142,6 @@ async function createCharacter({ bodyColor, dressColor, position }) {
 }
 const character = await createCharacter({
   position: startingPosition,
-  bodyColor: 0xf7c59f,
-  dressColor: 0x1d84b5,
 });
 const { instance: dustEffectInstance } = createParticleSystem(
   dustEffect,
@@ -1136,16 +1152,13 @@ units.push(character);
 
 const createEnemies = async (count) => {
   for (let i = 0; i < count; i++) {
-    //const position = getPositionByHeight(8);
-    //if (!position) continue;
     const position = startingPosition.clone();
     position.x += 10 + i * 1.5 - Math.floor(i / 5) * (5 * 1.5);
     position.z += -10 + Math.floor(i / 5) * 2;
     position.y = getHeightFromPosition(position);
     const enemy = await createCharacter({
       position,
-      bodyColor: 0x6da34d,
-      dressColor: 0x2b2b2b,
+      isZombie: true,
     });
     units.push(enemy);
   }
@@ -1572,36 +1585,28 @@ const updateUnits = () => {
             position: character.model.position,
           });
           removeCrate(index);
-          /*showFloatingLabel({
-            text: `+${appleIndices.length} apples`,
-            position: character.position
-          });
-          gameState.collectedApples += appleIndices.length;*/
         }
       }
     }
 
+    const elapsedTime = clock.getElapsedTime();
+
     if (unit === character.model) return;
 
-    /* if (!unit.userData.target) unit.userData.target = {};
-    if (
-      unit.userData.target[index] === undefined ||
-      unit.userData.target[index] === null
-    ) {
-      unit.userData.target[index] = new THREE.Vector3(
-        Math.min(
-          Math.max(unit.position.x + (Math.random() * 20 - 10), 0),
-          WORLD_WIDTH,
-        ),
-        0,
-        Math.min(
-          Math.max(unit.position.z + (Math.random() * 20 - 10), 0),
-          WORLD_HEIGHT,
-        ),
-      );
+    if (!unit.userData.target) unit.userData.target = new THREE.Vector3();
+    if (!unit.userData.nextTargetSelectionTime)
+      unit.userData.nextTargetSelectionTime = elapsedTime;
+    if (!unit.userData.resumeTime)
+      unit.userData.resumeTime = elapsedTime + Math.random() * 5;
+
+    if (elapsedTime >= unit.userData.nextTargetSelectionTime) {
+      unit.userData.nextTargetSelectionTime = elapsedTime + Math.random() * 5;
+      unit.userData.target.copy(character.model.position);
     }
+    if (elapsedTime < unit.userData.resumeTime) return;
+
     const direction = new THREE.Vector3()
-      .subVectors(unit.userData.target[index], unit.position)
+      .subVectors(unit.userData.target, unit.position)
       .normalize();
 
     unit.position.addScaledVector(direction, ENEMY_SPEED * cycleData.delta);
@@ -1615,10 +1620,10 @@ const updateUnits = () => {
       .multiply(adjustQuat);
     unit.quaternion.slerp(rotationTargetQuaternion, cycleData.delta * 10);
 
-    unit.userData.target[index].y = unit.position.y;
-    if (unit.position.distanceTo(unit.userData.target[index]) < 0.5) {
-      unit.userData.target[index] = null;
-    }*/
+    unit.userData.target.y = unit.position.y;
+    if (unit.position.distanceTo(unit.userData.target) < 1) {
+      unit.userData.resumeTime = clock.getElapsedTime() + Math.random() * 3;
+    }
   });
 
   for (let i = 0; i < units.length; i++) {
@@ -1856,7 +1861,7 @@ const cinamaticCameraController = createCinematicCameraController(camera, [
     ),
     to: new THREE.Vector3(startingPosition.x - 10, 12, startingPosition.z),
     lookAt: new THREE.Vector3(250, 20, 200),
-    duration: 4,
+    duration: 0.4,
   },
   {
     to: new THREE.Vector3(
@@ -1865,7 +1870,7 @@ const cinamaticCameraController = createCinematicCameraController(camera, [
       character.model.position.z + 8,
     ),
     lookAt: character.model.position,
-    duration: 2,
+    duration: 0.2,
   },
 ]);
 
