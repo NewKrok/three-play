@@ -677,6 +677,12 @@ const createCharacterAssets = () => {
           zombieAttackAnim,
         ].forEach(enableShadows);
 
+        zombieIdleAnim.traverse((child) => {
+          if (child.isMesh) {
+            child.material.color.setHex(0x4caf50);
+          }
+        });
+
         loaded = true;
       } catch (error) {
         throw error;
@@ -708,9 +714,8 @@ const createCharacterAssets = () => {
       roll: mixer.clipAction(animations.roll),
       attack: mixer.clipAction(animations.zombieAttack),
     };
-    actions.idle.play();
 
-    return { model: wrapper, mixer, actions };
+    return { model: wrapper, mixer, actions, userData: {} };
   };
 
   const isLoaded = () => loaded;
@@ -724,6 +729,24 @@ const createCharacterAssets = () => {
 
 const characterAssets = createCharacterAssets();
 await characterAssets.load();
+
+const playAnimation = (unit, animationName, fadeDuration = 0.2) => {
+  if (unit.userData.currentAnimationName === animationName) return;
+
+  unit.userData.lastAnimationName = unit.userData.currentAnimationName;
+  unit.userData.currentAnimationName = animationName;
+  if (unit.userData.lastAnimationName) {
+    unit.actions[animationName]
+      .reset()
+      .crossFadeFrom(
+        unit.actions[unit.userData.lastAnimationName],
+        fadeDuration,
+        true,
+      );
+  }
+
+  unit.actions[animationName].play();
+};
 
 const createCinematicCameraController = (
   camera,
@@ -1039,6 +1062,7 @@ const getPositionByHeight = (minHeight) => {
 
 async function createCharacter({ isZombie = false, position }) {
   const character = characterAssets.createInstance(isZombie);
+  playAnimation(character, 'idle');
   character.model.position.copy(position);
   scene.add(character.model);
 
@@ -1379,20 +1403,15 @@ const applyCharacterMovement = () => {
           : 1) *
         cycleData.delta,
     );
-    character.actions.idle.stop();
     if (isRunning) {
-      character.actions.walk.stop();
-      character.actions.run.play();
+      playAnimation(character, 'run');
     } else {
-      character.actions.walk.play();
-      character.actions.run.stop();
+      playAnimation(character, 'walk');
     }
 
     handleTerrainHeight(character);
   } else {
-    character.actions.idle.play();
-    character.actions.walk.stop();
-    character.actions.run.stop();
+    playAnimation(character, 'idle');
   }
 };
 const updateCharacter = () => {
@@ -1444,7 +1463,7 @@ const updateLight = () => {
 };
 const updateUnits = () => {
   units.forEach((_unit, index) => {
-    const { model: unit, mixer } = _unit;
+    const { model: unit, mixer, actions } = _unit;
     mixer.update(cycleData.delta);
     if (unit.knockbackVelocity) {
       unit.position.addScaledVector(unit.knockbackVelocity, cycleData.delta);
@@ -1525,19 +1544,19 @@ const updateUnits = () => {
       unit.userData.resumeTime = elapsedTime + Math.random() * 5;
 
     if (elapsedTime >= unit.userData.nextTargetSelectionTime) {
+      unit.userData.isAttacking = false;
       unit.userData.nextTargetSelectionTime = elapsedTime + Math.random() * 5;
       unit.userData.target.copy(character.model.position);
     }
-    if (elapsedTime < unit.userData.resumeTime) return;
 
     const direction = new THREE.Vector3()
-      .subVectors(unit.userData.target, unit.position)
+      .subVectors(
+        unit.userData.isAttacking
+          ? character.model.position
+          : unit.userData.target,
+        unit.position,
+      )
       .normalize();
-
-    unit.position.addScaledVector(direction, ENEMY_SPEED * cycleData.delta);
-    unit.userData.oldPos = unit.position.clone();
-
-    handleTerrainHeight(_unit);
     const adjustQuat = new THREE.Quaternion();
     adjustQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
     rotationTargetQuaternion
@@ -1545,9 +1564,24 @@ const updateUnits = () => {
       .multiply(adjustQuat);
     unit.quaternion.slerp(rotationTargetQuaternion, cycleData.delta * 10);
 
+    if (elapsedTime < unit.userData.resumeTime) return;
+
+    playAnimation(_unit, 'run');
+
+    unit.position.addScaledVector(direction, ENEMY_SPEED * cycleData.delta);
+    unit.userData.oldPos = unit.position.clone();
+
+    handleTerrainHeight(_unit);
+
     unit.userData.target.y = unit.position.y;
-    if (unit.position.distanceTo(unit.userData.target) < 1) {
+    if (unit.position.distanceTo(unit.userData.target) < 1.5) {
+      playAnimation(_unit, 'idle');
       unit.userData.resumeTime = cycleData.elapsed + Math.random() * 3;
+    }
+    if (unit.position.distanceTo(character.model.position) < 1.5) {
+      playAnimation(_unit, 'attack');
+      unit.userData.resumeTime = cycleData.elapsed + Math.random() * 3;
+      unit.userData.isAttacking = true;
     }
   });
 
@@ -1704,20 +1738,14 @@ const updateRollRoutine = () => {
   if (keys['KeyR'] && !isRolling) {
     if (now - lastRollTime > rollCooldown) {
       isRolling = true;
-      character.actions.idle.stop();
-      character.actions.walk.stop();
-      character.actions.run.stop();
-      character.actions.roll.play();
+      playAnimation(character, 'roll');
       lastRollTime = now;
     }
   } else if (isRolling) {
     const rollAction = character.actions.roll;
     if (lastRollTime + rollAction.getClip().duration * 1000 <= now) {
       isRolling = false;
-      character.actions.idle.play();
-      character.actions.walk.stop();
-      character.actions.run.stop();
-      character.actions.roll.stop();
+      playAnimation(character, 'idle');
     } else {
       const forward = new THREE.Vector3(1, 0, 0);
       forward.applyQuaternion(character.model.quaternion);
