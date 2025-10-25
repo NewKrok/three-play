@@ -7,6 +7,7 @@ This file contains coding conventions and guidelines for the THREE Play project 
 - Use `type` instead of `interface` for object type definitions
 - Import types with `import type { ... }` syntax
 - Place complex type definitions in `src/types/` directory
+- **ALWAYS move type definitions to appropriate files in `src/types/` - never leave them in implementation files**
 - Export types with descriptive names
 
 ## Code Style Guidelines
@@ -26,9 +27,12 @@ This file contains coding conventions and guidelines for the THREE Play project 
 ## Testing Requirements
 
 - Write unit tests for all new functionality using Jest
+- **ALWAYS create tests for every new function, method, or feature - no functionality should be left untested**
 - Place test files in `src/__tests__/` directory
 - Aim for minimum 80% code coverage
 - Include both positive and negative test cases
+- Test edge cases and error conditions
+- Mock external dependencies and console outputs when needed
 
 ## Module Organization
 
