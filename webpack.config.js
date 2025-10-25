@@ -59,5 +59,15 @@ export default {
   ],
   externals: {
     three: 'THREE',
+    // Externalize all Three.js examples modules
+    'three/examples/jsm/postprocessing/EffectComposer.js': 'THREE.EffectComposer',
+    'three/examples/jsm/postprocessing/RenderPass.js': 'THREE.RenderPass',
+    'three/examples/jsm/postprocessing/SSAOPass.js': 'THREE.SSAOPass',
+    'three/examples/jsm/postprocessing/UnrealBloomPass.js': 'THREE.UnrealBloomPass',
+    'three/examples/jsm/postprocessing/ShaderPass.js': 'THREE.ShaderPass',
+    'three/examples/jsm/postprocessing/OutputPass.js': 'THREE.OutputPass',
+    'three/examples/jsm/shaders/FXAAShader.js': 'THREE.FXAAShader',
+    // Externalize @newkrok/three-utils
+    '@newkrok/three-utils': 'ThreeUtils',
   },
 };
