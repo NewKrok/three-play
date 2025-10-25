@@ -51,4 +51,5 @@ export type WorldInstance = {
   pause(): void;
   resume(): void;
   onUpdate(callback: UpdateCallback): () => void; // Returns unsubscribe function
+  destroy(): void; // Complete cleanup and memory deallocation
 };

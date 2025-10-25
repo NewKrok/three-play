@@ -66,6 +66,76 @@ const createDefaultPasses = (
 };
 
 /**
+ * Recursively dispose Three.js objects to free memory
+ * @param obj - Three.js object to dispose
+ */
+const disposeObject = (obj: any) => {
+  if (!obj) return;
+
+  // Dispose geometry
+  if (obj.geometry) {
+    obj.geometry.dispose();
+  }
+
+  // Dispose material(s)
+  if (obj.material) {
+    if (Array.isArray(obj.material)) {
+      obj.material.forEach((material: any) => {
+        disposeMaterial(material);
+      });
+    } else {
+      disposeMaterial(obj.material);
+    }
+  }
+
+  // Dispose texture
+  if (obj.texture) {
+    obj.texture.dispose();
+  }
+
+  // Dispose render target
+  if (obj.renderTarget) {
+    obj.renderTarget.dispose();
+  }
+
+  // Recursively dispose children
+  if (obj.children) {
+    [...obj.children].forEach((child: any) => {
+      disposeObject(child);
+    });
+  }
+};
+
+/**
+ * Dispose material and its textures
+ * @param material - Three.js material to dispose
+ */
+const disposeMaterial = (material: any) => {
+  if (!material) return;
+
+  // Dispose all material textures
+  Object.keys(material).forEach((key) => {
+    const value = material[key];
+    if (
+      value &&
+      typeof value === 'object' &&
+      value.dispose &&
+      typeof value.dispose === 'function'
+    ) {
+      // Check if it's a texture
+      if (value.isTexture) {
+        value.dispose();
+      }
+    }
+  });
+
+  // Dispose the material itself
+  if (material.dispose) {
+    material.dispose();
+  }
+};
+
+/**
  * Creates a new world instance based on the provided configuration
  * @param config - The world configuration object
  * @returns World instance with methods to interact with the world
@@ -207,6 +277,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   let animationFrameId: number | null = null;
   let isRunning = false;
   let isPaused = false;
+  let isDestroyed = false;
 
   // Add initial callback if provided
   if (initialCallback) {
@@ -215,7 +286,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
 
   // Update loop function
   const updateLoop = () => {
-    if (!isRunning || isPaused) return;
+    if (!isRunning || isPaused || isDestroyed) return;
 
     const deltaTime = clock.getDelta();
     const elapsedTime = clock.getElapsedTime();
@@ -307,6 +378,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      * Start the update loop
      */
     start(): void {
+      if (isDestroyed) {
+        console.warn('Cannot start: world instance is destroyed');
+        return;
+      }
       if (isRunning) return;
 
       isRunning = true;
@@ -319,6 +394,8 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      * Pause the update loop
      */
     pause(): void {
+      if (isDestroyed) return;
+
       isPaused = true;
       if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
@@ -330,6 +407,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      * Resume the update loop
      */
     resume(): void {
+      if (isDestroyed) {
+        console.warn('Cannot resume: world instance is destroyed');
+        return;
+      }
       if (!isRunning || !isPaused) return;
 
       isPaused = false;
@@ -342,12 +423,74 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      * @returns Unsubscribe function
      */
     onUpdate(callback: UpdateCallback): () => void {
+      if (isDestroyed) {
+        console.warn(
+          'Cannot subscribe to update events: world instance is destroyed',
+        );
+        return () => {};
+      }
+
       updateCallbacks.add(callback);
 
       // Return unsubscribe function
       return () => {
         updateCallbacks.delete(callback);
       };
+    },
+
+    /**
+     * Destroy the world instance and clean up all resources
+     */
+    destroy(): void {
+      if (isDestroyed) return;
+
+      // Set destroyed flag
+      isDestroyed = true;
+
+      // Stop update loop
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      isRunning = false;
+      isPaused = false;
+
+      // Clear all update callbacks
+      updateCallbacks.clear();
+
+      // Remove event listeners
+      if (typeof window !== 'undefined' && window.removeEventListener) {
+        window.removeEventListener('resize', setCanvasSize);
+      }
+
+      // Dispose scene and all its children
+      disposeObject(scene);
+
+      // Dispose composer and its render targets
+      if (composer) {
+        // Dispose render targets
+        composer.passes.forEach((pass: any) => {
+          if (pass.renderTarget) {
+            pass.renderTarget.dispose();
+          }
+          if (pass.renderToScreen === false && pass.renderTarget) {
+            pass.renderTarget.dispose();
+          }
+        });
+
+        // Clear passes
+        composer.passes.length = 0;
+      }
+
+      // Dispose renderer
+      if (renderer && typeof renderer.dispose === 'function') {
+        renderer.dispose();
+      }
+
+      // Force garbage collection if available
+      if (typeof window !== 'undefined' && (window as any).gc) {
+        (window as any).gc();
+      }
     },
   };
 };

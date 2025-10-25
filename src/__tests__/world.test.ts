@@ -16,6 +16,7 @@ jest.mock('three', () => {
     toneMappingExposure: 1.2,
     setSize: jest.fn(),
     render: jest.fn(),
+    dispose: jest.fn(),
     domElement: {
       style: {},
       addEventListener: jest.fn(),
@@ -108,6 +109,7 @@ global.window = {
   innerWidth: 800,
   innerHeight: 600,
   addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
 } as any;
 
 // Mock requestAnimationFrame and cancelAnimationFrame
@@ -147,7 +149,10 @@ describe('createWorld', () => {
     consoleSpy.mockRestore();
     // Clean up all world instances to prevent hanging update loops
     worldInstances.forEach((instance) => {
-      if (instance && typeof instance.pause === 'function') {
+      if (instance && typeof instance.destroy === 'function') {
+        instance.destroy();
+      } else if (instance && typeof instance.pause === 'function') {
+        // Fallback for older instances without destroy method
         instance.pause();
       }
     });
@@ -169,6 +174,7 @@ describe('createWorld', () => {
     expect(typeof worldInstance.pause).toBe('function');
     expect(typeof worldInstance.resume).toBe('function');
     expect(typeof worldInstance.onUpdate).toBe('function');
+    expect(typeof worldInstance.destroy).toBe('function');
   });
 
   it('should log the configuration during creation', () => {
@@ -512,5 +518,98 @@ describe('createWorld', () => {
     };
 
     expect(() => createTrackedWorld(configWithFullUpdate)).not.toThrow();
+  });
+
+  // New tests for destroy method
+  it('should have destroy method available', () => {
+    const worldInstance = createTrackedWorld(mockConfig);
+
+    expect(typeof worldInstance.destroy).toBe('function');
+  });
+
+  it('should stop update loop when destroyed', () => {
+    const worldInstance = createTrackedWorld(mockConfig);
+
+    worldInstance.start();
+    worldInstance.destroy();
+
+    expect(global.cancelAnimationFrame).toHaveBeenCalled();
+  });
+
+  it('should remove event listeners when destroyed', () => {
+    const worldInstance = createTrackedWorld(mockConfig);
+
+    // Mock removeEventListener to track calls
+    const removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
+
+    worldInstance.destroy();
+
+    expect(removeEventListenerSpy).toHaveBeenCalledWith(
+      'resize',
+      expect.any(Function),
+    );
+
+    removeEventListenerSpy.mockRestore();
+  });
+
+  it('should prevent operations after destroy', () => {
+    const worldInstance = createTrackedWorld(mockConfig);
+    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+    worldInstance.destroy();
+
+    // These should not throw but warn
+    expect(() => worldInstance.start()).not.toThrow();
+    expect(() => worldInstance.resume()).not.toThrow();
+    expect(() => worldInstance.onUpdate(jest.fn())).not.toThrow();
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Cannot start: world instance is destroyed',
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Cannot resume: world instance is destroyed',
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Cannot subscribe to update events: world instance is destroyed',
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it('should clean up resources when destroyed', () => {
+    const worldInstance = createTrackedWorld(mockConfig);
+
+    // Should not throw during cleanup
+    expect(() => worldInstance.destroy()).not.toThrow();
+  });
+
+  it('should be idempotent - multiple destroy calls should be safe', () => {
+    const worldInstance = createTrackedWorld(mockConfig);
+
+    expect(() => {
+      worldInstance.destroy();
+      worldInstance.destroy();
+      worldInstance.destroy();
+    }).not.toThrow();
+  });
+
+  it('should clear all update callbacks when destroyed', () => {
+    const worldInstance = createTrackedWorld(mockConfig);
+    const callback1 = jest.fn();
+    const callback2 = jest.fn();
+
+    worldInstance.onUpdate(callback1);
+    worldInstance.onUpdate(callback2);
+
+    worldInstance.destroy();
+
+    // Callbacks should be cleared - we can't directly test this without exposing internals,
+    // but we can test that new subscriptions are rejected
+    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+    worldInstance.onUpdate(jest.fn());
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Cannot subscribe to update events: world instance is destroyed',
+    );
+    consoleSpy.mockRestore();
   });
 });
