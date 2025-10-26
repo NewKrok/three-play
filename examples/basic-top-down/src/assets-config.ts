@@ -1,14 +1,42 @@
-const assetConfig = {
+import type { AssetsConfig } from '../../../src/types/assets.js';
+import * as THREE from 'three';
+
+const assetConfig: AssetsConfig = {
+  textures: {
+    grass: {
+      url: 'https://raw.githubusercontent.com/NewKrok/three-game-demo/refs/heads/master/public/assets/textures/grass-flower-tint-01-base-basecolor.webp',
+      wrapS: THREE.MirroredRepeatWrapping,
+      wrapT: THREE.MirroredRepeatWrapping,
+    },
+    crate: {
+      url: 'https://newkrok.com/external-assets/crate-256.webp',
+    },
+  },
   models: {
-    ['human-idle']: 'assets/models/extra-low-poly-human/idle.fbx',
-    ['zombie-idle']: 'assets/models/extra-low-poly-zombie/idle.fbx',
-    ['walk']: 'assets/models/extra-low-poly-animations/walk.fbx',
-    ['run']: 'assets/models/extra-low-poly-animations/run.fbx',
-    ['roll']: 'assets/models/extra-low-poly-animations/roll.fbx',
-    ['zombie-walk']: 'assets/models/extra-low-poly-animations/zombie-walk.fbx',
-    ['zombie-run']: 'assets/models/extra-low-poly-animations/zombie-run.fbx',
-    ['zombie-attack']:
-      'assets/models/extra-low-poly-animations/zombie-attack.fbx',
+    'human-idle': {
+      url: 'assets/models/extra-low-poly-human/idle.fbx',
+    },
+    'zombie-idle': {
+      url: 'assets/models/extra-low-poly-zombie/idle.fbx',
+    },
+    walk: {
+      url: 'assets/models/extra-low-poly-animations/walk.fbx',
+    },
+    run: {
+      url: 'assets/models/extra-low-poly-animations/run.fbx',
+    },
+    roll: {
+      url: 'assets/models/extra-low-poly-animations/roll.fbx',
+    },
+    'zombie-walk': {
+      url: 'assets/models/extra-low-poly-animations/zombie-walk.fbx',
+    },
+    'zombie-run': {
+      url: 'assets/models/extra-low-poly-animations/zombie-run.fbx',
+    },
+    'zombie-attack': {
+      url: 'assets/models/extra-low-poly-animations/zombie-attack.fbx',
+    },
   },
 };
 

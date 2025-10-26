@@ -7,11 +7,11 @@ import {
   CSS2DRenderer,
   CSS2DObject,
 } from 'https://esm.sh/three/examples/jsm/renderers/CSS2DRenderer.js';
-import { FBXLoader } from 'https://esm.sh/three/examples/jsm/loaders/FBXLoader';
 import * as SkeletonUtils from 'https://esm.sh/three/examples/jsm/utils/SkeletonUtils.js';
 
 import * as THREE from 'three';
 import { runningEffect, dustEffect, splashEffect } from './effects-config.js';
+import assetConfig from './assets-config.js';
 
 /**
  * @typedef {Object} GameState
@@ -368,113 +368,62 @@ const showFloatingLabel = ({ text, position, duration = 1000 }) => {
 };
 
 const createCharacterAssets = () => {
-  let model = null;
-  let zombieModel = null;
-  let animations = {};
-  let loaded = false;
-  let loadingPromise = null;
-
-  const loadFBX = (url) => {
-    return new Promise((resolve, reject) => {
-      const loader = new FBXLoader();
-      loader.load(url, resolve, undefined, reject);
-    });
-  };
-
-  const load = async () => {
-    if (loadingPromise) return loadingPromise;
-    if (loaded) return;
-    loadingPromise = (async () => {
-      try {
-        const [
-          humanIdleAnim,
-          zombieIdleAnim,
-          walkAnim,
-          runAnim,
-          rollAnim,
-          zombieWalkAnim,
-          zombieRunAnim,
-          zombieAttackAnim,
-        ] = await Promise.all([
-          loadFBX('assets/models/extra-low-poly-human/idle.fbx'),
-          loadFBX('assets/models/extra-low-poly-zombie/idle.fbx'),
-          loadFBX('assets/models/extra-low-poly-animations/walk.fbx'),
-          loadFBX('assets/models/extra-low-poly-animations/run.fbx'),
-          loadFBX('assets/models/extra-low-poly-animations/roll.fbx'),
-          loadFBX('assets/models/extra-low-poly-animations/zombie-walk.fbx'),
-          loadFBX('assets/models/extra-low-poly-animations/zombie-run.fbx'),
-          loadFBX('assets/models/extra-low-poly-animations/zombie-attack.fbx'),
-        ]);
-        model = humanIdleAnim;
-        zombieModel = zombieIdleAnim;
-        animations.idle = humanIdleAnim.animations[0];
-        animations.zombieIdle = zombieIdleAnim.animations[0];
-        animations.walk = walkAnim.animations[0];
-        animations.run = runAnim.animations[0];
-        animations.roll = rollAnim.animations[0];
-        animations.zombieWalk = zombieWalkAnim.animations[0];
-        animations.zombieRun = zombieRunAnim.animations[0];
-        animations.zombieAttack = zombieAttackAnim.animations[0];
-
-        const enableShadows = (model) => {
-          model.traverse((child) => {
-            if (child.isMesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
-              if (child.material) {
-                child.material.needsUpdate = true;
-              }
-            }
-          });
-        };
-        [
-          humanIdleAnim,
-          zombieIdleAnim,
-          walkAnim,
-          runAnim,
-          rollAnim,
-          zombieWalkAnim,
-          zombieRunAnim,
-          zombieAttackAnim,
-        ].forEach(enableShadows);
-
-        zombieIdleAnim.traverse((child) => {
-          if (child.isMesh) {
-            child.material.color.setHex(0x4caf50);
-          }
-        });
-
-        loaded = true;
-      } catch (error) {
-        throw error;
-      }
-    })();
-
-    return loadingPromise;
-  };
+  let loaded = true; // Assets are already loaded
 
   const createInstance = (isZombie = false) => {
-    if (!loaded) {
-      return null;
-    }
+    const humanModel = loadedAssets.models['human-idle'] as THREE.Group;
+    const zombieModel = loadedAssets.models['zombie-idle'] as THREE.Group;
 
-    const instance = SkeletonUtils.clone(isZombie ? zombieModel : model);
+    const instance = SkeletonUtils.clone(isZombie ? zombieModel : humanModel);
     const wrapper = new THREE.Group();
     instance.rotation.y = Math.PI / 2;
     wrapper.add(instance);
 
     const mixer = new THREE.AnimationMixer(instance);
-    const actions = {
-      idle: mixer.clipAction(
-        isZombie ? animations.zombieIdle : animations.idle,
-      ),
-      walk: mixer.clipAction(
-        isZombie ? animations.zombieWalk : animations.walk,
-      ),
-      run: mixer.clipAction(isZombie ? animations.zombieRun : animations.run),
-      roll: mixer.clipAction(animations.roll),
-      attack: mixer.clipAction(animations.zombieAttack),
+
+    // Get animations from loaded models
+    const animations = {
+      idle: isZombie
+        ? (loadedAssets.models['zombie-idle'] as THREE.Group).animations[0]
+        : (loadedAssets.models['human-idle'] as THREE.Group).animations[0],
+      walk: isZombie
+        ? (loadedAssets.models['zombie-walk'] as THREE.Group).animations[0]
+        : (loadedAssets.models.walk as THREE.Group).animations[0],
+      run: isZombie
+        ? (loadedAssets.models['zombie-run'] as THREE.Group).animations[0]
+        : (loadedAssets.models.run as THREE.Group).animations[0],
+      roll: (loadedAssets.models.roll as THREE.Group).animations[0],
+      attack: (loadedAssets.models['zombie-attack'] as THREE.Group)
+        .animations[0],
     };
+
+    const actions = {
+      idle: mixer.clipAction(animations.idle),
+      walk: mixer.clipAction(animations.walk),
+      run: mixer.clipAction(animations.run),
+      roll: mixer.clipAction(animations.roll),
+      attack: mixer.clipAction(animations.attack),
+    };
+
+    // Enable shadows for the instance
+    instance.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        if (child.material) {
+          child.material.needsUpdate = true;
+        }
+      }
+    });
+
+    // Color zombies green
+    if (isZombie) {
+      instance.traverse((child) => {
+        if (child.isMesh) {
+          child.material.color.setHex(0x4caf50);
+        }
+      });
+    }
 
     return { model: wrapper, mixer, actions, userData: {} };
   };
@@ -482,14 +431,12 @@ const createCharacterAssets = () => {
   const isLoaded = () => loaded;
 
   return {
-    load,
     createInstance,
     isLoaded,
   };
 };
 
 const characterAssets = createCharacterAssets();
-await characterAssets.load();
 
 const playAnimation = (unit, animationName, fadeDuration = 0.2) => {
   if (unit.userData.currentAnimationName === animationName) return;
@@ -612,7 +559,7 @@ const createCinematicCameraController = (
   };
 };
 
-// Create THREE Play world instance
+// Create THREE Play world instance with assets
 const worldInstance = createWorld({
   world: {
     size: {
@@ -638,6 +585,23 @@ const worldInstance = createWorld({
     resolution: HEIGHT_MAP_RESOLUTION,
     elevationRatio: ELEVATION_RATIO,
   },
+  assets: assetConfig, // Add assets configuration
+});
+
+// Add progress tracking for asset loading
+worldInstance.onProgress((progress) => {
+  console.log(`Loading assets: ${progress.percentage}%`);
+  console.log(
+    `Textures: ${progress.loadedTextures.current}/${progress.loadedTextures.total}`,
+  );
+  console.log(
+    `Models: ${progress.loadedModels.current}/${progress.loadedModels.total}`,
+  );
+});
+
+// Add ready callback for when assets are loaded
+worldInstance.onReady((assets) => {
+  console.log('All assets loaded successfully!', assets);
 });
 
 // Get references to Three.js components
@@ -663,7 +627,23 @@ const waitForHeightmap = () => {
   });
 };
 
+// Wait for assets to load
+const waitForAssets = () => {
+  return new Promise<any>((resolve) => {
+    const check = () => {
+      const loadedAssets = worldInstance.getLoadedAssets();
+      if (loadedAssets) {
+        resolve(loadedAssets);
+      } else {
+        setTimeout(check, 100);
+      }
+    };
+    check();
+  });
+};
+
 const heightmapUtils = await waitForHeightmap();
+const loadedAssets = await waitForAssets();
 const { heightmapData } = heightmapUtils;
 const { heightmap, heightMapTexture } = heightmapData;
 const getHeightFromPosition = heightmapUtils.getHeightFromPosition;
@@ -672,12 +652,8 @@ const getHeightFromPosition = heightmapUtils.getHeightFromPosition;
 document.querySelector('#demo').appendChild(renderer.domElement);
 
 // Add terrain to the scene
-const grassTexture = new THREE.TextureLoader().load(
-  'https://raw.githubusercontent.com/NewKrok/three-game-demo/refs/heads/master/public/assets/textures/grass-flower-tint-01-base-basecolor.webp',
-);
-grassTexture.encoding = THREE.sRGBEncoding;
-grassTexture.wrapS = THREE.MirroredRepeatWrapping;
-grassTexture.wrapT = THREE.MirroredRepeatWrapping;
+const grassTexture = loadedAssets.textures.grass;
+grassTexture.colorSpace = THREE.SRGBColorSpace;
 grassTexture.repeat.x = WORLD_WIDTH / 4;
 grassTexture.repeat.y = WORLD_HEIGHT / 4;
 
@@ -805,9 +781,7 @@ trunkMesh.castShadow = true;
 trunkMesh.receiveShadow = true;
 scene.add(trunkMesh);
 const leafGeometry = new THREE.SphereGeometry(1, 16, 16);
-const leafTexture = new THREE.TextureLoader().load(
-  'https://raw.githubusercontent.com/NewKrok/three-game-demo/refs/heads/master/public/assets/textures/grass-flower-tint-01-base-basecolor.webp',
-);
+const leafTexture = loadedAssets.textures.grass;
 const leafMaterial = new THREE.MeshStandardMaterial({
   color: 0x00ff00,
   map: leafTexture,
@@ -921,9 +895,7 @@ rockMesh.instanceMatrix.needsUpdate = true;
 
 const crateGeometry = new THREE.BoxGeometry(1, 1, 1);
 const crateMaterial = new THREE.MeshStandardMaterial({
-  map: new THREE.TextureLoader().load(
-    'https://newkrok.com/external-assets/crate-256.webp',
-  ),
+  map: loadedAssets.textures.crate,
 });
 const crateMesh = new THREE.InstancedMesh(
   crateGeometry,
