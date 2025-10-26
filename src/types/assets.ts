@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /**
+ * Loaded model can be either GLTF or FBX (Group)
+ */
+export type LoadedModel = GLTF | THREE.Group;
+
+/**
  * Texture asset configuration
  */
 export type TextureAssetConfig = {
@@ -36,7 +41,7 @@ export type AssetsConfig = {
  */
 export type LoadedAssets = {
   textures: Record<string, THREE.Texture>;
-  models: Record<string, GLTF>;
+  models: Record<string, LoadedModel>;
 };
 
 /**

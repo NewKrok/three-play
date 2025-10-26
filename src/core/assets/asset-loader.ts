@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type {
   AssetsConfig,
   LoadedAssets,
+  LoadedModel,
   AssetProgress,
   ProgressCallback,
   TextureAssetConfig,
@@ -16,11 +18,13 @@ import type {
 export class AssetLoader {
   private textureLoader: THREE.TextureLoader;
   private gltfLoader: GLTFLoader;
+  private fbxLoader: FBXLoader;
   private progressCallbacks = new Set<ProgressCallback>();
 
   constructor() {
     this.textureLoader = new THREE.TextureLoader();
     this.gltfLoader = new GLTFLoader();
+    this.fbxLoader = new FBXLoader();
   }
 
   /**
@@ -47,6 +51,48 @@ export class AssetLoader {
         console.error('Error in progress callback:', error);
       }
     });
+  }
+
+  /**
+   * Determine model type based on file extension
+   */
+  private getModelType(url: string): 'gltf' | 'fbx' | 'unknown' {
+    const extension = url.toLowerCase().split('.').pop();
+    if (extension === 'gltf' || extension === 'glb') {
+      return 'gltf';
+    }
+    if (extension === 'fbx') {
+      return 'fbx';
+    }
+    return 'unknown';
+  }
+
+  /**
+   * Apply common configuration to model scene
+   */
+  private applyModelConfiguration(scene: THREE.Object3D, config: ModelAssetConfig): void {
+    if (config.scale !== undefined) {
+      const scale = Array.isArray(config.scale)
+        ? config.scale
+        : [config.scale, config.scale, config.scale];
+      scene.scale.set(scale[0], scale[1], scale[2]);
+    }
+
+    if (config.position !== undefined) {
+      scene.position.set(
+        config.position[0],
+        config.position[1],
+        config.position[2],
+      );
+    }
+
+    if (config.rotation !== undefined) {
+      scene.rotation.set(
+        config.rotation[0],
+        config.rotation[1],
+        config.rotation[2],
+      );
+    }
   }
 
   /**
@@ -90,42 +136,54 @@ export class AssetLoader {
    * Load a single model with configuration
    * @param url - Model URL
    * @param config - Model configuration
-   * @returns Promise that resolves to the loaded GLTF
+   * @returns Promise that resolves to the loaded model (GLTF or Group)
    */
-  private loadModel(url: string, config: ModelAssetConfig): Promise<GLTF> {
+  private loadModel(url: string, config: ModelAssetConfig): Promise<LoadedModel> {
+    const modelType = this.getModelType(url);
+    
+    if (modelType === 'gltf') {
+      return this.loadGLTFModel(url, config);
+    } else if (modelType === 'fbx') {
+      return this.loadFBXModel(url, config);
+    } else {
+      return Promise.reject(new Error(`Unsupported model format: ${url}`));
+    }
+  }
+
+  /**
+   * Load a GLTF model
+   */
+  private loadGLTFModel(url: string, config: ModelAssetConfig): Promise<GLTF> {
     return new Promise((resolve, reject) => {
       this.gltfLoader.load(
         url,
         (gltf) => {
-          // Apply configuration
-          if (config.scale !== undefined) {
-            const scale = Array.isArray(config.scale)
-              ? config.scale
-              : [config.scale, config.scale, config.scale];
-            gltf.scene.scale.set(scale[0], scale[1], scale[2]);
-          }
-
-          if (config.position !== undefined) {
-            gltf.scene.position.set(
-              config.position[0],
-              config.position[1],
-              config.position[2],
-            );
-          }
-
-          if (config.rotation !== undefined) {
-            gltf.scene.rotation.set(
-              config.rotation[0],
-              config.rotation[1],
-              config.rotation[2],
-            );
-          }
-
+          this.applyModelConfiguration(gltf.scene, config);
           resolve(gltf);
         },
         undefined,
         (error) => {
-          console.error(`Failed to load model: ${url}`, error);
+          console.error(`Failed to load GLTF model: ${url}`, error);
+          reject(error);
+        },
+      );
+    });
+  }
+
+  /**
+   * Load an FBX model
+   */
+  private loadFBXModel(url: string, config: ModelAssetConfig): Promise<THREE.Group> {
+    return new Promise((resolve, reject) => {
+      this.fbxLoader.load(
+        url,
+        (group) => {
+          this.applyModelConfiguration(group, config);
+          resolve(group);
+        },
+        undefined,
+        (error) => {
+          console.error(`Failed to load FBX model: ${url}`, error);
           reject(error);
         },
       );

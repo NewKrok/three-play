@@ -23,6 +23,7 @@ export type {
 export type {
   AssetsConfig,
   LoadedAssets,
+  LoadedModel,
   AssetProgress,
   ProgressCallback,
   ReadyCallback,
