@@ -344,29 +344,6 @@ document.body.appendChild(labelRenderer.domElement);
  * @param {THREE.Vector3} params.position
  * @param {number} [params.duration=1000]
  */
-const showFloatingLabel = ({ text, position, duration = 1000 }) => {
-  const div = document.createElement('div');
-  div.textContent = text;
-  div.style.color = 'yellow';
-  div.style.fontSize = '20px';
-  div.style.fontFamily = 'sans-serif';
-  div.style.fontWeight = 'bold';
-  div.style.pointerEvents = 'none';
-  div.style.transition = 'opacity 1s ease-out';
-  div.style.opacity = '1';
-
-  const label = new CSS2DObject(div);
-  label.position.copy(position);
-  scene.add(label);
-
-  setTimeout(() => {
-    div.style.opacity = '0';
-    setTimeout(() => {
-      scene.remove(label);
-    }, 1000);
-  }, duration);
-};
-
 const playAnimation = (unit, animationName, fadeDuration = 0.2) => {
   if (unit.userData.currentAnimationName === animationName) return;
 
@@ -607,6 +584,29 @@ worldInstance.onReady((assets) => {
     delta: 0,
   };
 
+  const showFloatingLabel = ({ text, position, duration = 1000 }) => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    div.style.color = 'yellow';
+    div.style.fontSize = '20px';
+    div.style.fontFamily = 'sans-serif';
+    div.style.fontWeight = 'bold';
+    div.style.pointerEvents = 'none';
+    div.style.transition = 'opacity 1s ease-out';
+    div.style.opacity = '1';
+
+    const label = new CSS2DObject(div);
+    label.position.copy(position);
+    scene.add(label);
+
+    setTimeout(() => {
+      div.style.opacity = '0';
+      setTimeout(() => {
+        scene.remove(label);
+      }, 1000);
+    }, duration);
+  };
+
   const createCharacterAssets = () => {
     const createInstance = (isZombie = false) => {
       const humanModel = loadedAssets.models['human-idle'] as THREE.Group;
@@ -662,6 +662,8 @@ worldInstance.onReady((assets) => {
           }
         });
       }
+
+      worldInstance.addOutlinedObjects([instance]);
 
       return { model: wrapper, mixer, actions, userData: {} };
     };
