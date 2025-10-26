@@ -2,6 +2,11 @@ import createWorld from '../core/world/world.js';
 import type { WorldConfig, WorldInstance } from '../types/world.js';
 import type { AssetsConfig } from '../types/assets.js';
 
+// Import for mocking
+const {
+  OutlinePass,
+} = require('three/examples/jsm/postprocessing/OutlinePass.js');
+
 // Mock the entire Three.js WebGLRenderer and related classes for testing
 jest.mock('three', () => {
   const THREE = jest.requireActual('three');
@@ -46,6 +51,7 @@ jest.mock('three/examples/jsm/postprocessing/EffectComposer.js', () => ({
     passes: [
       { name: 'RenderPass' },
       { name: 'SSAOPass' },
+      { name: 'OutlinePass' },
       { name: 'UnrealBloomPass' },
       { name: 'ShaderPass' },
       { name: 'OutputPass' },
@@ -105,6 +111,37 @@ jest.mock('three/examples/jsm/shaders/FXAAShader.js', () => ({
 jest.mock('three/examples/jsm/postprocessing/OutputPass.js', () => ({
   OutputPass: jest.fn(),
 }));
+
+jest.mock('three/examples/jsm/postprocessing/OutlinePass.js', () => {
+  const MockOutlinePass = jest.fn().mockImplementation(() => {
+    const mockOutlinePass = {
+      edgeStrength: 3.0,
+      edgeGlow: 0.0,
+      edgeThickness: 1.0,
+      pulsePeriod: 0,
+      visibleEdgeColor: {
+        set: jest.fn(),
+      },
+      hiddenEdgeColor: {
+        set: jest.fn(),
+      },
+      selectedObjects: [], // Fresh array for each instance
+      setSize: jest.fn(),
+    };
+
+    // Make the mock instance detectable
+    Object.defineProperty(mockOutlinePass, 'constructor', {
+      value: MockOutlinePass,
+      writable: false,
+    });
+
+    return mockOutlinePass;
+  });
+
+  return {
+    OutlinePass: MockOutlinePass,
+  };
+});
 
 // Mock window and global objects
 global.window = {
@@ -352,7 +389,7 @@ describe('createWorld', () => {
 
     expect(composer).not.toBeNull();
     // Should call addPass multiple times for default passes
-    expect(composer.addPass).toHaveBeenCalledTimes(5); // RenderPass, SSAOPass, UnrealBloomPass, ShaderPass, OutputPass
+    expect(composer.addPass).toHaveBeenCalledTimes(6); // RenderPass, SSAOPass, OutlinePass, UnrealBloomPass, ShaderPass, OutputPass
   });
 
   // New tests for light configuration
@@ -705,6 +742,182 @@ describe('createWorld', () => {
       expect(typeof unsubscribeReady).toBe('function');
 
       consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('Outline functionality', () => {
+    it('should have outline control methods available', () => {
+      const worldInstance = createTrackedWorld(mockConfig);
+
+      expect(typeof worldInstance.addOutlinedObjects).toBe('function');
+      expect(typeof worldInstance.removeOutlinedObjects).toBe('function');
+      expect(typeof worldInstance.clearOutlinedObjects).toBe('function');
+      expect(typeof worldInstance.getOutlinedObjects).toBe('function');
+      expect(typeof worldInstance.configureOutline).toBe('function');
+    });
+
+    it('should add objects to outline when composer is enabled', () => {
+      const worldInstance = createTrackedWorld(mockConfig);
+      const mockObject1 = { name: 'object1' } as any;
+      const mockObject2 = { name: 'object2' } as any;
+
+      worldInstance.addOutlinedObjects([mockObject1, mockObject2]);
+
+      const outlinedObjects = worldInstance.getOutlinedObjects();
+      expect(outlinedObjects).toContain(mockObject1);
+      expect(outlinedObjects).toContain(mockObject2);
+    });
+
+    it('should remove objects from outline', () => {
+      const worldInstance = createTrackedWorld(mockConfig);
+      const mockObject1 = { name: 'object1' } as any;
+      const mockObject2 = { name: 'object2' } as any;
+      const mockObject3 = { name: 'object3' } as any;
+
+      worldInstance.addOutlinedObjects([mockObject1, mockObject2, mockObject3]);
+      worldInstance.removeOutlinedObjects([mockObject2]);
+
+      const outlinedObjects = worldInstance.getOutlinedObjects();
+      expect(outlinedObjects).toContain(mockObject1);
+      expect(outlinedObjects).not.toContain(mockObject2);
+      expect(outlinedObjects).toContain(mockObject3);
+    });
+
+    it('should clear all outlined objects', () => {
+      const worldInstance = createTrackedWorld(mockConfig);
+      const mockObject1 = { name: 'object1' } as any;
+      const mockObject2 = { name: 'object2' } as any;
+
+      worldInstance.addOutlinedObjects([mockObject1, mockObject2]);
+      expect(worldInstance.getOutlinedObjects()).toHaveLength(2);
+
+      worldInstance.clearOutlinedObjects();
+      expect(worldInstance.getOutlinedObjects()).toHaveLength(0);
+    });
+
+    it('should configure outline appearance', () => {
+      const worldInstance = createTrackedWorld(mockConfig);
+      const outlineConfig = {
+        edgeStrength: 5.0,
+        edgeGlow: 1.0,
+        edgeThickness: 2.0,
+        pulsePeriod: 2,
+        visibleEdgeColor: '#ff0000',
+        hiddenEdgeColor: '#000000',
+      };
+
+      expect(() => worldInstance.configureOutline(outlineConfig)).not.toThrow();
+    });
+
+    it('should warn when outline operations are called without composer', () => {
+      const configWithoutComposer = {
+        ...mockConfig,
+        render: {
+          useComposer: false,
+        },
+      };
+
+      const worldInstance = createTrackedWorld(configWithoutComposer);
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockObject = { name: 'object' } as any;
+
+      worldInstance.addOutlinedObjects([mockObject]);
+      worldInstance.removeOutlinedObjects([mockObject]);
+      worldInstance.clearOutlinedObjects();
+      worldInstance.configureOutline({ edgeStrength: 5.0 });
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Outline pass is not available. Make sure useComposer is enabled.',
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(4);
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should return empty array when getting outlined objects without composer', () => {
+      const configWithoutComposer = {
+        ...mockConfig,
+        render: {
+          useComposer: false,
+        },
+      };
+
+      const worldInstance = createTrackedWorld(configWithoutComposer);
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const outlinedObjects = worldInstance.getOutlinedObjects();
+      expect(outlinedObjects).toEqual([]);
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Outline pass is not available. Make sure useComposer is enabled.',
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should warn when outline operations are called after destroy', () => {
+      const worldInstance = createTrackedWorld(mockConfig);
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      worldInstance.destroy();
+
+      const mockObject = { name: 'object' } as any;
+      worldInstance.addOutlinedObjects([mockObject]);
+      worldInstance.removeOutlinedObjects([mockObject]);
+      worldInstance.clearOutlinedObjects();
+      const outlinedObjects = worldInstance.getOutlinedObjects();
+      worldInstance.configureOutline({ edgeStrength: 5.0 });
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Cannot add outlined objects: world instance is destroyed',
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Cannot remove outlined objects: world instance is destroyed',
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Cannot clear outlined objects: world instance is destroyed',
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Cannot get outlined objects: world instance is destroyed',
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Cannot configure outline: world instance is destroyed',
+      );
+
+      expect(outlinedObjects).toEqual([]);
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should update default passes to include outline pass', () => {
+      const worldInstance = createTrackedWorld(mockConfig);
+      const composer = worldInstance.getComposer();
+
+      expect(composer).not.toBeNull();
+      // Should call addPass multiple times for default passes including outline
+      expect(composer.addPass).toHaveBeenCalledTimes(6); // RenderPass, SSAOPass, OutlinePass, UnrealBloomPass, ShaderPass, OutputPass
+    });
+
+    it('should handle partial outline configuration', () => {
+      const worldInstance = createTrackedWorld(mockConfig);
+      const partialConfig = {
+        edgeStrength: 4.0,
+        visibleEdgeColor: '#00ff00',
+      };
+
+      expect(() => worldInstance.configureOutline(partialConfig)).not.toThrow();
+    });
+
+    it('should maintain object references correctly', () => {
+      const worldInstance = createTrackedWorld(mockConfig);
+      const mockObject1 = { name: 'object1' } as any;
+      const mockObject2 = { name: 'object2' } as any;
+
+      worldInstance.addOutlinedObjects([mockObject1]);
+      worldInstance.addOutlinedObjects([mockObject2]);
+
+      const outlinedObjects = worldInstance.getOutlinedObjects();
+      expect(outlinedObjects).toHaveLength(2);
+      expect(outlinedObjects[0]).toBe(mockObject1);
+      expect(outlinedObjects[1]).toBe(mockObject2);
     });
   });
 });

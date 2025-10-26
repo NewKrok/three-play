@@ -1,6 +1,7 @@
 import { DisposeUtils } from '@newkrok/three-utils';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
@@ -14,6 +15,7 @@ import type {
   WorldConfig,
   WorldInstance,
   UpdateCallback,
+  OutlineConfig,
 } from '../../types/world.js';
 import type {
   LoadedAssets,
@@ -50,6 +52,20 @@ const createDefaultPasses = (
   ssaoPass.maxDistance = 0.1;
   ssaoPass.output = SSAOPass.OUTPUT.Default;
   passes.push(ssaoPass);
+
+  // Add outline pass for highlighted objects
+  const outlinePass = new OutlinePass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    scene,
+    camera,
+  );
+  outlinePass.edgeStrength = 3.0;
+  outlinePass.edgeGlow = 0.0;
+  outlinePass.edgeThickness = 1.0;
+  outlinePass.pulsePeriod = 0;
+  outlinePass.visibleEdgeColor.set('#ffffff');
+  outlinePass.hiddenEdgeColor.set('#190a05');
+  passes.push(outlinePass);
 
   // Add bloom pass
   const bloomPass = new UnrealBloomPass(
@@ -136,6 +152,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   // Create composer conditionally
   let composer: EffectComposer | null = null;
   let ssaoPass: SSAOPass | null = null;
+  let outlinePass: OutlinePass | null = null;
   let fxaaPass: ShaderPass | null = null;
 
   if (useComposer) {
@@ -164,6 +181,11 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       if (pass instanceof SSAOPass) {
         ssaoPass = pass;
       } else if (
+        pass instanceof OutlinePass ||
+        (pass as any).selectedObjects !== undefined
+      ) {
+        outlinePass = pass as OutlinePass;
+      } else if (
         pass instanceof ShaderPass &&
         pass.material.uniforms['resolution']
       ) {
@@ -183,6 +205,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
 
       if (ssaoPass) {
         ssaoPass.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      if (outlinePass) {
+        outlinePass.setSize(window.innerWidth, window.innerHeight);
       }
 
       if (fxaaPass) {
@@ -423,6 +449,135 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     getLoadedAssets(): LoadedAssets | null {
       return loadedAssets;
+    },
+
+    /**
+     * Add objects to be outlined
+     * @param objects - Array of THREE.Object3D objects to outline
+     */
+    addOutlinedObjects(objects: THREE.Object3D[]): void {
+      if (isDestroyed) {
+        console.warn(
+          'Cannot add outlined objects: world instance is destroyed',
+        );
+        return;
+      }
+
+      if (!outlinePass) {
+        console.warn(
+          'Outline pass is not available. Make sure useComposer is enabled.',
+        );
+        return;
+      }
+
+      outlinePass.selectedObjects = [
+        ...outlinePass.selectedObjects,
+        ...objects,
+      ];
+    },
+
+    /**
+     * Remove objects from being outlined
+     * @param objects - Array of THREE.Object3D objects to remove from outline
+     */
+    removeOutlinedObjects(objects: THREE.Object3D[]): void {
+      if (isDestroyed) {
+        console.warn(
+          'Cannot remove outlined objects: world instance is destroyed',
+        );
+        return;
+      }
+
+      if (!outlinePass) {
+        console.warn(
+          'Outline pass is not available. Make sure useComposer is enabled.',
+        );
+        return;
+      }
+
+      outlinePass.selectedObjects = outlinePass.selectedObjects.filter(
+        (obj: THREE.Object3D) => !objects.includes(obj),
+      );
+    },
+
+    /**
+     * Clear all outlined objects
+     */
+    clearOutlinedObjects(): void {
+      if (isDestroyed) {
+        console.warn(
+          'Cannot clear outlined objects: world instance is destroyed',
+        );
+        return;
+      }
+
+      if (!outlinePass) {
+        console.warn(
+          'Outline pass is not available. Make sure useComposer is enabled.',
+        );
+        return;
+      }
+
+      outlinePass.selectedObjects = [];
+    },
+
+    /**
+     * Get all currently outlined objects
+     * @returns Array of outlined objects
+     */
+    getOutlinedObjects(): THREE.Object3D[] {
+      if (isDestroyed) {
+        console.warn(
+          'Cannot get outlined objects: world instance is destroyed',
+        );
+        return [];
+      }
+
+      if (!outlinePass) {
+        console.warn(
+          'Outline pass is not available. Make sure useComposer is enabled.',
+        );
+        return [];
+      }
+
+      return [...outlinePass.selectedObjects];
+    },
+
+    /**
+     * Configure outline appearance
+     * @param config - Outline configuration options
+     */
+    configureOutline(config: OutlineConfig): void {
+      if (isDestroyed) {
+        console.warn('Cannot configure outline: world instance is destroyed');
+        return;
+      }
+
+      if (!outlinePass) {
+        console.warn(
+          'Outline pass is not available. Make sure useComposer is enabled.',
+        );
+        return;
+      }
+
+      if (config.edgeStrength !== undefined) {
+        outlinePass.edgeStrength = config.edgeStrength;
+      }
+      if (config.edgeGlow !== undefined) {
+        outlinePass.edgeGlow = config.edgeGlow;
+      }
+      if (config.edgeThickness !== undefined) {
+        outlinePass.edgeThickness = config.edgeThickness;
+      }
+      if (config.pulsePeriod !== undefined) {
+        outlinePass.pulsePeriod = config.pulsePeriod;
+      }
+      if (config.visibleEdgeColor !== undefined) {
+        outlinePass.visibleEdgeColor.set(config.visibleEdgeColor);
+      }
+      if (config.hiddenEdgeColor !== undefined) {
+        outlinePass.hiddenEdgeColor.set(config.hiddenEdgeColor);
+      }
     },
 
     /**
