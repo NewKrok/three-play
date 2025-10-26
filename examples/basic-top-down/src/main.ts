@@ -851,99 +851,6 @@ const createCinematicCameraController = (
   };
 };
 
-async function loadHeightmap(url) {
-  const loader = new THREE.TextureLoader();
-  const texture = await new Promise((resolve, reject) => {
-    loader.load(url, resolve, (err) =>
-      reject(new Error('Failed to load texture: ' + err)),
-    );
-  });
-
-  const img = texture.image;
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  canvas.width = img.width;
-  canvas.height = img.height;
-  ctx.drawImage(img, 0, 0);
-  const imageData = ctx.getImageData(0, 0, img.width, img.height);
-  const data = imageData.data;
-
-  const heights = new Float32Array(img.width * img.height);
-  for (let i = 0, j = 0; i < data.length; i += 4, j++) {
-    heights[j] = data[i] / 255;
-  }
-
-  return { heightmap: heights, heightMapTexture: texture };
-}
-const { heightmap, heightMapTexture } = await loadHeightmap(
-  'https://newkrok.com/external-assets/heightmap-island-256.webp',
-);
-const resolutionRatio = {
-  width: WORLD_WIDTH / (HEIGHT_MAP_RESOLUTION - 1),
-  depth: WORLD_HEIGHT / (HEIGHT_MAP_RESOLUTION - 1),
-};
-
-const sign = (point1, point2, point3) =>
-  (point1.x - point3.x) * (point2.z - point3.z) -
-  (point2.x - point3.x) * (point1.z - point3.z);
-
-const roundPosition = ({ x, z }) => ({
-  x: Math.floor(x / resolutionRatio.width),
-  z: Math.floor(z / resolutionRatio.depth),
-});
-const positionToHeightMapIndex = (x, z) => x + z * HEIGHT_MAP_RESOLUTION;
-const getHeightFromPosition = (position) => {
-  const roundedPosition = roundPosition(position);
-  const convertedPosition = {
-    x: roundedPosition.x * resolutionRatio.width,
-    z: roundedPosition.z * resolutionRatio.depth,
-  };
-
-  const pLT = {
-    x: convertedPosition.x,
-    z: convertedPosition.z,
-    y:
-      heightmap[
-        positionToHeightMapIndex(roundedPosition.x, roundedPosition.z)
-      ] || position.y,
-  };
-  const pRT = {
-    x: convertedPosition.x + resolutionRatio.width,
-    z: convertedPosition.z,
-    y:
-      heightmap[
-        positionToHeightMapIndex(roundedPosition.x + 1, roundedPosition.z)
-      ] || position.y,
-  };
-  const pLB = {
-    x: convertedPosition.x,
-    z: convertedPosition.z + resolutionRatio.depth,
-    y:
-      heightmap[
-        positionToHeightMapIndex(roundedPosition.x, roundedPosition.z + 1)
-      ] || position.y,
-  };
-  const pRB = {
-    x: convertedPosition.x + resolutionRatio.width,
-    z: convertedPosition.z + resolutionRatio.depth,
-    y:
-      heightmap[
-        positionToHeightMapIndex(roundedPosition.x + 1, roundedPosition.z + 1)
-      ] || position.y,
-  };
-
-  const triangleCheckA = GeomUtils.isPointInATriangle(position, pLT, pRT, pLB);
-  const triangleCheckB = GeomUtils.isPointInATriangle(position, pRT, pRB, pLB);
-
-  if (triangleCheckA) {
-    return GeomUtils.yFromTriangle(position, pLT, pRT, pLB) * ELEVATION_RATIO;
-  } else if (triangleCheckB) {
-    return GeomUtils.yFromTriangle(position, pRT, pRB, pLB) * ELEVATION_RATIO;
-  }
-
-  return 0;
-};
-
 // Create THREE Play world instance
 const worldInstance = createWorld({
   world: {
@@ -965,6 +872,11 @@ const worldInstance = createWorld({
       intensity: 0.5,
     },
   },
+  heightmap: {
+    url: 'https://newkrok.com/external-assets/heightmap-island-256.webp',
+    resolution: HEIGHT_MAP_RESOLUTION,
+    elevationRatio: ELEVATION_RATIO,
+  },
 });
 
 // Get references to Three.js components
@@ -974,6 +886,26 @@ const camera = worldInstance.getCamera();
 const composer = worldInstance.getComposer();
 let ambientLight = worldInstance.getAmbientLight();
 let directionalLight = worldInstance.getDirectionalLight();
+
+// Get heightmap utilities from the world instance - wait for it to load
+const waitForHeightmap = () => {
+  return new Promise<any>((resolve) => {
+    const check = () => {
+      const heightmapUtils = worldInstance.getHeightmapUtils();
+      if (heightmapUtils) {
+        resolve(heightmapUtils);
+      } else {
+        setTimeout(check, 100);
+      }
+    };
+    check();
+  });
+};
+
+const heightmapUtils = await waitForHeightmap();
+const { heightmapData } = heightmapUtils;
+const { heightmap, heightMapTexture } = heightmapData;
+const getHeightFromPosition = heightmapUtils.getHeightFromPosition;
 
 // Append renderer to DOM
 document.querySelector('#demo').appendChild(renderer.domElement);
@@ -1019,10 +951,9 @@ const geometry = new THREE.PlaneGeometry(
   HEIGHT_MAP_RESOLUTION - 1,
   HEIGHT_MAP_RESOLUTION - 1,
 );
-const vertices = geometry.attributes.position.array;
-for (let i = 0, j = 0, l = vertices.length / 3; i < l; i++, j += 3) {
-  vertices[j + 2] = heightmap[i] * ELEVATION_RATIO;
-}
+
+// Apply heightmap to geometry using engine utilities
+heightmapUtils.applyHeightmapToGeometry(geometry);
 
 geometry.rotateX(-Math.PI / 2);
 geometry.attributes.position.needsUpdate = true;
@@ -1044,20 +975,8 @@ const cycleData = {
 };
 
 const getPositionByHeight = (minHeight) => {
-  let attempts = 0;
-  const maxAttempts = 10;
-
-  while (attempts < maxAttempts) {
-    attempts++;
-
-    const x = Math.random() * WORLD_WIDTH;
-    const z = Math.random() * WORLD_HEIGHT;
-    const y = getHeightFromPosition(new THREE.Vector3(x, 0, z));
-
-    if (y > minHeight) return { x, y, z };
-  }
-
-  return null;
+  // Use the engine's heightmap utility function
+  return heightmapUtils.getPositionByHeight(minHeight);
 };
 
 async function createCharacter({ isZombie = false, position }) {
