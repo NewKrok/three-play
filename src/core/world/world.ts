@@ -7,11 +7,13 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { DisposeUtils } from '@newkrok/three-utils';
+import { loadHeightmap, createHeightmapUtils } from '../heightmap/index.js';
 import type {
   WorldConfig,
   WorldInstance,
   UpdateCallback,
 } from '../../types/world.js';
+import type { HeightmapUtils, HeightmapConfig } from '../../types/heightmap.js';
 
 /**
  * Creates default post-processing passes
@@ -94,6 +96,11 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   // Get update configuration with defaults
   const autoStart = config.update?.autoStart ?? false;
   const initialCallback = config.update?.onUpdate;
+
+  // Get heightmap configuration
+  const heightmapConfig = config.heightmap;
+  const heightmapUrl = heightmapConfig?.url;
+  const shouldLoadHeightmap = Boolean(heightmapUrl);
 
   // Create renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -210,6 +217,9 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   let isPaused = false;
   let isDestroyed = false;
 
+  // Heightmap system
+  let heightmapUtils: HeightmapUtils | null = null;
+
   // Add initial callback if provided
   if (initialCallback) {
     updateCallbacks.add(initialCallback);
@@ -240,6 +250,31 @@ const createWorld = (config: WorldConfig): WorldInstance => {
 
     animationFrameId = requestAnimationFrame(updateLoop);
   };
+
+  // Load heightmap automatically if configured
+  const initializeHeightmap = async () => {
+    if (shouldLoadHeightmap && heightmapUrl && heightmapConfig) {
+      try {
+        // Create config using world dimensions
+        const finalConfig: HeightmapConfig = {
+          worldWidth: worldConfig.world.size.x,
+          worldHeight: worldConfig.world.size.y,
+          resolution: heightmapConfig.resolution ?? 256,
+          elevationRatio: heightmapConfig.elevationRatio ?? 30,
+        };
+
+        const heightmapData = await loadHeightmap(heightmapUrl);
+        heightmapUtils = createHeightmapUtils(heightmapData, finalConfig);
+      } catch (error) {
+        console.error('Failed to auto-load heightmap:', error);
+      }
+    }
+  };
+
+  // Start auto-loading heightmap if configured
+  if (shouldLoadHeightmap) {
+    initializeHeightmap();
+  }
 
   // Start the loop automatically if configured
   if (autoStart) {
@@ -303,6 +338,14 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     getDirectionalLight(): THREE.DirectionalLight {
       return directionalLight;
+    },
+
+    /**
+     * Get the heightmap utilities
+     * @returns The heightmap utilities instance or null if not loaded
+     */
+    getHeightmapUtils(): HeightmapUtils | null {
+      return heightmapUtils;
     },
 
     /**

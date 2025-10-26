@@ -612,4 +612,28 @@ describe('createWorld', () => {
     );
     consoleSpy.mockRestore();
   });
+
+  it('should support simplified heightmap configuration', () => {
+    const heightmapConfig = {
+      world: {
+        size: { x: 1000, y: 1000 },
+      },
+      heightmap: {
+        url: 'test-heightmap.png',
+        resolution: 512,
+        elevationRatio: 25,
+      },
+    };
+
+    // This should not throw - configuration is valid
+    expect(() => createTrackedWorld(heightmapConfig)).not.toThrow();
+  });
+
+  it('should not expose loadHeightmap method', () => {
+    const worldInstance = createTrackedWorld(mockConfig);
+
+    // loadHeightmap should not be available on the world instance
+    expect('loadHeightmap' in worldInstance).toBe(false);
+    expect((worldInstance as any).loadHeightmap).toBeUndefined();
+  });
 });

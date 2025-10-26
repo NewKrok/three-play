@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
+import type { HeightmapUtils, HeightmapConfig } from './heightmap.js';
 
 /**
  * Update callback function type
@@ -34,6 +35,11 @@ export type WorldConfig = {
     autoStart?: boolean;
     onUpdate?: UpdateCallback;
   };
+  heightmap?: {
+    url: string;
+    resolution?: number;
+    elevationRatio?: number;
+  };
 };
 
 /**
@@ -47,6 +53,7 @@ export type WorldInstance = {
   getComposer(): any | null; // EffectComposer type or null if useComposer is false
   getAmbientLight(): THREE.AmbientLight;
   getDirectionalLight(): THREE.DirectionalLight;
+  getHeightmapUtils(): HeightmapUtils | null; // Heightmap utilities if loaded
   start(): void;
   pause(): void;
   resume(): void;
