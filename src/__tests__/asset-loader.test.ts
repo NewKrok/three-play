@@ -54,9 +54,7 @@ describe('AssetLoader', () => {
     (GLTFLoader as unknown as jest.Mock).mockImplementation(
       () => mockGLTFLoader,
     );
-    (FBXLoader as unknown as jest.Mock).mockImplementation(
-      () => mockFBXLoader,
-    );
+    (FBXLoader as unknown as jest.Mock).mockImplementation(() => mockFBXLoader);
 
     assetLoader = new AssetLoader();
   });
@@ -86,9 +84,11 @@ describe('AssetLoader', () => {
         userData: {},
       };
 
-      mockGLTFLoader.load.mockImplementation((url: string, onLoad: Function) => {
-        setTimeout(() => onLoad(mockGLTF), 10);
-      });
+      mockGLTFLoader.load.mockImplementation(
+        (url: string, onLoad: Function) => {
+          setTimeout(() => onLoad(mockGLTF), 10);
+        },
+      );
 
       const config: AssetsConfig = {
         models: {
@@ -106,7 +106,7 @@ describe('AssetLoader', () => {
         '/models/tree.gltf',
         expect.any(Function),
         undefined,
-        expect.any(Function)
+        expect.any(Function),
       );
     });
 
@@ -133,7 +133,7 @@ describe('AssetLoader', () => {
         '/models/character.fbx',
         expect.any(Function),
         undefined,
-        expect.any(Function)
+        expect.any(Function),
       );
     });
 
@@ -147,7 +147,7 @@ describe('AssetLoader', () => {
       };
 
       await expect(assetLoader.loadAssets(config)).rejects.toThrow(
-        'Unsupported model format: /models/model.obj'
+        'Unsupported model format: /models/model.obj',
       );
     });
 
@@ -162,9 +162,11 @@ describe('AssetLoader', () => {
         userData: {},
       };
 
-      mockGLTFLoader.load.mockImplementation((url: string, onLoad: Function) => {
-        setTimeout(() => onLoad(mockGLTF), 10);
-      });
+      mockGLTFLoader.load.mockImplementation(
+        (url: string, onLoad: Function) => {
+          setTimeout(() => onLoad(mockGLTF), 10);
+        },
+      );
 
       const config: AssetsConfig = {
         models: {

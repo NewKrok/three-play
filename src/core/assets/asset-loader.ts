@@ -70,7 +70,10 @@ export class AssetLoader {
   /**
    * Apply common configuration to model scene
    */
-  private applyModelConfiguration(scene: THREE.Object3D, config: ModelAssetConfig): void {
+  private applyModelConfiguration(
+    scene: THREE.Object3D,
+    config: ModelAssetConfig,
+  ): void {
     if (config.scale !== undefined) {
       const scale = Array.isArray(config.scale)
         ? config.scale
@@ -138,9 +141,12 @@ export class AssetLoader {
    * @param config - Model configuration
    * @returns Promise that resolves to the loaded model (GLTF or Group)
    */
-  private loadModel(url: string, config: ModelAssetConfig): Promise<LoadedModel> {
+  private loadModel(
+    url: string,
+    config: ModelAssetConfig,
+  ): Promise<LoadedModel> {
     const modelType = this.getModelType(url);
-    
+
     if (modelType === 'gltf') {
       return this.loadGLTFModel(url, config);
     } else if (modelType === 'fbx') {
@@ -173,7 +179,10 @@ export class AssetLoader {
   /**
    * Load an FBX model
    */
-  private loadFBXModel(url: string, config: ModelAssetConfig): Promise<THREE.Group> {
+  private loadFBXModel(
+    url: string,
+    config: ModelAssetConfig,
+  ): Promise<THREE.Group> {
     return new Promise((resolve, reject) => {
       this.fbxLoader.load(
         url,
