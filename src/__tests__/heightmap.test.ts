@@ -68,7 +68,7 @@ describe('HeightmapUtils', () => {
     jest.clearAllMocks();
 
     // Setup mock loader to call success callback
-    mockLoad.mockImplementation((url, onLoad, onProgress, onError) => {
+    mockLoad.mockImplementation((url, onLoad, _onProgress, _onError) => {
       setTimeout(() => onLoad(mockTexture), 0);
     });
   });

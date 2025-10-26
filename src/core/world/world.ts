@@ -1,19 +1,19 @@
+import { DisposeUtils } from '@newkrok/three-utils';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { DisposeUtils } from '@newkrok/three-utils';
 import { loadHeightmap, createHeightmapUtils } from '../heightmap/index.js';
+import type { HeightmapUtils, HeightmapConfig } from '../../types/heightmap.js';
 import type {
   WorldConfig,
   WorldInstance,
   UpdateCallback,
 } from '../../types/world.js';
-import type { HeightmapUtils, HeightmapConfig } from '../../types/heightmap.js';
 
 /**
  * Creates default post-processing passes

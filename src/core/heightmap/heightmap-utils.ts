@@ -1,5 +1,5 @@
-import * as THREE from 'three';
 import { GeomUtils } from '@newkrok/three-utils';
+import * as THREE from 'three';
 import type {
   HeightmapData,
   HeightmapConfig,

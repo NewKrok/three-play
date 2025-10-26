@@ -1,17 +1,16 @@
+import { createWorld } from '@newkrok/three-play';
 import {
   updateParticleSystems,
   createParticleSystem,
 } from 'https://esm.sh/@newkrok/three-particles';
-import { GeomUtils } from 'https://esm.sh/@newkrok/three-utils';
-import { FBXLoader } from 'https://esm.sh/three/examples/jsm/loaders/FBXLoader';
-import * as SkeletonUtils from 'https://esm.sh/three/examples/jsm/utils/SkeletonUtils.js';
 import {
   CSS2DRenderer,
   CSS2DObject,
 } from 'https://esm.sh/three/examples/jsm/renderers/CSS2DRenderer.js';
+import { FBXLoader } from 'https://esm.sh/three/examples/jsm/loaders/FBXLoader';
+import * as SkeletonUtils from 'https://esm.sh/three/examples/jsm/utils/SkeletonUtils.js';
 
 import * as THREE from 'three';
-import { createWorld } from '@newkrok/three-play';
 import { runningEffect, dustEffect, splashEffect } from './effects-config.js';
 
 /**

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
+import type { HeightmapUtils } from './heightmap.js';
 import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
-import type { HeightmapUtils, HeightmapConfig } from './heightmap.js';
 
 /**
  * Update callback function type

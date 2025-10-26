@@ -23,6 +23,14 @@ export default [
       // TypeScript-specific rules
       '@typescript-eslint/no-explicit-any': 'warn', // Warn against using `any` type
       '@typescript-eslint/no-empty-function': 'off', // Allow empty functions
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { 
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          ignoreRestSiblings: true
+        }
+      ], // Error on unused variables and imports
 
       // Import plugin rules
       'import/order': [

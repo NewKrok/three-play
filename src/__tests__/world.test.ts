@@ -69,6 +69,7 @@ jest.mock('three/examples/jsm/postprocessing/SSAOPass.js', () => ({
 // Mock SSAOPass static properties after the mock
 const mockSSAOPass =
   require('three/examples/jsm/postprocessing/SSAOPass.js').SSAOPass;
+
 mockSSAOPass.OUTPUT = {
   Default: 0,
   SSAO: 1,
