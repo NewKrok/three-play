@@ -367,77 +367,6 @@ const showFloatingLabel = ({ text, position, duration = 1000 }) => {
   }, duration);
 };
 
-const createCharacterAssets = () => {
-  let loaded = true; // Assets are already loaded
-
-  const createInstance = (isZombie = false) => {
-    const humanModel = loadedAssets.models['human-idle'] as THREE.Group;
-    const zombieModel = loadedAssets.models['zombie-idle'] as THREE.Group;
-
-    const instance = SkeletonUtils.clone(isZombie ? zombieModel : humanModel);
-    const wrapper = new THREE.Group();
-    instance.rotation.y = Math.PI / 2;
-    wrapper.add(instance);
-
-    const mixer = new THREE.AnimationMixer(instance);
-
-    // Get animations from loaded models
-    const animations = {
-      idle: isZombie
-        ? (loadedAssets.models['zombie-idle'] as THREE.Group).animations[0]
-        : (loadedAssets.models['human-idle'] as THREE.Group).animations[0],
-      walk: isZombie
-        ? (loadedAssets.models['zombie-walk'] as THREE.Group).animations[0]
-        : (loadedAssets.models.walk as THREE.Group).animations[0],
-      run: isZombie
-        ? (loadedAssets.models['zombie-run'] as THREE.Group).animations[0]
-        : (loadedAssets.models.run as THREE.Group).animations[0],
-      roll: (loadedAssets.models.roll as THREE.Group).animations[0],
-      attack: (loadedAssets.models['zombie-attack'] as THREE.Group)
-        .animations[0],
-    };
-
-    const actions = {
-      idle: mixer.clipAction(animations.idle),
-      walk: mixer.clipAction(animations.walk),
-      run: mixer.clipAction(animations.run),
-      roll: mixer.clipAction(animations.roll),
-      attack: mixer.clipAction(animations.attack),
-    };
-
-    // Enable shadows for the instance
-    instance.traverse((child) => {
-      if (child.isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-        if (child.material) {
-          child.material.needsUpdate = true;
-        }
-      }
-    });
-
-    // Color zombies green
-    if (isZombie) {
-      instance.traverse((child) => {
-        if (child.isMesh) {
-          child.material.color.setHex(0x4caf50);
-        }
-      });
-    }
-
-    return { model: wrapper, mixer, actions, userData: {} };
-  };
-
-  const isLoaded = () => loaded;
-
-  return {
-    createInstance,
-    isLoaded,
-  };
-};
-
-const characterAssets = createCharacterAssets();
-
 const playAnimation = (unit, animationName, fadeDuration = 0.2) => {
   if (unit.userData.currentAnimationName === animationName) return;
 
@@ -602,133 +531,166 @@ worldInstance.onProgress((progress) => {
 // Add ready callback for when assets are loaded
 worldInstance.onReady((assets) => {
   console.log('All assets loaded successfully!', assets);
-});
 
-// Get references to Three.js components
-const renderer = worldInstance.getRenderer();
-const scene = worldInstance.getScene();
-const camera = worldInstance.getCamera();
-const composer = worldInstance.getComposer();
-let ambientLight = worldInstance.getAmbientLight();
-let directionalLight = worldInstance.getDirectionalLight();
+  // Get references to Three.js components
+  const renderer = worldInstance.getRenderer();
+  const scene = worldInstance.getScene();
+  const camera = worldInstance.getCamera();
+  let ambientLight = worldInstance.getAmbientLight();
+  let directionalLight = worldInstance.getDirectionalLight();
 
-// Get heightmap utilities from the world instance - wait for it to load
-const waitForHeightmap = () => {
-  return new Promise<any>((resolve) => {
-    const check = () => {
-      const heightmapUtils = worldInstance.getHeightmapUtils();
-      if (heightmapUtils) {
-        resolve(heightmapUtils);
-      } else {
-        setTimeout(check, 100);
-      }
-    };
-    check();
+  const heightmapUtils = worldInstance.getHeightmapUtils();
+  const loadedAssets = worldInstance.getLoadedAssets();
+  const { heightmapData } = heightmapUtils;
+  const { heightMapTexture } = heightmapData;
+  const getHeightFromPosition = heightmapUtils.getHeightFromPosition;
+
+  // Append renderer to DOM
+  document.querySelector('#demo').appendChild(renderer.domElement);
+
+  // Add terrain to the scene
+  const grassTexture = loadedAssets.textures.grass;
+  grassTexture.repeat.x = WORLD_WIDTH / 4;
+  grassTexture.repeat.y = WORLD_HEIGHT / 4;
+
+  const material = new THREE.MeshStandardMaterial({
+    map: grassTexture,
   });
-};
 
-// Wait for assets to load
-const waitForAssets = () => {
-  return new Promise<any>((resolve) => {
-    const check = () => {
-      const loadedAssets = worldInstance.getLoadedAssets();
-      if (loadedAssets) {
-        resolve(loadedAssets);
-      } else {
-        setTimeout(check, 100);
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uWaterLevel = { value: WATER_LEVEL };
+    shader.uniforms.uSandBlendDistance = { value: 1.0 };
+
+    shader.vertexShader =
+      'varying vec3 vWorldPosition;\nvarying vec2 vUvCustom;\n' +
+      shader.vertexShader;
+
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <worldpos_vertex>',
+      terrainVertexShader,
+    );
+
+    shader.fragmentShader = terrainFragmentShaderPart1 + shader.fragmentShader;
+
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <color_fragment>',
+      terrainFragmentShaderPart2,
+    );
+  };
+
+  const geometry = new THREE.PlaneGeometry(
+    WORLD_WIDTH,
+    WORLD_HEIGHT,
+    HEIGHT_MAP_RESOLUTION - 1,
+    HEIGHT_MAP_RESOLUTION - 1,
+  );
+
+  // Apply heightmap to geometry using engine utilities
+  heightmapUtils.applyHeightmapToGeometry(geometry);
+
+  geometry.rotateX(-Math.PI / 2);
+  geometry.attributes.position.needsUpdate = true;
+  geometry.computeVertexNormals();
+
+  const plane = new THREE.Mesh(geometry, material);
+  plane.castShadow = true;
+  plane.receiveShadow = true;
+  plane.position.x = WORLD_WIDTH / 2;
+  plane.position.z = WORLD_HEIGHT / 2;
+  scene.add(plane);
+
+  const cycleData = {
+    now: 0,
+    pauseStartTime: 0,
+    totalPauseTime: 0,
+    elapsed: 0,
+    delta: 0,
+  };
+
+  const createCharacterAssets = () => {
+    const createInstance = (isZombie = false) => {
+      const humanModel = loadedAssets.models['human-idle'] as THREE.Group;
+      const zombieModel = loadedAssets.models['zombie-idle'] as THREE.Group;
+
+      const instance = SkeletonUtils.clone(isZombie ? zombieModel : humanModel);
+      const wrapper = new THREE.Group();
+      instance.rotation.y = Math.PI / 2;
+      wrapper.add(instance);
+
+      const mixer = new THREE.AnimationMixer(instance);
+
+      // Get animations from loaded models
+      const animations = {
+        idle: isZombie
+          ? (loadedAssets.models['zombie-idle'] as THREE.Group).animations[0]
+          : (loadedAssets.models['human-idle'] as THREE.Group).animations[0],
+        walk: isZombie
+          ? (loadedAssets.models['zombie-walk'] as THREE.Group).animations[0]
+          : (loadedAssets.models.walk as THREE.Group).animations[0],
+        run: isZombie
+          ? (loadedAssets.models['zombie-run'] as THREE.Group).animations[0]
+          : (loadedAssets.models.run as THREE.Group).animations[0],
+        roll: (loadedAssets.models.roll as THREE.Group).animations[0],
+        attack: (loadedAssets.models['zombie-attack'] as THREE.Group)
+          .animations[0],
+      };
+
+      const actions = {
+        idle: mixer.clipAction(animations.idle),
+        walk: mixer.clipAction(animations.walk),
+        run: mixer.clipAction(animations.run),
+        roll: mixer.clipAction(animations.roll),
+        attack: mixer.clipAction(animations.attack),
+      };
+
+      // Enable shadows for the instance
+      instance.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+          if (child.material) {
+            child.material.needsUpdate = true;
+          }
+        }
+      });
+
+      // Color zombies green
+      if (isZombie) {
+        instance.traverse((child) => {
+          if (child.isMesh) {
+            child.material.color.setHex(0x4caf50);
+          }
+        });
       }
+
+      return { model: wrapper, mixer, actions, userData: {} };
     };
-    check();
-  });
-};
 
-const heightmapUtils = await waitForHeightmap();
-const loadedAssets = await waitForAssets();
-const { heightmapData } = heightmapUtils;
-const { heightmap, heightMapTexture } = heightmapData;
-const getHeightFromPosition = heightmapUtils.getHeightFromPosition;
+    return {
+      createInstance,
+    };
+  };
 
-// Append renderer to DOM
-document.querySelector('#demo').appendChild(renderer.domElement);
+  const characterAssets = createCharacterAssets();
 
-// Add terrain to the scene
-const grassTexture = loadedAssets.textures.grass;
-grassTexture.colorSpace = THREE.SRGBColorSpace;
-grassTexture.repeat.x = WORLD_WIDTH / 4;
-grassTexture.repeat.y = WORLD_HEIGHT / 4;
+  const getPositionByHeight = (minHeight) => {
+    // Use the engine's heightmap utility function
+    return heightmapUtils.getPositionByHeight(minHeight);
+  };
 
-const material = new THREE.MeshStandardMaterial({
-  map: grassTexture,
-});
+  const createCharacter = ({ isZombie = false, position }) => {
+    const character = characterAssets.createInstance(isZombie);
+    playAnimation(character, 'idle');
+    character.model.position.copy(position);
+    scene.add(character.model);
 
-material.onBeforeCompile = (shader) => {
-  shader.uniforms.uWaterLevel = { value: WATER_LEVEL };
-  shader.uniforms.uSandBlendDistance = { value: 1.0 };
+    const { instance: runningEffectInstance } = createParticleSystem(
+      runningEffect,
+      cycleData.now,
+    );
+    character.model.add(runningEffectInstance);
 
-  shader.vertexShader =
-    'varying vec3 vWorldPosition;\nvarying vec2 vUvCustom;\n' +
-    shader.vertexShader;
-
-  shader.vertexShader = shader.vertexShader.replace(
-    '#include <worldpos_vertex>',
-    terrainVertexShader,
-  );
-
-  shader.fragmentShader = terrainFragmentShaderPart1 + shader.fragmentShader;
-
-  shader.fragmentShader = shader.fragmentShader.replace(
-    '#include <color_fragment>',
-    terrainFragmentShaderPart2,
-  );
-};
-
-const geometry = new THREE.PlaneGeometry(
-  WORLD_WIDTH,
-  WORLD_HEIGHT,
-  HEIGHT_MAP_RESOLUTION - 1,
-  HEIGHT_MAP_RESOLUTION - 1,
-);
-
-// Apply heightmap to geometry using engine utilities
-heightmapUtils.applyHeightmapToGeometry(geometry);
-
-geometry.rotateX(-Math.PI / 2);
-geometry.attributes.position.needsUpdate = true;
-geometry.computeVertexNormals();
-
-const plane = new THREE.Mesh(geometry, material);
-plane.castShadow = true;
-plane.receiveShadow = true;
-plane.position.x = WORLD_WIDTH / 2;
-plane.position.z = WORLD_HEIGHT / 2;
-scene.add(plane);
-
-const cycleData = {
-  now: 0,
-  pauseStartTime: 0,
-  totalPauseTime: 0,
-  elapsed: 0,
-  delta: 0,
-};
-
-const getPositionByHeight = (minHeight) => {
-  // Use the engine's heightmap utility function
-  return heightmapUtils.getPositionByHeight(minHeight);
-};
-
-async function createCharacter({ isZombie = false, position }) {
-  const character = characterAssets.createInstance(isZombie);
-  playAnimation(character, 'idle');
-  character.model.position.copy(position);
-  scene.add(character.model);
-
-  const { instance: runningEffectInstance } = createParticleSystem(
-    runningEffect,
-    cycleData.now,
-  );
-  character.model.add(runningEffectInstance);
-
-  /*character.updateMatrixWorld(true);
+    /*character.updateMatrixWorld(true);
   const exporter = new GLTFExporter();
   exporter.parse(
     character,
@@ -743,771 +705,789 @@ async function createCharacter({ isZombie = false, position }) {
     { binary: false }
   );*/
 
-  return character;
-}
-const character = await createCharacter({
-  position: startingPosition,
-});
-const { instance: dustEffectInstance } = createParticleSystem(
-  dustEffect,
-  cycleData.now,
-);
-character.model.add(dustEffectInstance);
-units.push(character);
-
-const createEnemies = async (count) => {
-  for (let i = 0; i < count; i++) {
-    const position = startingPosition.clone();
-    position.x += 10 + i * 1.5 - Math.floor(i / 5) * (5 * 1.5);
-    position.z += -10 + Math.floor(i / 5) * 2;
-    position.y = getHeightFromPosition(position);
-    const enemy = await createCharacter({
-      position,
-      isZombie: true,
-    });
-    units.push(enemy);
-  }
-};
-createEnemies(ENEMY_COUNT);
-
-const trunkGeometry = new THREE.BoxGeometry(0.4, 2, 0.4);
-const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x895129 });
-const trunkMesh = new THREE.InstancedMesh(
-  trunkGeometry,
-  trunkMaterial,
-  TREE_COUNT,
-);
-trunkMesh.castShadow = true;
-trunkMesh.receiveShadow = true;
-scene.add(trunkMesh);
-const leafGeometry = new THREE.SphereGeometry(1, 16, 16);
-const leafTexture = loadedAssets.textures.grass;
-const leafMaterial = new THREE.MeshStandardMaterial({
-  color: 0x00ff00,
-  map: leafTexture,
-});
-const leafMesh = new THREE.InstancedMesh(
-  leafGeometry,
-  leafMaterial,
-  TREE_COUNT,
-);
-leafMesh.castShadow = true;
-leafMesh.receiveShadow = true;
-scene.add(leafMesh);
-
-const appleGeometry = new THREE.SphereGeometry(0.2, 8, 8);
-const appleMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-const appleMesh = new THREE.InstancedMesh(
-  appleGeometry,
-  appleMaterial,
-  TREE_COUNT * MAX_APPLES_PER_TREE * 2,
-);
-appleMesh.castShadow = true;
-appleMesh.receiveShadow = true;
-scene.add(appleMesh);
-let appleIndex = 0;
-const applesPerTree = [];
-
-for (let i = 0; i < TREE_COUNT; i++) {
-  const scale = 1 + Math.random();
-  const position = getPositionByHeight(9);
-  if (!position) continue;
-
-  const { x, z } = position;
-  const y = position.y - 0.5 * scale;
-
-  dummy.position.set(x, y + 1 * scale, z);
-  dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
-  dummy.scale.set(scale, scale, scale);
-  dummy.updateMatrix();
-  trunkMesh.setMatrixAt(i, dummy.matrix);
-  const tree = {
-    isActive: true,
-    position: dummy.position.clone(),
-    appleIndices: null,
+    return character;
   };
-  trees.push(tree);
+  const character = createCharacter({
+    position: startingPosition,
+  });
+  const { instance: dustEffectInstance } = createParticleSystem(
+    dustEffect,
+    cycleData.now,
+  );
+  character.model.add(dustEffectInstance);
+  units.push(character);
 
-  dummy.position.set(x, y + 1.5 * scale + 1 * scale, z);
-  dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
-  dummy.scale.set(scale, scale, scale);
-  dummy.updateMatrix();
-  leafMesh.setMatrixAt(i, dummy.matrix);
+  const createEnemies = async (count) => {
+    for (let i = 0; i < count; i++) {
+      const position = startingPosition.clone();
+      position.x += 10 + i * 1.5 - Math.floor(i / 5) * (5 * 1.5);
+      position.z += -10 + Math.floor(i / 5) * 2;
+      position.y = getHeightFromPosition(position);
+      const enemy = createCharacter({
+        position,
+        isZombie: true,
+      });
+      units.push(enemy);
+    }
+  };
+  createEnemies(ENEMY_COUNT);
 
-  const appleCount =
-    MIN_APPLES_PER_TREE +
-    Math.floor(Math.random() * (MAX_APPLES_PER_TREE - MIN_APPLES_PER_TREE));
-  const treeAppleIndices = [];
-  for (let j = 0; j < appleCount; j++) {
-    const offsetX = (Math.random() - 0.5) * 1.5 * scale;
-    const offsetY = Math.random() * 1.5 * scale + 1.5 * scale + 0.5 * scale;
-    const offsetZ = (Math.random() - 0.5) * 1.5 * scale;
+  const trunkGeometry = new THREE.BoxGeometry(0.4, 2, 0.4);
+  const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x895129 });
+  const trunkMesh = new THREE.InstancedMesh(
+    trunkGeometry,
+    trunkMaterial,
+    TREE_COUNT,
+  );
+  trunkMesh.castShadow = true;
+  trunkMesh.receiveShadow = true;
+  scene.add(trunkMesh);
+  const leafGeometry = new THREE.SphereGeometry(1, 16, 16);
+  const leafTexture = loadedAssets.textures.grass;
+  const leafMaterial = new THREE.MeshStandardMaterial({
+    color: 0x00ff00,
+    map: leafTexture,
+  });
+  const leafMesh = new THREE.InstancedMesh(
+    leafGeometry,
+    leafMaterial,
+    TREE_COUNT,
+  );
+  leafMesh.castShadow = true;
+  leafMesh.receiveShadow = true;
+  scene.add(leafMesh);
 
-    dummy.position.set(x + offsetX, y + offsetY, z + offsetZ);
+  const appleGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+  const appleMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+  const appleMesh = new THREE.InstancedMesh(
+    appleGeometry,
+    appleMaterial,
+    TREE_COUNT * MAX_APPLES_PER_TREE * 2,
+  );
+  appleMesh.castShadow = true;
+  appleMesh.receiveShadow = true;
+  scene.add(appleMesh);
+  let appleIndex = 0;
+  const applesPerTree = [];
+
+  for (let i = 0; i < TREE_COUNT; i++) {
+    const scale = 1 + Math.random();
+    const position = getPositionByHeight(9);
+    if (!position) continue;
+
+    const { x, z } = position;
+    const y = position.y - 0.5 * scale;
+
+    dummy.position.set(x, y + 1 * scale, z);
+    dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
+    dummy.scale.set(scale, scale, scale);
     dummy.updateMatrix();
+    trunkMesh.setMatrixAt(i, dummy.matrix);
+    const tree = {
+      isActive: true,
+      position: dummy.position.clone(),
+      appleIndices: null,
+    };
+    trees.push(tree);
 
-    appleMesh.setMatrixAt(appleIndex, dummy.matrix);
-    treeAppleIndices.push(appleIndex);
-    appleIndex++;
+    dummy.position.set(x, y + 1.5 * scale + 1 * scale, z);
+    dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
+    dummy.scale.set(scale, scale, scale);
+    dummy.updateMatrix();
+    leafMesh.setMatrixAt(i, dummy.matrix);
+
+    const appleCount =
+      MIN_APPLES_PER_TREE +
+      Math.floor(Math.random() * (MAX_APPLES_PER_TREE - MIN_APPLES_PER_TREE));
+    const treeAppleIndices = [];
+    for (let j = 0; j < appleCount; j++) {
+      const offsetX = (Math.random() - 0.5) * 1.5 * scale;
+      const offsetY = Math.random() * 1.5 * scale + 1.5 * scale + 0.5 * scale;
+      const offsetZ = (Math.random() - 0.5) * 1.5 * scale;
+
+      dummy.position.set(x + offsetX, y + offsetY, z + offsetZ);
+      dummy.updateMatrix();
+
+      appleMesh.setMatrixAt(appleIndex, dummy.matrix);
+      treeAppleIndices.push(appleIndex);
+      appleIndex++;
+    }
+    tree.appleIndices = treeAppleIndices;
   }
-  tree.appleIndices = treeAppleIndices;
-}
-trunkMesh.instanceMatrix.needsUpdate = true;
-leafMesh.instanceMatrix.needsUpdate = true;
-appleMesh.instanceMatrix.needsUpdate = true;
+  trunkMesh.instanceMatrix.needsUpdate = true;
+  leafMesh.instanceMatrix.needsUpdate = true;
+  appleMesh.instanceMatrix.needsUpdate = true;
 
-const removeApplesFromTree = (indices) => {
-  for (const idx of indices) {
+  const removeApplesFromTree = (indices) => {
+    for (const idx of indices) {
+      dummy.position.set(0, -100, 0);
+      dummy.updateMatrix();
+      appleMesh.setMatrixAt(idx, dummy.matrix);
+    }
+    appleMesh.instanceMatrix.needsUpdate = true;
+  };
+
+  const rockGeometry = new THREE.IcosahedronGeometry(0.3, 0);
+  const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
+  const rockMesh = new THREE.InstancedMesh(
+    rockGeometry,
+    rockMaterial,
+    ROCK_COUNT,
+  );
+  rockMesh.castShadow = true;
+  rockMesh.receiveShadow = true;
+  scene.add(rockMesh);
+  for (let i = 0; i < ROCK_COUNT; i++) {
+    const position = getPositionByHeight(7);
+    if (!position) continue;
+    const { x, y, z } = position;
+
+    dummy.position.set(x, y, z);
+    dummy.rotation.set(
+      Math.random() * Math.PI,
+      Math.random() * Math.PI,
+      Math.random() * Math.PI,
+    );
+    const scale = 0.5 + Math.random();
+    dummy.scale.set(scale, scale, scale);
+    dummy.updateMatrix();
+    rockMesh.setMatrixAt(i, dummy.matrix);
+  }
+  rockMesh.instanceMatrix.needsUpdate = true;
+
+  const crateGeometry = new THREE.BoxGeometry(1, 1, 1);
+  const crateMaterial = new THREE.MeshStandardMaterial({
+    map: loadedAssets.textures.crate,
+  });
+  const crateMesh = new THREE.InstancedMesh(
+    crateGeometry,
+    crateMaterial,
+    CRATE_COUNT,
+  );
+  crateMesh.castShadow = true;
+  crateMesh.receiveShadow = true;
+  scene.add(crateMesh);
+  for (let i = 0; i < CRATE_COUNT; i++) {
+    const position = getPositionByHeight(WATER_LEVEL);
+    if (!position) continue;
+    const { x, y, z } = position;
+
+    dummy.position.set(x, y + 0.5, z);
+    dummy.rotation.set(0, 0, 0);
+    dummy.scale.set(1, 1, 1);
+    dummy.updateMatrix();
+    crateMesh.setMatrixAt(i, dummy.matrix);
+
+    const effect =
+      crateEffects[Math.floor(Math.random() * crateEffects.length)];
+
+    const crate = {
+      isActive: true,
+      position: dummy.position.clone(),
+      effect,
+      index: i,
+    };
+    crates.push(crate);
+  }
+  crateMesh.instanceMatrix.needsUpdate = true;
+
+  const removeCrate = (index) => {
     dummy.position.set(0, -100, 0);
     dummy.updateMatrix();
-    appleMesh.setMatrixAt(idx, dummy.matrix);
-  }
-  appleMesh.instanceMatrix.needsUpdate = true;
-};
-
-const rockGeometry = new THREE.IcosahedronGeometry(0.3, 0);
-const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
-const rockMesh = new THREE.InstancedMesh(
-  rockGeometry,
-  rockMaterial,
-  ROCK_COUNT,
-);
-rockMesh.castShadow = true;
-rockMesh.receiveShadow = true;
-scene.add(rockMesh);
-for (let i = 0; i < ROCK_COUNT; i++) {
-  const position = getPositionByHeight(7);
-  if (!position) continue;
-  const { x, y, z } = position;
-
-  dummy.position.set(x, y, z);
-  dummy.rotation.set(
-    Math.random() * Math.PI,
-    Math.random() * Math.PI,
-    Math.random() * Math.PI,
-  );
-  const scale = 0.5 + Math.random();
-  dummy.scale.set(scale, scale, scale);
-  dummy.updateMatrix();
-  rockMesh.setMatrixAt(i, dummy.matrix);
-}
-rockMesh.instanceMatrix.needsUpdate = true;
-
-const crateGeometry = new THREE.BoxGeometry(1, 1, 1);
-const crateMaterial = new THREE.MeshStandardMaterial({
-  map: loadedAssets.textures.crate,
-});
-const crateMesh = new THREE.InstancedMesh(
-  crateGeometry,
-  crateMaterial,
-  CRATE_COUNT,
-);
-crateMesh.castShadow = true;
-crateMesh.receiveShadow = true;
-scene.add(crateMesh);
-for (let i = 0; i < CRATE_COUNT; i++) {
-  const position = getPositionByHeight(WATER_LEVEL);
-  if (!position) continue;
-  const { x, y, z } = position;
-
-  dummy.position.set(x, y + 0.5, z);
-  dummy.rotation.set(0, 0, 0);
-  dummy.scale.set(1, 1, 1);
-  dummy.updateMatrix();
-  crateMesh.setMatrixAt(i, dummy.matrix);
-
-  const effect = crateEffects[Math.floor(Math.random() * crateEffects.length)];
-
-  const crate = {
-    isActive: true,
-    position: dummy.position.clone(),
-    effect,
-    index: i,
+    crateMesh.setMatrixAt(index, dummy.matrix);
+    crateMesh.instanceMatrix.needsUpdate = true;
   };
-  crates.push(crate);
-}
-crateMesh.instanceMatrix.needsUpdate = true;
 
-const removeCrate = (index) => {
-  dummy.position.set(0, -100, 0);
-  dummy.updateMatrix();
-  crateMesh.setMatrixAt(index, dummy.matrix);
-  crateMesh.instanceMatrix.needsUpdate = true;
-};
+  const createKeyListeners = () => {
+    const onKeyDown = (event) => (keys[event.code] = true);
+    const onKeyUp = (event) => (keys[event.code] = false);
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keyup', onKeyUp);
+  };
+  createKeyListeners();
 
-const createKeyListeners = () => {
-  const onKeyDown = (event) => (keys[event.code] = true);
-  const onKeyUp = (event) => (keys[event.code] = false);
-  document.addEventListener('keydown', onKeyDown);
-  document.addEventListener('keyup', onKeyUp);
-};
-createKeyListeners();
+  const updateCamera = () => {
+    camera.position.lerp(
+      new THREE.Vector3(
+        character.model.position.x,
+        character.model.position.y + DISTANCE_FROM_CAMERA,
+        character.model.position.z + 8,
+      ),
+      cycleData.delta * 5,
+    );
+    camera.lookAt(character.model.position);
+  };
 
-const updateCamera = () => {
-  camera.position.lerp(
-    new THREE.Vector3(
-      character.model.position.x,
-      character.model.position.y + DISTANCE_FROM_CAMERA,
-      character.model.position.z + 8,
-    ),
-    cycleData.delta * 5,
-  );
-  camera.lookAt(character.model.position);
-};
+  const handleTerrainHeight = ({ model: unit }) => {
+    const terrainHeight = getHeightFromPosition(
+      new THREE.Vector3(unit.position.x, 0, unit.position.z),
+    );
+    if (terrainHeight < WATER_LEVEL - 0.5) {
+      const direction = new THREE.Vector3()
+        .subVectors(unit.userData.oldPos, unit.position)
+        .normalize();
 
-const handleTerrainHeight = ({ model: unit }) => {
-  const terrainHeight = getHeightFromPosition(
-    new THREE.Vector3(unit.position.x, 0, unit.position.z),
-  );
-  if (terrainHeight < WATER_LEVEL - 0.5) {
-    const direction = new THREE.Vector3()
-      .subVectors(unit.userData.oldPos, unit.position)
-      .normalize();
-
-    unit.position.x = unit.userData.oldPos.x;
-    if (
-      getHeightFromPosition(
-        new THREE.Vector3(unit.position.x, 0, unit.position.z),
-      ) <
-      WATER_LEVEL - 0.5
-    ) {
-      unit.position.z = unit.userData.oldPos.z;
+      unit.position.x = unit.userData.oldPos.x;
       if (
         getHeightFromPosition(
           new THREE.Vector3(unit.position.x, 0, unit.position.z),
         ) <
         WATER_LEVEL - 0.5
       ) {
-        unit.position.copy(unit.userData.oldPos);
-      }
-    }
-  }
-};
-
-const applyCharacterRotation = () => {
-  if (keys['KeyA'] || keys['ArrowLeft']) direction = Math.PI;
-  if (keys['KeyD'] || keys['ArrowRight']) direction = 0;
-  if (keys['KeyW'] || keys['ArrowUp']) direction = Math.PI / 2;
-  if (keys['KeyS'] || keys['ArrowDown']) direction = -Math.PI / 2;
-  if ((keys['KeyA'] || keys['ArrowLeft']) && (keys['KeyW'] || keys['ArrowUp']))
-    direction = Math.PI - Math.PI / 4;
-  if (
-    (keys['KeyA'] || keys['ArrowLeft']) &&
-    (keys['KeyS'] || keys['ArrowDown'])
-  )
-    direction = Math.PI + Math.PI / 4;
-  if ((keys['KeyD'] || keys['ArrowRight']) && (keys['KeyW'] || keys['ArrowUp']))
-    direction = Math.PI / 4;
-  if (
-    (keys['KeyD'] || keys['ArrowRight']) &&
-    (keys['KeyS'] || keys['ArrowDown'])
-  )
-    direction = Math.PI + (Math.PI / 4) * 3;
-  rotationTargetQuaternion.setFromAxisAngle(
-    new THREE.Vector3(0, 1, 0),
-    direction,
-  );
-  character.model.quaternion.slerp(
-    rotationTargetQuaternion,
-    cycleData.delta * 10,
-  );
-};
-const applyCharacterMovement = () => {
-  if (isRolling) return;
-
-  const isMoving =
-    keys['KeyA'] ||
-    keys['KeyS'] ||
-    keys['KeyD'] ||
-    keys['KeyW'] ||
-    keys['ArrowLeft'] ||
-    keys['ArrowDown'] ||
-    keys['ArrowRight'] ||
-    keys['ArrowUp'];
-
-  const isRunningKey = keys['ShiftLeft'];
-  let isRunning = false;
-
-  if (isMoving && isRunningKey) {
-    if (gameState.stamina > 0) {
-      isRunning = true;
-      gameState.stamina -= STAMINA_DRAIN * cycleData.delta;
-      gameState.stamina = Math.max(gameState.stamina, 0);
-    }
-  } else {
-    gameState.stamina += STAMINA_RECOVERY * cycleData.delta;
-    gameState.stamina = Math.min(gameState.stamina, MAX_STAMINA);
-  }
-
-  if (isMoving) {
-    character.model.getWorldDirection(charactersWorldDirection);
-    correctedDir.set(
-      charactersWorldDirection.z,
-      0,
-      -charactersWorldDirection.x,
-    );
-    character.model.userData.oldPos = character.model.position.clone();
-    character.model.position.addScaledVector(
-      correctedDir,
-      (isRunning ? RUN_SPEED : WALK_SPEED) *
-        (character.model.position.y < WATER_SPEED_LEVEL
-          ? WATER_SPEED_MULTIPLIER
-          : 1) *
-        cycleData.delta,
-    );
-    if (isRunning) {
-      playAnimation(character, 'run');
-    } else {
-      playAnimation(character, 'walk');
-    }
-
-    handleTerrainHeight(character);
-  } else {
-    playAnimation(character, 'idle');
-  }
-};
-const updateCharacter = () => {
-  applyCharacterRotation();
-  applyCharacterMovement();
-};
-
-const updateLight = () => {
-  timeOfDay += cycleData.delta / DAY_LENGTH;
-  if (timeOfDay > 1) timeOfDay -= 1;
-
-  const angle = timeOfDay * Math.PI * 2;
-  const radius = 100;
-
-  directionalLight.position.set(
-    character.model.position.x + Math.cos(angle) * radius,
-    character.model.position.y + Math.sin(angle) * radius + 20,
-    character.model.position.z - 40,
-  );
-  directionalLight.target.position.copy(character.model.position);
-  directionalLight.target.updateMatrixWorld();
-
-  const t = Math.max(0, Math.sin(angle));
-  const eased = Math.pow(t, 0.7);
-
-  ambientLight.intensity = 0.6 + eased * 0.3;
-  directionalLight.intensity = 0.4 + eased * 0.6;
-
-  const nightColor = new THREE.Color(0x99bbff);
-  const dayColor = new THREE.Color(0xfef9e6);
-  ambientLight.color.copy(nightColor).lerp(dayColor, eased);
-
-  const sunColor = new THREE.Color(0xffd18b);
-  const noonColor = new THREE.Color(0xffffff);
-  directionalLight.color.copy(sunColor).lerp(noonColor, eased);
-
-  const startHour = 6;
-  let totalHours = startHour + timeOfDay * 24;
-  if (totalHours >= 24) totalHours -= 24;
-
-  const hours = Math.floor(totalHours);
-  const minutes = Math.floor((totalHours - hours) * 60);
-
-  const hStr = String(hours).padStart(2, '0');
-  const mStr = String(minutes).padStart(2, '0');
-
-  const clockEl = document.getElementById('clock-text');
-  if (clockEl) clockEl.textContent = `${hStr}:${mStr}`;
-};
-const updateUnits = () => {
-  units.forEach((_unit, index) => {
-    const { model: unit, mixer, actions } = _unit;
-    mixer.update(cycleData.delta);
-    if (unit.knockbackVelocity) {
-      unit.position.addScaledVector(unit.knockbackVelocity, cycleData.delta);
-      unit.knockbackVelocity.multiplyScalar(0.9);
-      if (unit.knockbackVelocity.lengthSq() < 0.0001)
-        unit.knockbackVelocity.set(0, 0, 0);
-    }
-    for (const tree of trees) {
-      const { position, appleIndices, isActive } = tree;
-
-      const dist = unit.position.distanceTo(position);
-      if (dist < TREE_COLLISION_RADIUS) {
-        const away = unit.position.clone().sub(position).normalize();
-        unit.position.addScaledVector(
-          away,
-          (TREE_COLLISION_RADIUS - dist) * 0.2,
-        );
-        if (unit === character.model && appleIndices && isActive) {
-          tree.isActive = false;
-          removeApplesFromTree(appleIndices);
-          showFloatingLabel({
-            text: `+${appleIndices.length} apples`,
-            position: character.model.position,
-          });
-          gameState.collectedApples += appleIndices.length;
-
-          const effect =
-            appleEffects[Math.floor(Math.random() * appleEffects.length)];
-          if (effect.stamina) {
-            gameState.stamina +=
-              Math.floor(
-                Math.random() * (effect.stamina.max - effect.stamina.min + 1),
-              ) + effect.stamina.min;
-            gameState.stamina = Math.min(gameState.stamina, MAX_STAMINA);
-          } else {
-            gameState.health +=
-              Math.floor(
-                Math.random() * (effect.health.max - effect.health.min + 1),
-              ) + effect.health.min;
-          }
-
-          updateAppleCount();
-          tree.appleIndices = null;
+        unit.position.z = unit.userData.oldPos.z;
+        if (
+          getHeightFromPosition(
+            new THREE.Vector3(unit.position.x, 0, unit.position.z),
+          ) <
+          WATER_LEVEL - 0.5
+        ) {
+          unit.position.copy(unit.userData.oldPos);
         }
       }
     }
-
-    for (const crate of crates) {
-      const { position, effect, index, isActive } = crate;
-      if (!isActive) continue;
-
-      const dist = unit.position.distanceTo(position);
-      if (dist < CRATE_COLLISION_RADIUS) {
-        const away = unit.position.clone().sub(position).normalize();
-        unit.position.addScaledVector(
-          away,
-          (CRATE_COLLISION_RADIUS - dist) * 0.2,
-        );
-        if (unit === character.model && isActive) {
-          crate.isActive = false;
-          showFloatingLabel({
-            text: effect,
-            position: character.model.position,
-          });
-          removeCrate(index);
-        }
-      }
-    }
-
-    const elapsedTime = cycleData.elapsed;
-
-    if (unit === character.model) return;
-
-    if (!unit.userData.target) unit.userData.target = new THREE.Vector3();
-    if (!unit.userData.nextTargetSelectionTime)
-      unit.userData.nextTargetSelectionTime = elapsedTime;
-    if (!unit.userData.resumeTime)
-      unit.userData.resumeTime = elapsedTime + Math.random() * 5;
-
-    if (elapsedTime >= unit.userData.nextTargetSelectionTime) {
-      unit.userData.isAttacking = false;
-      unit.userData.nextTargetSelectionTime = elapsedTime + Math.random() * 5;
-      unit.userData.target.copy(character.model.position);
-    }
-
-    const direction = new THREE.Vector3()
-      .subVectors(
-        unit.userData.isAttacking
-          ? character.model.position
-          : unit.userData.target,
-        unit.position,
-      )
-      .normalize();
-    const adjustQuat = new THREE.Quaternion();
-    adjustQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
-    rotationTargetQuaternion
-      .setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction)
-      .multiply(adjustQuat);
-    unit.quaternion.slerp(rotationTargetQuaternion, cycleData.delta * 10);
-
-    if (elapsedTime < unit.userData.resumeTime) return;
-
-    playAnimation(_unit, 'run');
-
-    unit.position.addScaledVector(direction, ENEMY_SPEED * cycleData.delta);
-    unit.userData.oldPos = unit.position.clone();
-
-    handleTerrainHeight(_unit);
-
-    unit.userData.target.y = unit.position.y;
-    if (unit.position.distanceTo(unit.userData.target) < 1.5) {
-      playAnimation(_unit, 'idle');
-      unit.userData.resumeTime = cycleData.elapsed + Math.random() * 3;
-    }
-    if (unit.position.distanceTo(character.model.position) < 1.5) {
-      playAnimation(_unit, 'attack');
-      unit.userData.resumeTime = cycleData.elapsed + Math.random() * 3;
-      unit.userData.isAttacking = true;
-    }
-  });
-
-  for (let i = 0; i < units.length; i++) {
-    const e1 = units[i].model;
-
-    for (let j = i + 1; j < units.length; j++) {
-      const e2 = units[j].model;
-
-      const dist = e1.position.distanceTo(e2.position);
-      const minDist = 1;
-
-      if (dist < minDist) {
-        const pushDir = e1.position.clone().sub(e2.position).normalize();
-        const overlap = minDist - dist;
-
-        e1.position.addScaledVector(pushDir, overlap * 0.5);
-        e2.position.addScaledVector(pushDir, -overlap * 0.5);
-      }
-    }
-  }
-};
-
-const updateCharactersYPosition = () => {
-  units.forEach(
-    ({ model: unit }) =>
-      (unit.position.y = getHeightFromPosition(unit.position)),
-  );
-};
-
-const getThrowVelocity = () => {
-  const direction = character.model.getWorldDirection(new THREE.Vector3());
-  direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-
-  direction.x += (Math.random() - 0.5) * throwSpread;
-  direction.y += Math.random() * 0.2;
-  direction.z += (Math.random() - 0.5) * throwSpread;
-
-  direction.normalize();
-  direction.multiplyScalar(throwStrength);
-  return direction;
-};
-
-const updateAppleInstance = (index, position) => {
-  dummy.position.copy(position);
-  dummy.updateMatrix();
-  appleMesh.setMatrixAt(index, dummy.matrix);
-  appleMesh.instanceMatrix.needsUpdate = true;
-};
-
-const throwApple = () => {
-  for (let i = 0; i < appleMesh.count; i++) {
-    if (!apples[i] || apples[i].inactive) {
-      const apple = {
-        position: character.model.position.clone(),
-        velocity: getThrowVelocity(),
-        life: 5,
-        instanceId: i,
-        inactive: false,
-      };
-      apple.position.y += 0.5;
-      apples[i] = apple;
-      updateAppleInstance(i, apple.position);
-      break;
-    }
-  }
-};
-
-const getSplashText = () => {
-  const texts = [
-    'Splash!',
-    'Pow!',
-    'Thud!',
-    'Smash!',
-    'Bam!',
-    'Whack!',
-    'Bonk!',
-    'Kaboom!',
-  ];
-  return texts[Math.floor(Math.random() * texts.length)];
-};
-
-const updateApples = () => {
-  for (let apple of apples) {
-    if (apple && !apple.inactive) {
-      apple.velocity.add(gravity.clone().multiplyScalar(cycleData.delta));
-      apple.position.add(
-        apple.velocity.clone().multiplyScalar(cycleData.delta),
-      );
-      updateAppleInstance(apple.instanceId, apple.position);
-
-      const terrainHeight = getHeightFromPosition(apple.position);
-      apple.life -= cycleData.delta;
-
-      const addAppleExplosion = (position) => {
-        const { instance: splashEffectInstance, dispose } =
-          createParticleSystem(splashEffect, cycleData.now);
-        splashEffectInstance.position.copy(position);
-        scene.add(splashEffectInstance);
-        setTimeout(dispose, 1000);
-      };
-
-      if (apple.position.y <= terrainHeight) addAppleExplosion(apple.position);
-
-      for (let { model: unit } of units) {
-        if (unit === character.model) continue;
-        const dist = apple.position.distanceTo(unit.position);
-        if (dist < APPLE_HIT_RADIUS) {
-          const away = unit.position.clone().sub(apple.position).normalize();
-          const knockback = away.multiplyScalar(APPLE_PUSH_FORCE);
-          if (!unit.knockbackVelocity)
-            unit.knockbackVelocity = new THREE.Vector3();
-          unit.knockbackVelocity.add(knockback);
-
-          apple.inactive = true;
-          apple.velocity.set(0, 0, 0);
-          addAppleExplosion(unit.position);
-          showFloatingLabel({ text: getSplashText(), position: unit.position });
-          gameState.score++;
-          updateScore();
-
-          updateAppleInstance(apple.instanceId, new THREE.Vector3(0, -100, 0));
-          break;
-        }
-      }
-
-      if (
-        apple.life <= 0 ||
-        apple.position.y < 0 ||
-        apple.position.y <= terrainHeight
-      ) {
-        apple.inactive = true;
-        apple.velocity.set(0, 0, 0);
-        updateAppleInstance(apple.instanceId, new THREE.Vector3(0, -100, 0));
-      }
-    }
-  }
-};
-
-const updateAppleThrowRoutine = () => {
-  if (keys['Space']) {
-    const now = performance.now();
-    if (now - lastThrowTime > throwCooldown && gameState.collectedApples > 0) {
-      gameState.collectedApples--;
-      updateAppleCount();
-      throwApple();
-      lastThrowTime = now;
-    }
-  }
-};
-
-const updateRollRoutine = () => {
-  const now = performance.now();
-  if (keys['KeyR'] && !isRolling) {
-    if (now - lastRollTime > rollCooldown) {
-      isRolling = true;
-      playAnimation(character, 'roll');
-      lastRollTime = now;
-    }
-  } else if (isRolling) {
-    const rollAction = character.actions.roll;
-    if (lastRollTime + rollAction.getClip().duration * 1000 <= now) {
-      isRolling = false;
-      playAnimation(character, 'idle');
-    } else {
-      const forward = new THREE.Vector3(1, 0, 0);
-      forward.applyQuaternion(character.model.quaternion);
-      character.model.userData.oldPos = character.model.position.clone();
-      character.model.position.addScaledVector(
-        forward,
-        (keys['ShiftLeft'] ? FAST_ROLL_SPEED : ROLL_SPEED) * cycleData.delta,
-      );
-      handleTerrainHeight(character);
-    }
-  }
-};
-
-const createWater = () => {
-  const uniforms = {
-    uTime: { value: 0.0 },
-    uAmplitude: { value: 1.0 },
-    uFrequency: { value: 4.0 },
-    uSpeed: { value: 1.5 },
-    uDeepColor: { value: new THREE.Color(0x013a5b) },
-    uShallowColor: { value: new THREE.Color(0x2fc7ff) },
-    uShallowStrength: { value: 0.2 },
-    uFoamColor: { value: new THREE.Color(0xf6f9ff) },
-    uFoamWidth: { value: 0.4 },
-    uFoamStrength: { value: 0.2 },
-    uTerrainHeightMap: { value: heightMapTexture },
-    uWaterLevel: { value: WATER_LEVEL },
-    uMaxTerrainHeight: { value: 30 },
-    uWorldWidth: { value: WORLD_WIDTH },
-    uWorldHeight: { value: WORLD_HEIGHT },
-    uOpacity: { value: 0.8 },
   };
 
-  const material = new THREE.ShaderMaterial({
-    vertexShader: WaterVertexShader,
-    fragmentShader: WaterFragmentShader,
-    uniforms,
-    side: THREE.DoubleSide,
-    transparent: true,
+  const applyCharacterRotation = () => {
+    if (keys['KeyA'] || keys['ArrowLeft']) direction = Math.PI;
+    if (keys['KeyD'] || keys['ArrowRight']) direction = 0;
+    if (keys['KeyW'] || keys['ArrowUp']) direction = Math.PI / 2;
+    if (keys['KeyS'] || keys['ArrowDown']) direction = -Math.PI / 2;
+    if (
+      (keys['KeyA'] || keys['ArrowLeft']) &&
+      (keys['KeyW'] || keys['ArrowUp'])
+    )
+      direction = Math.PI - Math.PI / 4;
+    if (
+      (keys['KeyA'] || keys['ArrowLeft']) &&
+      (keys['KeyS'] || keys['ArrowDown'])
+    )
+      direction = Math.PI + Math.PI / 4;
+    if (
+      (keys['KeyD'] || keys['ArrowRight']) &&
+      (keys['KeyW'] || keys['ArrowUp'])
+    )
+      direction = Math.PI / 4;
+    if (
+      (keys['KeyD'] || keys['ArrowRight']) &&
+      (keys['KeyS'] || keys['ArrowDown'])
+    )
+      direction = Math.PI + (Math.PI / 4) * 3;
+    rotationTargetQuaternion.setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      direction,
+    );
+    character.model.quaternion.slerp(
+      rotationTargetQuaternion,
+      cycleData.delta * 10,
+    );
+  };
+  const applyCharacterMovement = () => {
+    if (isRolling) return;
+
+    const isMoving =
+      keys['KeyA'] ||
+      keys['KeyS'] ||
+      keys['KeyD'] ||
+      keys['KeyW'] ||
+      keys['ArrowLeft'] ||
+      keys['ArrowDown'] ||
+      keys['ArrowRight'] ||
+      keys['ArrowUp'];
+
+    const isRunningKey = keys['ShiftLeft'];
+    let isRunning = false;
+
+    if (isMoving && isRunningKey) {
+      if (gameState.stamina > 0) {
+        isRunning = true;
+        gameState.stamina -= STAMINA_DRAIN * cycleData.delta;
+        gameState.stamina = Math.max(gameState.stamina, 0);
+      }
+    } else {
+      gameState.stamina += STAMINA_RECOVERY * cycleData.delta;
+      gameState.stamina = Math.min(gameState.stamina, MAX_STAMINA);
+    }
+
+    if (isMoving) {
+      character.model.getWorldDirection(charactersWorldDirection);
+      correctedDir.set(
+        charactersWorldDirection.z,
+        0,
+        -charactersWorldDirection.x,
+      );
+      character.model.userData.oldPos = character.model.position.clone();
+      character.model.position.addScaledVector(
+        correctedDir,
+        (isRunning ? RUN_SPEED : WALK_SPEED) *
+          (character.model.position.y < WATER_SPEED_LEVEL
+            ? WATER_SPEED_MULTIPLIER
+            : 1) *
+          cycleData.delta,
+      );
+      if (isRunning) {
+        playAnimation(character, 'run');
+      } else {
+        playAnimation(character, 'walk');
+      }
+
+      handleTerrainHeight(character);
+    } else {
+      playAnimation(character, 'idle');
+    }
+  };
+  const updateCharacter = () => {
+    applyCharacterRotation();
+    applyCharacterMovement();
+  };
+
+  const updateLight = () => {
+    timeOfDay += cycleData.delta / DAY_LENGTH;
+    if (timeOfDay > 1) timeOfDay -= 1;
+
+    const angle = timeOfDay * Math.PI * 2;
+    const radius = 100;
+
+    directionalLight.position.set(
+      character.model.position.x + Math.cos(angle) * radius,
+      character.model.position.y + Math.sin(angle) * radius + 20,
+      character.model.position.z - 40,
+    );
+    directionalLight.target.position.copy(character.model.position);
+    directionalLight.target.updateMatrixWorld();
+
+    const t = Math.max(0, Math.sin(angle));
+    const eased = Math.pow(t, 0.7);
+
+    ambientLight.intensity = 0.6 + eased * 0.3;
+    directionalLight.intensity = 0.4 + eased * 0.6;
+
+    const nightColor = new THREE.Color(0x99bbff);
+    const dayColor = new THREE.Color(0xfef9e6);
+    ambientLight.color.copy(nightColor).lerp(dayColor, eased);
+
+    const sunColor = new THREE.Color(0xffd18b);
+    const noonColor = new THREE.Color(0xffffff);
+    directionalLight.color.copy(sunColor).lerp(noonColor, eased);
+
+    const startHour = 6;
+    let totalHours = startHour + timeOfDay * 24;
+    if (totalHours >= 24) totalHours -= 24;
+
+    const hours = Math.floor(totalHours);
+    const minutes = Math.floor((totalHours - hours) * 60);
+
+    const hStr = String(hours).padStart(2, '0');
+    const mStr = String(minutes).padStart(2, '0');
+
+    const clockEl = document.getElementById('clock-text');
+    if (clockEl) clockEl.textContent = `${hStr}:${mStr}`;
+  };
+  const updateUnits = () => {
+    units.forEach((_unit, index) => {
+      const { model: unit, mixer, actions } = _unit;
+      mixer.update(cycleData.delta);
+      if (unit.knockbackVelocity) {
+        unit.position.addScaledVector(unit.knockbackVelocity, cycleData.delta);
+        unit.knockbackVelocity.multiplyScalar(0.9);
+        if (unit.knockbackVelocity.lengthSq() < 0.0001)
+          unit.knockbackVelocity.set(0, 0, 0);
+      }
+      for (const tree of trees) {
+        const { position, appleIndices, isActive } = tree;
+
+        const dist = unit.position.distanceTo(position);
+        if (dist < TREE_COLLISION_RADIUS) {
+          const away = unit.position.clone().sub(position).normalize();
+          unit.position.addScaledVector(
+            away,
+            (TREE_COLLISION_RADIUS - dist) * 0.2,
+          );
+          if (unit === character.model && appleIndices && isActive) {
+            tree.isActive = false;
+            removeApplesFromTree(appleIndices);
+            showFloatingLabel({
+              text: `+${appleIndices.length} apples`,
+              position: character.model.position,
+            });
+            gameState.collectedApples += appleIndices.length;
+
+            const effect =
+              appleEffects[Math.floor(Math.random() * appleEffects.length)];
+            if (effect.stamina) {
+              gameState.stamina +=
+                Math.floor(
+                  Math.random() * (effect.stamina.max - effect.stamina.min + 1),
+                ) + effect.stamina.min;
+              gameState.stamina = Math.min(gameState.stamina, MAX_STAMINA);
+            } else {
+              gameState.health +=
+                Math.floor(
+                  Math.random() * (effect.health.max - effect.health.min + 1),
+                ) + effect.health.min;
+            }
+
+            updateAppleCount();
+            tree.appleIndices = null;
+          }
+        }
+      }
+
+      for (const crate of crates) {
+        const { position, effect, index, isActive } = crate;
+        if (!isActive) continue;
+
+        const dist = unit.position.distanceTo(position);
+        if (dist < CRATE_COLLISION_RADIUS) {
+          const away = unit.position.clone().sub(position).normalize();
+          unit.position.addScaledVector(
+            away,
+            (CRATE_COLLISION_RADIUS - dist) * 0.2,
+          );
+          if (unit === character.model && isActive) {
+            crate.isActive = false;
+            showFloatingLabel({
+              text: effect,
+              position: character.model.position,
+            });
+            removeCrate(index);
+          }
+        }
+      }
+
+      const elapsedTime = cycleData.elapsed;
+
+      if (unit === character.model) return;
+
+      if (!unit.userData.target) unit.userData.target = new THREE.Vector3();
+      if (!unit.userData.nextTargetSelectionTime)
+        unit.userData.nextTargetSelectionTime = elapsedTime;
+      if (!unit.userData.resumeTime)
+        unit.userData.resumeTime = elapsedTime + Math.random() * 5;
+
+      if (elapsedTime >= unit.userData.nextTargetSelectionTime) {
+        unit.userData.isAttacking = false;
+        unit.userData.nextTargetSelectionTime = elapsedTime + Math.random() * 5;
+        unit.userData.target.copy(character.model.position);
+      }
+
+      const direction = new THREE.Vector3()
+        .subVectors(
+          unit.userData.isAttacking
+            ? character.model.position
+            : unit.userData.target,
+          unit.position,
+        )
+        .normalize();
+      const adjustQuat = new THREE.Quaternion();
+      adjustQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+      rotationTargetQuaternion
+        .setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction)
+        .multiply(adjustQuat);
+      unit.quaternion.slerp(rotationTargetQuaternion, cycleData.delta * 10);
+
+      if (elapsedTime < unit.userData.resumeTime) return;
+
+      playAnimation(_unit, 'run');
+
+      unit.position.addScaledVector(direction, ENEMY_SPEED * cycleData.delta);
+      unit.userData.oldPos = unit.position.clone();
+
+      handleTerrainHeight(_unit);
+
+      unit.userData.target.y = unit.position.y;
+      if (unit.position.distanceTo(unit.userData.target) < 1.5) {
+        playAnimation(_unit, 'idle');
+        unit.userData.resumeTime = cycleData.elapsed + Math.random() * 3;
+      }
+      if (unit.position.distanceTo(character.model.position) < 1.5) {
+        playAnimation(_unit, 'attack');
+        unit.userData.resumeTime = cycleData.elapsed + Math.random() * 3;
+        unit.userData.isAttacking = true;
+      }
+    });
+
+    for (let i = 0; i < units.length; i++) {
+      const e1 = units[i].model;
+
+      for (let j = i + 1; j < units.length; j++) {
+        const e2 = units[j].model;
+
+        const dist = e1.position.distanceTo(e2.position);
+        const minDist = 1;
+
+        if (dist < minDist) {
+          const pushDir = e1.position.clone().sub(e2.position).normalize();
+          const overlap = minDist - dist;
+
+          e1.position.addScaledVector(pushDir, overlap * 0.5);
+          e2.position.addScaledVector(pushDir, -overlap * 0.5);
+        }
+      }
+    }
+  };
+
+  const updateCharactersYPosition = () => {
+    units.forEach(
+      ({ model: unit }) =>
+        (unit.position.y = getHeightFromPosition(unit.position)),
+    );
+  };
+
+  const getThrowVelocity = () => {
+    const direction = character.model.getWorldDirection(new THREE.Vector3());
+    direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+
+    direction.x += (Math.random() - 0.5) * throwSpread;
+    direction.y += Math.random() * 0.2;
+    direction.z += (Math.random() - 0.5) * throwSpread;
+
+    direction.normalize();
+    direction.multiplyScalar(throwStrength);
+    return direction;
+  };
+
+  const updateAppleInstance = (index, position) => {
+    dummy.position.copy(position);
+    dummy.updateMatrix();
+    appleMesh.setMatrixAt(index, dummy.matrix);
+    appleMesh.instanceMatrix.needsUpdate = true;
+  };
+
+  const throwApple = () => {
+    for (let i = 0; i < appleMesh.count; i++) {
+      if (!apples[i] || apples[i].inactive) {
+        const apple = {
+          position: character.model.position.clone(),
+          velocity: getThrowVelocity(),
+          life: 5,
+          instanceId: i,
+          inactive: false,
+        };
+        apple.position.y += 0.5;
+        apples[i] = apple;
+        updateAppleInstance(i, apple.position);
+        break;
+      }
+    }
+  };
+
+  const getSplashText = () => {
+    const texts = [
+      'Splash!',
+      'Pow!',
+      'Thud!',
+      'Smash!',
+      'Bam!',
+      'Whack!',
+      'Bonk!',
+      'Kaboom!',
+    ];
+    return texts[Math.floor(Math.random() * texts.length)];
+  };
+
+  const updateApples = () => {
+    for (let apple of apples) {
+      if (apple && !apple.inactive) {
+        apple.velocity.add(gravity.clone().multiplyScalar(cycleData.delta));
+        apple.position.add(
+          apple.velocity.clone().multiplyScalar(cycleData.delta),
+        );
+        updateAppleInstance(apple.instanceId, apple.position);
+
+        const terrainHeight = getHeightFromPosition(apple.position);
+        apple.life -= cycleData.delta;
+
+        const addAppleExplosion = (position) => {
+          const { instance: splashEffectInstance, dispose } =
+            createParticleSystem(splashEffect, cycleData.now);
+          splashEffectInstance.position.copy(position);
+          scene.add(splashEffectInstance);
+          setTimeout(dispose, 1000);
+        };
+
+        if (apple.position.y <= terrainHeight)
+          addAppleExplosion(apple.position);
+
+        for (let { model: unit } of units) {
+          if (unit === character.model) continue;
+          const dist = apple.position.distanceTo(unit.position);
+          if (dist < APPLE_HIT_RADIUS) {
+            const away = unit.position.clone().sub(apple.position).normalize();
+            const knockback = away.multiplyScalar(APPLE_PUSH_FORCE);
+            if (!unit.knockbackVelocity)
+              unit.knockbackVelocity = new THREE.Vector3();
+            unit.knockbackVelocity.add(knockback);
+
+            apple.inactive = true;
+            apple.velocity.set(0, 0, 0);
+            addAppleExplosion(unit.position);
+            showFloatingLabel({
+              text: getSplashText(),
+              position: unit.position,
+            });
+            gameState.score++;
+            updateScore();
+
+            updateAppleInstance(
+              apple.instanceId,
+              new THREE.Vector3(0, -100, 0),
+            );
+            break;
+          }
+        }
+
+        if (
+          apple.life <= 0 ||
+          apple.position.y < 0 ||
+          apple.position.y <= terrainHeight
+        ) {
+          apple.inactive = true;
+          apple.velocity.set(0, 0, 0);
+          updateAppleInstance(apple.instanceId, new THREE.Vector3(0, -100, 0));
+        }
+      }
+    }
+  };
+
+  const updateAppleThrowRoutine = () => {
+    if (keys['Space']) {
+      const now = performance.now();
+      if (
+        now - lastThrowTime > throwCooldown &&
+        gameState.collectedApples > 0
+      ) {
+        gameState.collectedApples--;
+        updateAppleCount();
+        throwApple();
+        lastThrowTime = now;
+      }
+    }
+  };
+
+  const updateRollRoutine = () => {
+    const now = performance.now();
+    if (keys['KeyR'] && !isRolling) {
+      if (now - lastRollTime > rollCooldown) {
+        isRolling = true;
+        playAnimation(character, 'roll');
+        lastRollTime = now;
+      }
+    } else if (isRolling) {
+      const rollAction = character.actions.roll;
+      if (lastRollTime + rollAction.getClip().duration * 1000 <= now) {
+        isRolling = false;
+        playAnimation(character, 'idle');
+      } else {
+        const forward = new THREE.Vector3(1, 0, 0);
+        forward.applyQuaternion(character.model.quaternion);
+        character.model.userData.oldPos = character.model.position.clone();
+        character.model.position.addScaledVector(
+          forward,
+          (keys['ShiftLeft'] ? FAST_ROLL_SPEED : ROLL_SPEED) * cycleData.delta,
+        );
+        handleTerrainHeight(character);
+      }
+    }
+  };
+
+  const createWater = () => {
+    const uniforms = {
+      uTime: { value: 0.0 },
+      uAmplitude: { value: 1.0 },
+      uFrequency: { value: 4.0 },
+      uSpeed: { value: 1.5 },
+      uDeepColor: { value: new THREE.Color(0x013a5b) },
+      uShallowColor: { value: new THREE.Color(0x2fc7ff) },
+      uShallowStrength: { value: 0.2 },
+      uFoamColor: { value: new THREE.Color(0xf6f9ff) },
+      uFoamWidth: { value: 0.4 },
+      uFoamStrength: { value: 0.2 },
+      uTerrainHeightMap: { value: heightMapTexture },
+      uWaterLevel: { value: WATER_LEVEL },
+      uMaxTerrainHeight: { value: 30 },
+      uWorldWidth: { value: WORLD_WIDTH },
+      uWorldHeight: { value: WORLD_HEIGHT },
+      uOpacity: { value: 0.8 },
+    };
+
+    const material = new THREE.ShaderMaterial({
+      vertexShader: WaterVertexShader,
+      fragmentShader: WaterFragmentShader,
+      uniforms,
+      side: THREE.DoubleSide,
+      transparent: true,
+    });
+
+    const geom = new THREE.PlaneGeometry(WORLD_WIDTH, WORLD_HEIGHT, 64, 64);
+    const mesh = new THREE.Mesh(geom, material);
+
+    return { mesh, uniforms };
+  };
+
+  const waters = [];
+  const water = createWater();
+  water.mesh.rotation.x = -Math.PI / 2;
+  water.mesh.position.x = WORLD_WIDTH / 2;
+  water.mesh.position.y = WATER_LEVEL;
+  water.mesh.position.z = WORLD_HEIGHT / 2;
+  scene.add(water.mesh);
+  waters.push(water);
+  const updateWaters = () => {
+    waters.forEach(({ uniforms }) => (uniforms.uTime.value += cycleData.delta));
+  };
+
+  const cinamaticCameraController = createCinematicCameraController(camera, [
+    {
+      from: new THREE.Vector3(
+        startingPosition.x + 150,
+        40,
+        startingPosition.z + 50,
+      ),
+      to: new THREE.Vector3(startingPosition.x - 10, 12, startingPosition.z),
+      lookAt: new THREE.Vector3(250, 20, 200),
+      duration: 0.4,
+    },
+    {
+      to: new THREE.Vector3(
+        character.model.position.x,
+        character.model.position.y + DISTANCE_FROM_CAMERA,
+        character.model.position.z + 8,
+      ),
+      lookAt: character.model.position,
+      duration: 0.2,
+    },
+  ]);
+
+  camera.lookAt(150, 20, 200);
+  cinamaticCameraController.play();
+
+  // Use THREE Play's update system
+  worldInstance.onUpdate((deltaTime, elapsedTime) => {
+    // Update cycle data for compatibility
+    cycleData.now = Date.now() - cycleData.totalPauseTime;
+    cycleData.delta = deltaTime > 0.1 ? 0.1 : deltaTime;
+    cycleData.elapsed = elapsedTime;
+
+    updateParticleSystems(cycleData);
+    if (!cinamaticCameraController.isPlaying()) {
+      updateCamera();
+      updateCharacter();
+    }
+    updateUnits();
+    updateCharactersYPosition();
+    updateAppleThrowRoutine();
+    updateRollRoutine();
+    updateApples();
+    updateLight();
+    updateStaminaUi();
+    updateWaters();
+
+    cinamaticCameraController.update(cycleData.delta);
+
+    // Render CSS2D labels
+    labelRenderer.render(scene, camera);
   });
 
-  const geom = new THREE.PlaneGeometry(WORLD_WIDTH, WORLD_HEIGHT, 64, 64);
-  const mesh = new THREE.Mesh(geom, material);
-
-  return { mesh, uniforms };
-};
-
-const waters = [];
-const water = createWater();
-water.mesh.rotation.x = -Math.PI / 2;
-water.mesh.position.x = WORLD_WIDTH / 2;
-water.mesh.position.y = WATER_LEVEL;
-water.mesh.position.z = WORLD_HEIGHT / 2;
-scene.add(water.mesh);
-waters.push(water);
-const updateWaters = () => {
-  waters.forEach(({ uniforms }) => (uniforms.uTime.value += cycleData.delta));
-};
-
-const cinamaticCameraController = createCinematicCameraController(camera, [
-  {
-    from: new THREE.Vector3(
-      startingPosition.x + 150,
-      40,
-      startingPosition.z + 50,
-    ),
-    to: new THREE.Vector3(startingPosition.x - 10, 12, startingPosition.z),
-    lookAt: new THREE.Vector3(250, 20, 200),
-    duration: 0.4,
-  },
-  {
-    to: new THREE.Vector3(
-      character.model.position.x,
-      character.model.position.y + DISTANCE_FROM_CAMERA,
-      character.model.position.z + 8,
-    ),
-    lookAt: character.model.position,
-    duration: 0.2,
-  },
-]);
-
-camera.lookAt(150, 20, 200);
-cinamaticCameraController.play();
-
-// Use THREE Play's update system
-worldInstance.onUpdate((deltaTime, elapsedTime) => {
-  // Update cycle data for compatibility
-  cycleData.now = Date.now() - cycleData.totalPauseTime;
-  cycleData.delta = deltaTime > 0.1 ? 0.1 : deltaTime;
-  cycleData.elapsed = elapsedTime;
-
-  updateParticleSystems(cycleData);
-  if (!cinamaticCameraController.isPlaying()) {
-    updateCamera();
-    updateCharacter();
-  }
-  updateUnits();
-  updateCharactersYPosition();
-  updateAppleThrowRoutine();
-  updateRollRoutine();
-  updateApples();
-  updateLight();
-  updateStaminaUi();
-  updateWaters();
-
-  cinamaticCameraController.update(cycleData.delta);
-
-  // Render CSS2D labels
-  labelRenderer.render(scene, camera);
+  // Start the THREE Play update loop
+  worldInstance.start();
 });
-
-// Start the THREE Play update loop
-worldInstance.start();
