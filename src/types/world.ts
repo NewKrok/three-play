@@ -1,6 +1,12 @@
 import * as THREE from 'three';
 import type { HeightmapUtils } from './heightmap.js';
 import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
+import type {
+  AssetsConfig,
+  LoadedAssets,
+  ProgressCallback,
+  ReadyCallback,
+} from './assets.js';
 
 /**
  * Update callback function type
@@ -40,6 +46,7 @@ export type WorldConfig = {
     resolution?: number;
     elevationRatio?: number;
   };
+  assets?: AssetsConfig;
 };
 
 /**
@@ -54,9 +61,12 @@ export type WorldInstance = {
   getAmbientLight(): THREE.AmbientLight;
   getDirectionalLight(): THREE.DirectionalLight;
   getHeightmapUtils(): HeightmapUtils | null; // Heightmap utilities if loaded
+  getLoadedAssets(): LoadedAssets | null; // Loaded assets if available
   start(): void;
   pause(): void;
   resume(): void;
   onUpdate(callback: UpdateCallback): () => void; // Returns unsubscribe function
+  onProgress(callback: ProgressCallback): () => void; // Returns unsubscribe function for asset loading progress
+  onReady(callback: ReadyCallback): () => void; // Returns unsubscribe function for asset loading completion
   destroy(): void; // Complete cleanup and memory deallocation
 };

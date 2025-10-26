@@ -8,12 +8,19 @@ import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { loadHeightmap, createHeightmapUtils } from '../heightmap/index.js';
+import { AssetLoader } from '../assets/index.js';
 import type { HeightmapUtils, HeightmapConfig } from '../../types/heightmap.js';
 import type {
   WorldConfig,
   WorldInstance,
   UpdateCallback,
 } from '../../types/world.js';
+import type {
+  LoadedAssets,
+  ProgressCallback,
+  ReadyCallback,
+  AssetsConfig,
+} from '../../types/assets.js';
 
 /**
  * Creates default post-processing passes
@@ -101,6 +108,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   const heightmapConfig = config.heightmap;
   const heightmapUrl = heightmapConfig?.url;
   const shouldLoadHeightmap = Boolean(heightmapUrl);
+
+  // Get assets configuration
+  const assetsConfig = config.assets;
+  const shouldLoadAssets = Boolean(assetsConfig);
 
   // Create renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -220,10 +231,61 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   // Heightmap system
   let heightmapUtils: HeightmapUtils | null = null;
 
+  // Asset loading system
+  const assetLoader = new AssetLoader();
+  let loadedAssets: LoadedAssets | null = null;
+  const progressCallbacks = new Set<ProgressCallback>();
+  const readyCallbacks = new Set<ReadyCallback>();
+
   // Add initial callback if provided
   if (initialCallback) {
     updateCallbacks.add(initialCallback);
   }
+
+  // Asset loading functions
+  const notifyProgress = (progress: any) => {
+    progressCallbacks.forEach((callback) => {
+      try {
+        callback(progress);
+      } catch (error) {
+        console.error('Error in progress callback:', error);
+      }
+    });
+  };
+
+  const notifyReady = (assets: LoadedAssets) => {
+    readyCallbacks.forEach((callback) => {
+      try {
+        callback(assets);
+      } catch (error) {
+        console.error('Error in ready callback:', error);
+      }
+    });
+  };
+
+  const loadAssetsInternal = async (
+    config: AssetsConfig,
+  ): Promise<LoadedAssets> => {
+    try {
+      // Subscribe to asset loader progress
+      const unsubscribeProgress = assetLoader.onProgress(notifyProgress);
+
+      // Load assets
+      const assets = await assetLoader.loadAssets(config);
+      loadedAssets = assets;
+
+      // Unsubscribe from progress
+      unsubscribeProgress();
+
+      // Notify ready callbacks
+      notifyReady(assets);
+
+      return assets;
+    } catch (error) {
+      console.error('Failed to load assets:', error);
+      throw error;
+    }
+  };
 
   // Update loop function
   const updateLoop = () => {
@@ -274,6 +336,13 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   // Start auto-loading heightmap if configured
   if (shouldLoadHeightmap) {
     initializeHeightmap();
+  }
+
+  // Start auto-loading assets if configured
+  if (shouldLoadAssets && assetsConfig) {
+    loadAssetsInternal(assetsConfig).catch((error) => {
+      console.error('Failed to auto-load assets:', error);
+    });
   }
 
   // Start the loop automatically if configured
@@ -349,6 +418,14 @@ const createWorld = (config: WorldConfig): WorldInstance => {
     },
 
     /**
+     * Get the loaded assets
+     * @returns The loaded assets instance or null if not loaded
+     */
+    getLoadedAssets(): LoadedAssets | null {
+      return loadedAssets;
+    },
+
+    /**
      * Start the update loop
      */
     start(): void {
@@ -413,6 +490,48 @@ const createWorld = (config: WorldConfig): WorldInstance => {
     },
 
     /**
+     * Subscribe to asset loading progress events
+     * @param callback - Function to call on progress updates
+     * @returns Unsubscribe function
+     */
+    onProgress(callback: ProgressCallback): () => void {
+      if (isDestroyed) {
+        console.warn(
+          'Cannot subscribe to progress events: world instance is destroyed',
+        );
+        return () => {};
+      }
+
+      progressCallbacks.add(callback);
+
+      // Return unsubscribe function
+      return () => {
+        progressCallbacks.delete(callback);
+      };
+    },
+
+    /**
+     * Subscribe to asset loading completion events
+     * @param callback - Function to call when assets are loaded
+     * @returns Unsubscribe function
+     */
+    onReady(callback: ReadyCallback): () => void {
+      if (isDestroyed) {
+        console.warn(
+          'Cannot subscribe to ready events: world instance is destroyed',
+        );
+        return () => {};
+      }
+
+      readyCallbacks.add(callback);
+
+      // Return unsubscribe function
+      return () => {
+        readyCallbacks.delete(callback);
+      };
+    },
+
+    /**
      * Destroy the world instance and clean up all resources
      */
     destroy(): void {
@@ -431,6 +550,24 @@ const createWorld = (config: WorldConfig): WorldInstance => {
 
       // Clear all update callbacks
       updateCallbacks.clear();
+
+      // Clear all asset loading callbacks
+      progressCallbacks.clear();
+      readyCallbacks.clear();
+
+      // Cleanup asset loader
+      assetLoader.destroy();
+
+      // Dispose loaded assets
+      if (loadedAssets) {
+        // Dispose textures
+        Object.values(loadedAssets.textures).forEach((texture) => {
+          texture.dispose();
+        });
+
+        // Dispose models (they are already added to scene, so they'll be disposed with scene)
+        loadedAssets = null;
+      }
 
       // Remove event listeners
       if (typeof window !== 'undefined' && window.removeEventListener) {

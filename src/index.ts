@@ -8,6 +8,9 @@ export {
   createHeightmapUtils,
 } from './core/heightmap/index.js';
 
+// Asset loading utilities
+export { AssetLoader } from './core/assets/index.js';
+
 // Types
 export type { WorldConfig, WorldInstance } from './types/world.js';
 export type {
@@ -17,3 +20,12 @@ export type {
   HeightmapPosition,
   ResolutionRatio,
 } from './types/heightmap.js';
+export type {
+  AssetsConfig,
+  LoadedAssets,
+  AssetProgress,
+  ProgressCallback,
+  ReadyCallback,
+  TextureAssetConfig,
+  ModelAssetConfig,
+} from './types/assets.js';

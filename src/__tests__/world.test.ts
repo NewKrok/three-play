@@ -1,5 +1,6 @@
-import createWorld from '../core/world/world';
-import type { WorldConfig, WorldInstance } from '../types/world';
+import createWorld from '../core/world/world.js';
+import type { WorldConfig, WorldInstance } from '../types/world.js';
+import type { AssetsConfig } from '../types/assets.js';
 
 // Mock the entire Three.js WebGLRenderer and related classes for testing
 jest.mock('three', () => {
@@ -636,5 +637,74 @@ describe('createWorld', () => {
     // loadHeightmap should not be available on the world instance
     expect('loadHeightmap' in worldInstance).toBe(false);
     expect((worldInstance as any).loadHeightmap).toBeUndefined();
+  });
+
+  describe('Asset Loading', () => {
+    it('should create world without assets configuration', () => {
+      const config: WorldConfig = {
+        world: {
+          size: { x: 100, y: 100 },
+        },
+      };
+
+      const world = createWorld(config);
+      expect(world.getLoadedAssets()).toBeNull();
+      world.destroy();
+    });
+
+    it('should provide onProgress and onReady subscription methods', () => {
+      const config: WorldConfig = {
+        world: {
+          size: { x: 100, y: 100 },
+        },
+      };
+
+      const world = createWorld(config);
+
+      const progressCallback = jest.fn();
+      const readyCallback = jest.fn();
+
+      const unsubscribeProgress = world.onProgress(progressCallback);
+      const unsubscribeReady = world.onReady(readyCallback);
+
+      expect(typeof unsubscribeProgress).toBe('function');
+      expect(typeof unsubscribeReady).toBe('function');
+
+      unsubscribeProgress();
+      unsubscribeReady();
+
+      world.destroy();
+    });
+
+    it('should not allow subscriptions after destroy', () => {
+      const config: WorldConfig = {
+        world: {
+          size: { x: 100, y: 100 },
+        },
+      };
+
+      const world = createWorld(config);
+      world.destroy();
+
+      const progressCallback = jest.fn();
+      const readyCallback = jest.fn();
+
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const unsubscribeProgress = world.onProgress(progressCallback);
+      const unsubscribeReady = world.onReady(readyCallback);
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Cannot subscribe to progress events: world instance is destroyed',
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Cannot subscribe to ready events: world instance is destroyed',
+      );
+
+      expect(typeof unsubscribeProgress).toBe('function');
+      expect(typeof unsubscribeReady).toBe('function');
+
+      consoleWarnSpy.mockRestore();
+    });
   });
 });
