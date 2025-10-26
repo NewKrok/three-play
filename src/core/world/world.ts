@@ -59,12 +59,12 @@ const createDefaultPasses = (
     scene,
     camera,
   );
-  outlinePass.edgeStrength = 3.0;
+  outlinePass.edgeStrength = 1.0;
   outlinePass.edgeGlow = 0.0;
   outlinePass.edgeThickness = 1.0;
   outlinePass.pulsePeriod = 0;
-  outlinePass.visibleEdgeColor.set('#ffffff');
-  outlinePass.hiddenEdgeColor.set('#190a05');
+  outlinePass.visibleEdgeColor.set('#ffff00');
+  outlinePass.hiddenEdgeColor.set('#ffff00');
   passes.push(outlinePass);
 
   // Add bloom pass
