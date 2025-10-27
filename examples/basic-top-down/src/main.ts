@@ -1242,14 +1242,15 @@ worldInstance.onReady((assets) => {
         unit.userData.target.copy(character.model.position);
       }
 
-      const direction = new THREE.Vector3()
-        .subVectors(
-          unit.userData.isAttacking
-            ? character.model.position
-            : unit.userData.target,
-          unit.position,
-        )
-        .normalize();
+      const direction = new THREE.Vector3().subVectors(
+        unit.userData.isAttacking
+          ? character.model.position
+          : unit.userData.target,
+        unit.position,
+      );
+      // Flatten direction to horizontal plane (ignore Y component)
+      direction.y = 0;
+      direction.normalize();
       const adjustQuat = new THREE.Quaternion();
       adjustQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
       rotationTargetQuaternion
