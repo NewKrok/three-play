@@ -7,11 +7,11 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
-import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
 import type {
   PostProcessingConfig,
   PostProcessingManager,
 } from '../../types/world.js';
+import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
 
 /**
  * Creates default post-processing passes

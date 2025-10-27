@@ -1,16 +1,16 @@
 import * as THREE from 'three';
-import type { HeightmapUtils } from './heightmap.js';
-import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
-import type { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import type { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
-import type { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import type { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import type {
   AssetsConfig,
   LoadedAssets,
   ProgressCallback,
   ReadyCallback,
 } from './assets.js';
+import type { HeightmapUtils } from './heightmap.js';
+import type { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import type { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
+import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
+import type { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import type { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 
 /**
  * Update callback function type

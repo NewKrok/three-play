@@ -1,14 +1,14 @@
 import {
+  loadHeightmap,
+  createHeightmapUtils,
+} from '../core/heightmap/index.js';
+import {
   createHeightmapIntegrationConfig,
   createHeightmapManager,
   shouldLoadHeightmap,
 } from '../core/world/heightmap-integration.js';
-import {
-  loadHeightmap,
-  createHeightmapUtils,
-} from '../core/heightmap/index.js';
-import type { WorldConfig } from '../types/world.js';
 import type { HeightmapData } from '../types/heightmap.js';
+import type { WorldConfig } from '../types/world.js';
 
 // Mock the heightmap module
 jest.mock('../core/heightmap/index.js', () => ({

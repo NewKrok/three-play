@@ -257,7 +257,7 @@ describe('World Outline System', () => {
 
     it('should not affect other outlines when removing one', () => {
       const outlineId1 = world.addOutline(testObject1, { color: '#ff0000' });
-      const outlineId2 = world.addOutline(testObject2, { color: '#00ff00' });
+      const _outlineId2 = world.addOutline(testObject2, { color: '#00ff00' });
 
       expect(world.getOutlines()).toHaveLength(2);
 

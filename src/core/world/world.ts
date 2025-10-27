@@ -1,32 +1,27 @@
 import { DisposeUtils } from '@newkrok/three-utils';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
-import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import { AssetLoader } from '../assets/index.js';
-import { createPostProcessingManager } from './post-processing-passes.js';
 import {
   createHeightmapIntegrationConfig,
   createHeightmapManager,
-  shouldLoadHeightmap,
 } from './heightmap-integration.js';
-import type { HeightmapUtils } from '../../types/heightmap.js';
+import { createPostProcessingManager } from './post-processing-passes.js';
 import type {
-  WorldConfig,
-  WorldInstance,
-  UpdateCallback,
-  OutlineConfig,
-  OutlineEntry,
-  PostProcessingManager,
-  HeightmapManager,
-} from '../../types/world.js';
-import type {
+  AssetsConfig,
   LoadedAssets,
   ProgressCallback,
   ReadyCallback,
-  AssetsConfig,
 } from '../../types/assets.js';
+import type { HeightmapUtils } from '../../types/heightmap.js';
+import type {
+  HeightmapManager,
+  OutlineConfig,
+  OutlineEntry,
+  UpdateCallback,
+  WorldConfig,
+  WorldInstance,
+} from '../../types/world.js';
 
 /**
  * Creates a new world instance based on the provided configuration
@@ -96,7 +91,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
     camera,
   });
 
-  const { composer, ssaoPass, outlinePass, fxaaPass } = postProcessingManager;
+  const { composer, outlinePass } = postProcessingManager;
 
   // Resize handler
   const setCanvasSize = () => {
@@ -139,9 +134,6 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   let isRunning = false;
   let isPaused = false;
   let isDestroyed = false;
-
-  // Heightmap system
-  let heightmapUtils: HeightmapUtils | null = null;
 
   // Asset loading system
   const assetLoader = new AssetLoader();

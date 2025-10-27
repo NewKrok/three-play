@@ -1,7 +1,6 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
-import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type {
   AssetsConfig,
   LoadedAssets,
@@ -11,6 +10,7 @@ import type {
   TextureAssetConfig,
   ModelAssetConfig,
 } from '../../types/assets.js';
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /**
  * Asset loader utility for handling texture and model loading with progress tracking
