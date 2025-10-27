@@ -14,15 +14,27 @@ import type {
 export type UpdateCallback = (deltaTime: number, elapsedTime: number) => void;
 
 /**
- * Outline configuration type
+ * Simple and flexible outline configuration
  */
 export type OutlineConfig = {
-  edgeStrength?: number;
-  edgeGlow?: number;
-  edgeThickness?: number;
-  pulsePeriod?: number;
-  visibleEdgeColor?: string;
-  hiddenEdgeColor?: string;
+  color?: string; // Outline color (visible and hidden edge color)
+  visibleColor?: string; // Visible edge color (overrides color)
+  hiddenColor?: string; // Hidden edge color (overrides color)
+  strength?: number; // Edge strength (0-10, default: 1)
+  thickness?: number; // Edge thickness (0-10, default: 1)
+  glow?: number; // Edge glow (0-1, default: 0)
+  pulse?: boolean | number; // Pulse animation (true/false or pulse period)
+  priority?: number; // Priority for overlapping outlines (higher wins)
+  enabled?: boolean; // Enable/disable without removing (default: true)
+};
+
+/**
+ * Object outline entry for internal management
+ */
+export type OutlineEntry = {
+  object: THREE.Object3D;
+  config: Required<OutlineConfig>;
+  id: string; // Unique identifier for this outline entry
 };
 
 /**
@@ -74,11 +86,17 @@ export type WorldInstance = {
   getDirectionalLight(): THREE.DirectionalLight;
   getHeightmapUtils(): HeightmapUtils | null; // Heightmap utilities if loaded
   getLoadedAssets(): LoadedAssets | null; // Loaded assets if available
-  addOutlinedObjects(objects: THREE.Object3D[]): void; // Add objects to be outlined
-  removeOutlinedObjects(objects: THREE.Object3D[]): void; // Remove objects from outline
-  clearOutlinedObjects(): void; // Clear all outlined objects
-  getOutlinedObjects(): THREE.Object3D[]; // Get currently outlined objects
-  configureOutline(config: OutlineConfig): void; // Configure outline appearance
+
+  // Simple outline system methods
+  addOutline(
+    objects: THREE.Object3D | THREE.Object3D[],
+    config: OutlineConfig,
+  ): string; // Returns outline ID
+  removeOutline(outlineId: string): void; // Remove by ID
+  updateOutline(outlineId: string, config: Partial<OutlineConfig>): void; // Update existing outline
+  clearOutlines(): void; // Clear all outlines
+  getOutlines(): OutlineEntry[]; // Get all outlines
+
   start(): void;
   pause(): void;
   resume(): void;

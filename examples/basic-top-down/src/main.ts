@@ -663,8 +663,6 @@ worldInstance.onReady((assets) => {
         });
       }
 
-      worldInstance.addOutlinedObjects([instance]);
-
       return { model: wrapper, mixer, actions, userData: {} };
     };
 
