@@ -2,6 +2,7 @@ import { DisposeUtils } from '@newkrok/three-utils';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { AssetLoader } from '../assets/index.js';
+import { createOutlineManager } from '../effects/index.js';
 import {
   createHeightmapIntegrationConfig,
   createHeightmapManager,
@@ -22,6 +23,7 @@ import type {
   WorldConfig,
   WorldInstance,
 } from '../../types/world.js';
+import type { OutlineManager } from '../effects/index.js';
 
 /**
  * Creates a new world instance based on the provided configuration
@@ -141,71 +143,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   const progressCallbacks = new Set<ProgressCallback>();
   const readyCallbacks = new Set<ReadyCallback>();
 
-  // Outline management system
-  const outlineEntries = new Map<string, OutlineEntry>();
-  let outlineIdCounter = 0;
-
-  // Helper function to generate unique outline IDs
-  const generateOutlineId = (): string => {
-    return `outline_${++outlineIdCounter}_${Date.now()}`;
-  };
-
-  // Helper function to apply outline configuration with defaults
-  const getOutlineConfigWithDefaults = (
-    config: OutlineConfig,
-  ): Required<OutlineConfig> => {
-    return {
-      color: config.color ?? '#ffff00',
-      visibleColor: config.visibleColor ?? config.color ?? '#ffff00',
-      hiddenColor: config.hiddenColor ?? config.color ?? '#ffff00',
-      strength: config.strength ?? 1.0,
-      thickness: config.thickness ?? 1.0,
-      glow: config.glow ?? 0.0,
-      pulse: config.pulse ?? false,
-      priority: config.priority ?? 0,
-      enabled: config.enabled ?? true,
-    };
-  };
-
-  // Function to update the outline pass with current highest priority settings
-  const updateOutlinePass = () => {
-    if (!outlinePass) return;
-
-    // Get all enabled outlines sorted by priority (highest first)
-    const enabledOutlines = Array.from(outlineEntries.values())
-      .filter((entry) => entry.config.enabled)
-      .sort((a, b) => b.config.priority - a.config.priority);
-
-    if (enabledOutlines.length === 0) {
-      // No outlines, clear the pass
-      outlinePass.selectedObjects = [];
-      return;
-    }
-
-    // Use the highest priority outline's configuration
-    const highestPriorityConfig = enabledOutlines[0].config;
-
-    // Collect all objects from enabled outlines
-    const allObjects = enabledOutlines.map((entry) => entry.object);
-    outlinePass.selectedObjects = allObjects;
-
-    // Apply the highest priority configuration
-    outlinePass.edgeStrength = highestPriorityConfig.strength;
-    outlinePass.edgeGlow = highestPriorityConfig.glow;
-    outlinePass.edgeThickness = highestPriorityConfig.thickness;
-
-    // Handle pulse configuration
-    if (typeof highestPriorityConfig.pulse === 'number') {
-      outlinePass.pulsePeriod = highestPriorityConfig.pulse;
-    } else if (highestPriorityConfig.pulse === true) {
-      outlinePass.pulsePeriod = 1; // Default pulse period
-    } else {
-      outlinePass.pulsePeriod = 0; // No pulse
-    }
-
-    outlinePass.visibleEdgeColor.set(highestPriorityConfig.visibleColor);
-    outlinePass.hiddenEdgeColor.set(highestPriorityConfig.hiddenColor);
-  };
+  // Create outline manager
+  const outlineManager: OutlineManager = createOutlineManager({
+    outlinePass,
+  });
 
   // Add initial callback if provided
   if (initialCallback) {
@@ -397,29 +338,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
         return '';
       }
 
-      if (!outlinePass) {
-        console.warn(
-          'Outline pass is not available. Make sure useComposer is enabled.',
-        );
-        return '';
-      }
-
-      const objectArray = Array.isArray(objects) ? objects : [objects];
-      const outlineId = generateOutlineId();
-      const fullConfig = getOutlineConfigWithDefaults(config);
-
-      // Create outline entries for each object
-      objectArray.forEach((object) => {
-        const entryId = `${outlineId}_${object.uuid}`;
-        outlineEntries.set(entryId, {
-          id: entryId,
-          object,
-          config: fullConfig,
-        });
-      });
-
-      updateOutlinePass();
-      return outlineId;
+      return outlineManager.addOutline(objects, config);
     },
 
     /**
@@ -432,13 +351,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
         return;
       }
 
-      // Remove all entries that start with this outline ID
-      const keysToRemove = Array.from(outlineEntries.keys()).filter((key) =>
-        key.startsWith(outlineId),
-      );
-
-      keysToRemove.forEach((key) => outlineEntries.delete(key));
-      updateOutlinePass();
+      outlineManager.removeOutline(outlineId);
     },
 
     /**
@@ -452,30 +365,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
         return;
       }
 
-      // Find all entries that start with this outline ID
-      const entriesToUpdate = Array.from(outlineEntries.entries()).filter(
-        ([key]) => key.startsWith(outlineId),
-      );
-
-      if (entriesToUpdate.length === 0) {
-        console.warn(`Outline with ID ${outlineId} not found`);
-        return;
-      }
-
-      // Update all matching entries
-      entriesToUpdate.forEach(([key, entry]) => {
-        const updatedConfig = getOutlineConfigWithDefaults({
-          ...entry.config,
-          ...config,
-        });
-
-        outlineEntries.set(key, {
-          ...entry,
-          config: updatedConfig,
-        });
-      });
-
-      updateOutlinePass();
+      outlineManager.updateOutline(outlineId, config);
     },
 
     /**
@@ -487,8 +377,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
         return;
       }
 
-      outlineEntries.clear();
-      updateOutlinePass();
+      outlineManager.clearOutlines();
     },
 
     /**
@@ -501,7 +390,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
         return [];
       }
 
-      return Array.from(outlineEntries.values());
+      return outlineManager.getOutlines();
     },
 
     /**
@@ -634,8 +523,8 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       progressCallbacks.clear();
       readyCallbacks.clear();
 
-      // Clear outline entries
-      outlineEntries.clear();
+      // Cleanup outline manager
+      outlineManager.destroy();
 
       // Cleanup asset loader
       assetLoader.destroy();
