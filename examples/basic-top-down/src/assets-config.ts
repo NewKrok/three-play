@@ -4,15 +4,15 @@ import * as THREE from 'three';
 const assetConfig: AssetsConfig = {
   textures: {
     grass: {
-      url: 'https://raw.githubusercontent.com/NewKrok/three-game-demo/refs/heads/master/public/assets/textures/grass-flower-tint-01-base-basecolor.webp',
+      url: 'assets/textures/grass-256.webp',
       wrapS: THREE.MirroredRepeatWrapping,
       wrapT: THREE.MirroredRepeatWrapping,
     },
     crate: {
-      url: 'https://newkrok.com/external-assets/crate-256.webp',
+      url: 'assets/textures/crate-256.webp',
     },
     heightmap: {
-      url: 'https://newkrok.com/external-assets/heightmap-island-256.webp',
+      url: 'assets/textures/heightmap-island-256.webp',
     },
   },
   models: {

@@ -746,7 +746,9 @@ worldInstance.onReady((assets) => {
   trunkMesh.receiveShadow = true;
   scene.add(trunkMesh);
   const leafGeometry = new THREE.SphereGeometry(1, 16, 16);
-  const leafTexture = loadedAssets.textures.grass;
+  const leafTexture = loadedAssets.textures.grass.clone();
+  leafTexture.repeat.x = 1;
+  leafTexture.repeat.y = 1;
   const leafMaterial = new THREE.MeshStandardMaterial({
     color: 0x00ff00,
     map: leafTexture,
