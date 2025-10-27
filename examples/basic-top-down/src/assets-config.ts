@@ -40,6 +40,15 @@ const assetConfig: AssetsConfig = {
     'zombie-attack': {
       url: 'assets/models/extra-low-poly-animations/zombie-attack.fbx',
     },
+    'light-attack': {
+      url: 'assets/models/extra-low-poly-animations/light-attack.fbx',
+    },
+    'heavy-attack': {
+      url: 'assets/models/extra-low-poly-animations/heavy-attack.fbx',
+    },
+    'hit-to-body': {
+      url: 'assets/models/extra-low-poly-animations/hit-to-body.fbx',
+    },
   },
 };
 

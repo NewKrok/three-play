@@ -248,11 +248,24 @@ const MAX_STAMINA = 10.0;
 const STAMINA_RECOVERY = 1;
 const STAMINA_DRAIN = 2;
 const MAX_HEALTH = 100.0;
-const HEALTH_RECOVERY = 0.5;
 let timeOfDay = 0;
 const DAY_LENGTH = 1200;
 const WATER_LEVEL = 7.8;
 const startingPosition = new THREE.Vector3(88, 0, 132);
+
+const LIGHT_ATTACK_KNOCKBACK = 20;
+const LIGHT_ATTACK_ACTION_DELAY = 500;
+const STAMINA_FOR_LIGHT_ATTACK = 1;
+const LIGHT_ATTACK_COOLDOWN = 900;
+const LIGHT_ATTACK_EFFECT_AREA = 3;
+const LIGHT_ATTACK_STUN_DURATION = 1000;
+
+const HEAVY_ATTACK_KNOCKBACK = 40;
+const HEAVY_ATTACK_ACTION_DELAY = 1500;
+const STAMINA_FOR_HEAVY_ATTACK = 4;
+const HEAVY_ATTACK_COOLDOWN = 3000;
+const HEAVY_ATTACK_EFFECT_AREA = 8;
+const HEAVY_ATTACK_STUN_DURATION = 3000;
 
 const appleEffects = [
   { health: { min: 5, max: 10 } },
@@ -276,7 +289,10 @@ let nearbyCreateOutlines = new Map(); // Track crate outlines by crate index
 let crateProxyMeshes = new Map(); // Individual meshes for outlined crates
 let lastThrowTime = 0;
 let lastRollTime = 0;
+let lastLightAttackTime = 0;
+let lastHeavyAttackTime = 0;
 let isRolling = false;
+let isAttacking = false;
 const throwCooldown = 250;
 const rollCooldown = 500;
 const gravity = new THREE.Vector3(0, -9.8, 0);
@@ -636,6 +652,12 @@ worldInstance.onReady((assets) => {
         roll: (loadedAssets.models.roll as THREE.Group).animations[0],
         attack: (loadedAssets.models['zombie-attack'] as THREE.Group)
           .animations[0],
+        lightAttack: (loadedAssets.models['light-attack'] as THREE.Group)
+          .animations[0],
+        heavyAttack: (loadedAssets.models['heavy-attack'] as THREE.Group)
+          .animations[0],
+        hitToBody: (loadedAssets.models['hit-to-body'] as THREE.Group)
+          .animations[0],
       };
 
       const actions = {
@@ -644,6 +666,9 @@ worldInstance.onReady((assets) => {
         run: mixer.clipAction(animations.run),
         roll: mixer.clipAction(animations.roll),
         attack: mixer.clipAction(animations.attack),
+        lightAttack: mixer.clipAction(animations.lightAttack),
+        heavyAttack: mixer.clipAction(animations.heavyAttack),
+        hitToBody: mixer.clipAction(animations.hitToBody),
       };
 
       // Enable shadows for the instance
@@ -983,11 +1008,11 @@ worldInstance.onReady((assets) => {
     );
     character.model.quaternion.slerp(
       rotationTargetQuaternion,
-      cycleData.delta * 10,
+      cycleData.delta * (isAttacking ? 0.5 : 10),
     );
   };
   const applyCharacterMovement = () => {
-    if (isRolling) return;
+    if (isRolling || isAttacking) return;
 
     const isMoving =
       keys['KeyA'] ||
@@ -1040,9 +1065,103 @@ worldInstance.onReady((assets) => {
       playAnimation(character, 'idle');
     }
   };
+  const applyCharacterLightAttack = () => {
+    const now = performance.now();
+    if (
+      isRolling ||
+      isAttacking ||
+      !keys['KeyE'] ||
+      lastLightAttackTime + LIGHT_ATTACK_COOLDOWN > now
+    )
+      return;
+
+    isAttacking = true;
+    const lightAttackAction = character.actions.lightAttack;
+    setTimeout(() => {
+      isAttacking = false;
+      playAnimation(character, 'idle');
+    }, lightAttackAction.getClip().duration * 1000);
+    gameState.stamina -= STAMINA_FOR_LIGHT_ATTACK;
+    gameState.stamina = Math.max(gameState.stamina, 0);
+    playAnimation(character, 'lightAttack');
+
+    setTimeout(() => {
+      units.forEach((_unit) => {
+        if (_unit === character) return;
+        const { model: unit } = _unit;
+        const away = unit.position
+          .clone()
+          .sub(character.model.position)
+          .normalize();
+        if (
+          unit.position.distanceTo(character.model.position) <
+          LIGHT_ATTACK_EFFECT_AREA
+        ) {
+          const knockback = away.multiplyScalar(LIGHT_ATTACK_KNOCKBACK);
+          if (!unit.knockbackVelocity)
+            unit.knockbackVelocity = new THREE.Vector3();
+          unit.knockbackVelocity.add(knockback);
+          unit.userData.isStunned = true;
+          playAnimation(_unit, 'hitToBody');
+          setTimeout(() => {
+            unit.userData.isStunned = false;
+            playAnimation(_unit, 'idle');
+          }, LIGHT_ATTACK_STUN_DURATION);
+        }
+      });
+    }, LIGHT_ATTACK_ACTION_DELAY);
+  };
+  const applyCharacterHeavyAttack = () => {
+    const now = performance.now();
+    if (
+      isRolling ||
+      isAttacking ||
+      !keys['KeyT'] ||
+      lastHeavyAttackTime + HEAVY_ATTACK_COOLDOWN > now
+    )
+      return;
+
+    isAttacking = true;
+    const heavyAttackAction = character.actions.heavyAttack;
+    setTimeout(() => {
+      isAttacking = false;
+      playAnimation(character, 'idle');
+    }, heavyAttackAction.getClip().duration * 1000);
+    gameState.stamina -= STAMINA_FOR_HEAVY_ATTACK;
+    gameState.stamina = Math.max(gameState.stamina, 0);
+    playAnimation(character, 'heavyAttack');
+
+    setTimeout(() => {
+      units.forEach((_unit) => {
+        if (_unit === character) return;
+        const { model: unit } = _unit;
+        const away = unit.position
+          .clone()
+          .sub(character.model.position)
+          .normalize();
+        if (
+          unit.position.distanceTo(character.model.position) <
+          HEAVY_ATTACK_EFFECT_AREA
+        ) {
+          const knockback = away.multiplyScalar(HEAVY_ATTACK_KNOCKBACK);
+          if (!unit.knockbackVelocity)
+            unit.knockbackVelocity = new THREE.Vector3();
+          unit.knockbackVelocity.add(knockback);
+          unit.userData.isStunned = true;
+          playAnimation(_unit, 'hitToBody');
+          setTimeout(() => {
+            unit.userData.isStunned = false;
+            playAnimation(_unit, 'idle');
+          }, HEAVY_ATTACK_STUN_DURATION);
+        }
+      });
+    }, HEAVY_ATTACK_ACTION_DELAY);
+  };
   const updateCharacter = () => {
     applyCharacterRotation();
     applyCharacterMovement();
+    applyCharacterLightAttack();
+    applyCharacterHeavyAttack();
   };
 
   const updateLight = () => {
@@ -1229,6 +1348,7 @@ worldInstance.onReady((assets) => {
       const elapsedTime = cycleData.elapsed;
 
       if (unit === character.model) return;
+      if (unit.userData.isStunned) return;
 
       if (!unit.userData.target) unit.userData.target = new THREE.Vector3();
       if (!unit.userData.nextTargetSelectionTime)
