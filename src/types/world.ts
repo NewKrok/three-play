@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import type { HeightmapUtils } from './heightmap.js';
 import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
+import type { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import type { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
+import type { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import type { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import type {
   AssetsConfig,
   LoadedAssets,
@@ -35,6 +39,52 @@ export type OutlineEntry = {
   object: THREE.Object3D;
   config: Required<OutlineConfig>;
   id: string; // Unique identifier for this outline entry
+};
+
+/**
+ * Configuration for post-processing setup
+ */
+export type PostProcessingConfig = {
+  useComposer: boolean;
+  customPasses?: Pass[];
+  renderer: THREE.WebGLRenderer;
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+};
+
+/**
+ * Post-processing manager for handling passes and composer
+ */
+export type PostProcessingManager = {
+  composer: EffectComposer | null;
+  ssaoPass: SSAOPass | null;
+  outlinePass: OutlinePass | null;
+  fxaaPass: ShaderPass | null;
+  setSize: (width: number, height: number) => void;
+  destroy: () => void;
+};
+
+/**
+ * Configuration for heightmap integration
+ */
+export type HeightmapIntegrationConfig = {
+  heightmapUrl: string;
+  worldWidth: number;
+  worldHeight: number;
+  resolution?: number;
+  elevationRatio?: number;
+};
+
+/**
+ * Heightmap manager for handling loading and initialization
+ */
+export type HeightmapManager = {
+  utils: HeightmapUtils | null;
+  isLoading: boolean;
+  isLoaded: boolean;
+  error: Error | null;
+  initialize: () => Promise<void>;
+  destroy: () => void;
 };
 
 /**

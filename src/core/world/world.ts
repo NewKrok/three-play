@@ -2,21 +2,24 @@ import { DisposeUtils } from '@newkrok/three-utils';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
-import { loadHeightmap, createHeightmapUtils } from '../heightmap/index.js';
 import { AssetLoader } from '../assets/index.js';
-import type { HeightmapUtils, HeightmapConfig } from '../../types/heightmap.js';
+import { createPostProcessingManager } from './post-processing-passes.js';
+import {
+  createHeightmapIntegrationConfig,
+  createHeightmapManager,
+  shouldLoadHeightmap,
+} from './heightmap-integration.js';
+import type { HeightmapUtils } from '../../types/heightmap.js';
 import type {
   WorldConfig,
   WorldInstance,
   UpdateCallback,
   OutlineConfig,
   OutlineEntry,
+  PostProcessingManager,
+  HeightmapManager,
 } from '../../types/world.js';
 import type {
   LoadedAssets,
@@ -24,73 +27,6 @@ import type {
   ReadyCallback,
   AssetsConfig,
 } from '../../types/assets.js';
-
-/**
- * Creates default post-processing passes
- * @param scene - The Three.js scene
- * @param camera - The Three.js camera
- * @returns Array of default passes
- */
-const createDefaultPasses = (
-  scene: THREE.Scene,
-  camera: THREE.PerspectiveCamera,
-) => {
-  const passes = [];
-
-  // Add render pass
-  const renderPass = new RenderPass(scene, camera);
-  passes.push(renderPass);
-
-  // Add SSAO pass
-  const ssaoPass = new SSAOPass(
-    scene,
-    camera,
-    window.innerWidth,
-    window.innerHeight,
-  );
-  ssaoPass.kernelRadius = 16;
-  ssaoPass.minDistance = 0.005;
-  ssaoPass.maxDistance = 0.1;
-  ssaoPass.output = SSAOPass.OUTPUT.Default;
-  passes.push(ssaoPass);
-
-  // Add outline pass for highlighted objects
-  const outlinePass = new OutlinePass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    scene,
-    camera,
-  );
-  outlinePass.edgeStrength = 1.0;
-  outlinePass.edgeGlow = 0.0;
-  outlinePass.edgeThickness = 1.0;
-  outlinePass.pulsePeriod = 0;
-  outlinePass.visibleEdgeColor.set('#ffff00');
-  outlinePass.hiddenEdgeColor.set('#ffff00');
-  passes.push(outlinePass);
-
-  // Add bloom pass
-  const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.5,
-    0.4,
-    0.85,
-  );
-  passes.push(bloomPass);
-
-  // Add FXAA pass
-  const fxaaPass = new ShaderPass(FXAAShader);
-  fxaaPass.material.uniforms['resolution'].value.set(
-    1 / window.innerWidth,
-    1 / window.innerHeight,
-  );
-  passes.push(fxaaPass);
-
-  // Add output pass
-  const outputPass = new OutputPass();
-  passes.push(outputPass);
-
-  return passes;
-};
 
 /**
  * Creates a new world instance based on the provided configuration
@@ -121,10 +57,11 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   const autoStart = config.update?.autoStart ?? false;
   const initialCallback = config.update?.onUpdate;
 
-  // Get heightmap configuration
-  const heightmapConfig = config.heightmap;
-  const heightmapUrl = heightmapConfig?.url;
-  const shouldLoadHeightmap = Boolean(heightmapUrl);
+  // Get heightmap configuration and create manager
+  const heightmapIntegrationConfig = createHeightmapIntegrationConfig(config);
+  const heightmapManager: HeightmapManager | null = heightmapIntegrationConfig
+    ? createHeightmapManager(heightmapIntegrationConfig)
+    : null;
 
   // Get assets configuration
   const assetsConfig = config.assets;
@@ -150,75 +87,23 @@ const createWorld = (config: WorldConfig): WorldInstance => {
     100,
   );
 
-  // Create composer conditionally
-  let composer: EffectComposer | null = null;
-  let ssaoPass: SSAOPass | null = null;
-  let outlinePass: OutlinePass | null = null;
-  let fxaaPass: ShaderPass | null = null;
+  // Create post-processing manager
+  const postProcessingManager = createPostProcessingManager({
+    useComposer,
+    customPasses,
+    renderer,
+    scene,
+    camera,
+  });
 
-  if (useComposer) {
-    // Create render target for post-processing
-    const renderTarget = new THREE.WebGLRenderTarget(
-      window.innerWidth,
-      window.innerHeight,
-    );
-    renderTarget.depthTexture = new THREE.DepthTexture(
-      window.innerWidth,
-      window.innerHeight,
-    );
-    renderTarget.depthTexture.format = THREE.DepthFormat;
-    renderTarget.depthTexture.type = THREE.UnsignedShortType;
-
-    // Create composer with post-processing effects
-    composer = new EffectComposer(renderer, renderTarget);
-
-    // Use custom passes or default passes
-    const passes = customPasses || createDefaultPasses(scene, camera);
-
-    passes.forEach((pass) => {
-      composer!.addPass(pass);
-
-      // Store references to passes that need resize handling
-      if (pass instanceof SSAOPass) {
-        ssaoPass = pass;
-      } else if (
-        pass instanceof OutlinePass ||
-        (pass as any).selectedObjects !== undefined
-      ) {
-        outlinePass = pass as OutlinePass;
-      } else if (
-        pass instanceof ShaderPass &&
-        pass.material.uniforms['resolution']
-      ) {
-        fxaaPass = pass;
-      }
-    });
-  }
+  const { composer, ssaoPass, outlinePass, fxaaPass } = postProcessingManager;
 
   // Resize handler
   const setCanvasSize = () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-
-    if (composer) {
-      composer.setSize(window.innerWidth, window.innerHeight);
-
-      if (ssaoPass) {
-        ssaoPass.setSize(window.innerWidth, window.innerHeight);
-      }
-
-      if (outlinePass) {
-        outlinePass.setSize(window.innerWidth, window.innerHeight);
-      }
-
-      if (fxaaPass) {
-        fxaaPass.material.uniforms['resolution'].value.set(
-          1 / window.innerWidth,
-          1 / window.innerHeight,
-        );
-      }
-    }
+    postProcessingManager.setSize(window.innerWidth, window.innerHeight);
   };
 
   setCanvasSize();
@@ -406,29 +291,16 @@ const createWorld = (config: WorldConfig): WorldInstance => {
     animationFrameId = requestAnimationFrame(updateLoop);
   };
 
-  // Load heightmap automatically if configured
-  const initializeHeightmap = async () => {
-    if (shouldLoadHeightmap && heightmapUrl && heightmapConfig) {
-      try {
-        // Create config using world dimensions
-        const finalConfig: HeightmapConfig = {
-          worldWidth: worldConfig.world.size.x,
-          worldHeight: worldConfig.world.size.y,
-          resolution: heightmapConfig.resolution ?? 256,
-          elevationRatio: heightmapConfig.elevationRatio ?? 30,
-        };
-
-        const heightmapData = await loadHeightmap(heightmapUrl);
-        heightmapUtils = createHeightmapUtils(heightmapData, finalConfig);
-      } catch (error) {
-        console.error('Failed to auto-load heightmap:', error);
-      }
-    }
+  // Update getter to use heightmap manager
+  const getHeightmapUtils = (): HeightmapUtils | null => {
+    return heightmapManager?.utils || null;
   };
 
   // Start auto-loading heightmap if configured
-  if (shouldLoadHeightmap) {
-    initializeHeightmap();
+  if (heightmapManager) {
+    heightmapManager.initialize().catch((error) => {
+      console.error('Failed to auto-load heightmap:', error);
+    });
   }
 
   // Start auto-loading assets if configured
@@ -507,7 +379,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      * @returns The heightmap utilities instance or null if not loaded
      */
     getHeightmapUtils(): HeightmapUtils | null {
-      return heightmapUtils;
+      return getHeightmapUtils();
     },
 
     /**
@@ -776,6 +648,14 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       // Cleanup asset loader
       assetLoader.destroy();
 
+      // Cleanup heightmap manager
+      if (heightmapManager) {
+        heightmapManager.destroy();
+      }
+
+      // Cleanup post-processing
+      postProcessingManager.destroy();
+
       // Dispose loaded assets
       if (loadedAssets) {
         // Dispose textures
@@ -794,22 +674,6 @@ const createWorld = (config: WorldConfig): WorldInstance => {
 
       // Dispose scene and all its children using three-utils deepDispose
       DisposeUtils.deepDispose(scene);
-
-      // Dispose composer and its render targets
-      if (composer) {
-        // Dispose render targets
-        composer.passes.forEach((pass: any) => {
-          if (pass.renderTarget) {
-            pass.renderTarget.dispose();
-          }
-          if (pass.renderToScreen === false && pass.renderTarget) {
-            pass.renderTarget.dispose();
-          }
-        });
-
-        // Clear passes
-        composer.passes.length = 0;
-      }
 
       // Dispose renderer
       if (renderer && typeof renderer.dispose === 'function') {

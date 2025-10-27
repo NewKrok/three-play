@@ -749,64 +749,72 @@ describe('createWorld', () => {
     it('should have outline control methods available', () => {
       const worldInstance = createTrackedWorld(mockConfig);
 
-      expect(typeof worldInstance.addOutlinedObjects).toBe('function');
-      expect(typeof worldInstance.removeOutlinedObjects).toBe('function');
-      expect(typeof worldInstance.clearOutlinedObjects).toBe('function');
-      expect(typeof worldInstance.getOutlinedObjects).toBe('function');
-      expect(typeof worldInstance.configureOutline).toBe('function');
+      expect(typeof worldInstance.addOutline).toBe('function');
+      expect(typeof worldInstance.removeOutline).toBe('function');
+      expect(typeof worldInstance.clearOutlines).toBe('function');
+      expect(typeof worldInstance.getOutlines).toBe('function');
+      expect(typeof worldInstance.updateOutline).toBe('function');
     });
 
     it('should add objects to outline when composer is enabled', () => {
       const worldInstance = createTrackedWorld(mockConfig);
-      const mockObject1 = { name: 'object1' } as any;
-      const mockObject2 = { name: 'object2' } as any;
+      const mockObject1 = { name: 'object1', uuid: 'uuid1' } as any;
+      const mockObject2 = { name: 'object2', uuid: 'uuid2' } as any;
 
-      worldInstance.addOutlinedObjects([mockObject1, mockObject2]);
+      const outlineId = worldInstance.addOutline([mockObject1, mockObject2], { color: '#ff0000' });
 
-      const outlinedObjects = worldInstance.getOutlinedObjects();
-      expect(outlinedObjects).toContain(mockObject1);
-      expect(outlinedObjects).toContain(mockObject2);
+      const outlines = worldInstance.getOutlines();
+      expect(outlines).toHaveLength(2);
+      expect(outlines.some(entry => entry.object === mockObject1)).toBe(true);
+      expect(outlines.some(entry => entry.object === mockObject2)).toBe(true);
+      expect(outlineId).toBeTruthy();
     });
 
     it('should remove objects from outline', () => {
       const worldInstance = createTrackedWorld(mockConfig);
-      const mockObject1 = { name: 'object1' } as any;
-      const mockObject2 = { name: 'object2' } as any;
-      const mockObject3 = { name: 'object3' } as any;
+      const mockObject1 = { name: 'object1', uuid: 'uuid1' } as any;
+      const mockObject2 = { name: 'object2', uuid: 'uuid2' } as any;
+      const mockObject3 = { name: 'object3', uuid: 'uuid3' } as any;
 
-      worldInstance.addOutlinedObjects([mockObject1, mockObject2, mockObject3]);
-      worldInstance.removeOutlinedObjects([mockObject2]);
+      const outlineId1 = worldInstance.addOutline([mockObject1, mockObject2], { color: '#ff0000' });
+      const outlineId2 = worldInstance.addOutline([mockObject3], { color: '#00ff00' });
+      
+      expect(worldInstance.getOutlines()).toHaveLength(3);
+      
+      worldInstance.removeOutline(outlineId2);
 
-      const outlinedObjects = worldInstance.getOutlinedObjects();
-      expect(outlinedObjects).toContain(mockObject1);
-      expect(outlinedObjects).not.toContain(mockObject2);
-      expect(outlinedObjects).toContain(mockObject3);
+      const outlines = worldInstance.getOutlines();
+      expect(outlines).toHaveLength(2);
+      expect(outlines.some(entry => entry.object === mockObject1)).toBe(true);
+      expect(outlines.some(entry => entry.object === mockObject2)).toBe(true);
+      expect(outlines.some(entry => entry.object === mockObject3)).toBe(false);
     });
 
     it('should clear all outlined objects', () => {
       const worldInstance = createTrackedWorld(mockConfig);
-      const mockObject1 = { name: 'object1' } as any;
-      const mockObject2 = { name: 'object2' } as any;
+      const mockObject1 = { name: 'object1', uuid: 'uuid1' } as any;
+      const mockObject2 = { name: 'object2', uuid: 'uuid2' } as any;
 
-      worldInstance.addOutlinedObjects([mockObject1, mockObject2]);
-      expect(worldInstance.getOutlinedObjects()).toHaveLength(2);
+      worldInstance.addOutline([mockObject1, mockObject2], { color: '#ff0000' });
+      expect(worldInstance.getOutlines()).toHaveLength(2);
 
-      worldInstance.clearOutlinedObjects();
-      expect(worldInstance.getOutlinedObjects()).toHaveLength(0);
+      worldInstance.clearOutlines();
+      expect(worldInstance.getOutlines()).toHaveLength(0);
     });
 
-    it('should configure outline appearance', () => {
+    it('should update outline configuration', () => {
       const worldInstance = createTrackedWorld(mockConfig);
+      const mockObject = { name: 'object', uuid: 'uuid1' } as any;
+      
+      const outlineId = worldInstance.addOutline([mockObject], { color: '#ff0000' });
+      
       const outlineConfig = {
-        edgeStrength: 5.0,
-        edgeGlow: 1.0,
-        edgeThickness: 2.0,
-        pulsePeriod: 2,
-        visibleEdgeColor: '#ff0000',
-        hiddenEdgeColor: '#000000',
+        color: '#00ff00',
+        strength: 2.0,
+        thickness: 1.5,
       };
 
-      expect(() => worldInstance.configureOutline(outlineConfig)).not.toThrow();
+      expect(() => worldInstance.updateOutline(outlineId, outlineConfig)).not.toThrow();
     });
 
     it('should warn when outline operations are called without composer', () => {
@@ -819,17 +827,17 @@ describe('createWorld', () => {
 
       const worldInstance = createTrackedWorld(configWithoutComposer);
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-      const mockObject = { name: 'object' } as any;
+      const mockObject = { name: 'object', uuid: 'uuid1' } as any;
 
-      worldInstance.addOutlinedObjects([mockObject]);
-      worldInstance.removeOutlinedObjects([mockObject]);
-      worldInstance.clearOutlinedObjects();
-      worldInstance.configureOutline({ edgeStrength: 5.0 });
+      worldInstance.addOutline([mockObject], { color: '#ff0000' });
+      worldInstance.removeOutline('invalid-id');
+      worldInstance.clearOutlines();
+      worldInstance.updateOutline('invalid-id', { strength: 5.0 });
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         'Outline pass is not available. Make sure useComposer is enabled.',
       );
-      expect(consoleWarnSpy).toHaveBeenCalledTimes(4);
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(2);
 
       consoleWarnSpy.mockRestore();
     });
@@ -843,15 +851,10 @@ describe('createWorld', () => {
       };
 
       const worldInstance = createTrackedWorld(configWithoutComposer);
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-      const outlinedObjects = worldInstance.getOutlinedObjects();
-      expect(outlinedObjects).toEqual([]);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Outline pass is not available. Make sure useComposer is enabled.',
-      );
-
-      consoleWarnSpy.mockRestore();
+      const outlines = worldInstance.getOutlines();
+      expect(outlines).toEqual([]);
+    });
     });
 
     it('should warn when outline operations are called after destroy', () => {
@@ -860,30 +863,30 @@ describe('createWorld', () => {
 
       worldInstance.destroy();
 
-      const mockObject = { name: 'object' } as any;
-      worldInstance.addOutlinedObjects([mockObject]);
-      worldInstance.removeOutlinedObjects([mockObject]);
-      worldInstance.clearOutlinedObjects();
-      const outlinedObjects = worldInstance.getOutlinedObjects();
-      worldInstance.configureOutline({ edgeStrength: 5.0 });
+      const mockObject = { name: 'object', uuid: 'uuid1' } as any;
+      worldInstance.addOutline([mockObject], { color: '#ff0000' });
+      worldInstance.removeOutline('invalid-id');
+      worldInstance.clearOutlines();
+      const outlines = worldInstance.getOutlines();
+      worldInstance.updateOutline('invalid-id', { strength: 5.0 });
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Cannot add outlined objects: world instance is destroyed',
+        'Cannot add outline: world instance is destroyed',
       );
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Cannot remove outlined objects: world instance is destroyed',
+        'Cannot remove outline: world instance is destroyed',
       );
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Cannot clear outlined objects: world instance is destroyed',
+        'Cannot clear outlines: world instance is destroyed',
       );
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Cannot get outlined objects: world instance is destroyed',
+        'Cannot update outline: world instance is destroyed',
       );
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Cannot configure outline: world instance is destroyed',
+        'Cannot get outlines: world instance is destroyed',
       );
 
-      expect(outlinedObjects).toEqual([]);
+      expect(outlines).toEqual([]);
       consoleWarnSpy.mockRestore();
     });
 
@@ -898,26 +901,30 @@ describe('createWorld', () => {
 
     it('should handle partial outline configuration', () => {
       const worldInstance = createTrackedWorld(mockConfig);
+      const mockObject = { name: 'object', uuid: 'uuid1' } as any;
+      
+      const outlineId = worldInstance.addOutline([mockObject], { color: '#ff0000' });
       const partialConfig = {
-        edgeStrength: 4.0,
-        visibleEdgeColor: '#00ff00',
+        strength: 4.0,
+        color: '#00ff00',
       };
 
-      expect(() => worldInstance.configureOutline(partialConfig)).not.toThrow();
+      expect(() => worldInstance.updateOutline(outlineId, partialConfig)).not.toThrow();
     });
 
     it('should maintain object references correctly', () => {
       const worldInstance = createTrackedWorld(mockConfig);
-      const mockObject1 = { name: 'object1' } as any;
-      const mockObject2 = { name: 'object2' } as any;
+      const mockObject1 = { name: 'object1', uuid: 'uuid1' } as any;
+      const mockObject2 = { name: 'object2', uuid: 'uuid2' } as any;
 
-      worldInstance.addOutlinedObjects([mockObject1]);
-      worldInstance.addOutlinedObjects([mockObject2]);
+      const outlineId1 = worldInstance.addOutline([mockObject1], { color: '#ff0000' });
+      const outlineId2 = worldInstance.addOutline([mockObject2], { color: '#00ff00' });
 
-      const outlinedObjects = worldInstance.getOutlinedObjects();
-      expect(outlinedObjects).toHaveLength(2);
-      expect(outlinedObjects[0]).toBe(mockObject1);
-      expect(outlinedObjects[1]).toBe(mockObject2);
+      const outlines = worldInstance.getOutlines();
+      expect(outlines).toHaveLength(2);
+      expect(outlines.some(entry => entry.object === mockObject1)).toBe(true);
+      expect(outlines.some(entry => entry.object === mockObject1)).toBe(true);
+      expect(outlines.some(entry => entry.object === mockObject2)).toBe(true);
     });
   });
 });
