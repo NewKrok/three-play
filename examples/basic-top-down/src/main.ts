@@ -490,7 +490,7 @@ const worldInstance = createWorld({
     },
   },
   heightmap: {
-    url: 'https://newkrok.com/external-assets/heightmap-island-256.webp',
+    assetId: 'heightmap',
     resolution: HEIGHT_MAP_RESOLUTION,
     elevationRatio: ELEVATION_RATIO,
   },

@@ -11,6 +11,9 @@ const assetConfig: AssetsConfig = {
     crate: {
       url: 'https://newkrok.com/external-assets/crate-256.webp',
     },
+    heightmap: {
+      url: 'https://newkrok.com/external-assets/heightmap-island-256.webp',
+    },
   },
   models: {
     'human-idle': {

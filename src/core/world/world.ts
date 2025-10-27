@@ -54,11 +54,9 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   const autoStart = config.update?.autoStart ?? false;
   const initialCallback = config.update?.onUpdate;
 
-  // Get heightmap configuration and create manager
+  // Get heightmap configuration
   const heightmapIntegrationConfig = createHeightmapIntegrationConfig(config);
-  const heightmapManager: HeightmapManager | null = heightmapIntegrationConfig
-    ? createHeightmapManager(heightmapIntegrationConfig)
-    : null;
+  let heightmapManager: HeightmapManager | null = null;
 
   // Get assets configuration
   const assetsConfig = config.assets;
@@ -165,6 +163,14 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   };
 
   const notifyReady = (assets: LoadedAssets) => {
+    // Create heightmap manager now that assets are loaded
+    if (heightmapIntegrationConfig && !heightmapManager) {
+      heightmapManager = createHeightmapManager(
+        heightmapIntegrationConfig,
+        assets,
+      );
+    }
+
     readyCallbacks.forEach((callback) => {
       try {
         callback(assets);
@@ -228,13 +234,6 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   const getHeightmapUtils = (): HeightmapUtils | null => {
     return heightmapManager?.utils || null;
   };
-
-  // Start auto-loading heightmap if configured
-  if (heightmapManager) {
-    heightmapManager.initialize().catch((error) => {
-      console.error('Failed to auto-load heightmap:', error);
-    });
-  }
 
   // Start auto-loading assets if configured
   if (shouldLoadAssets && assetsConfig) {

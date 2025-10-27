@@ -4,7 +4,7 @@ export { default as createWorld } from './core/world/world.js';
 // Heightmap utilities
 export {
   HeightmapUtils,
-  loadHeightmap,
+  loadFromTexture,
   createHeightmapUtils,
 } from './core/heightmap/index.js';
 

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {
-  loadHeightmap,
+  loadFromTexture,
   createHeightmapUtils,
 } from '../core/heightmap/heightmap-utils';
 import type { HeightmapConfig } from '../types/heightmap';
@@ -23,20 +23,12 @@ const mockGetContext = jest.fn().mockReturnValue({
   getImageData: mockGetImageData,
 });
 
-// Mock THREE.TextureLoader
+// Create mock texture for tests
 const mockTexture = new THREE.Texture();
 mockTexture.image = {
   width: 256,
   height: 256,
 };
-
-const mockLoad = jest.fn();
-jest.mock('three', () => ({
-  ...jest.requireActual('three'),
-  TextureLoader: jest.fn().mockImplementation(() => ({
-    load: mockLoad,
-  })),
-}));
 
 // Mock canvas and DOM elements for Node.js environment
 (global as any).HTMLCanvasElement = class MockHTMLCanvasElement {
@@ -66,60 +58,30 @@ Object.defineProperty(global, 'document', {
 describe('HeightmapUtils', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-
-    // Setup mock loader to call success callback
-    mockLoad.mockImplementation((url, onLoad, _onProgress, _onError) => {
-      setTimeout(() => onLoad(mockTexture), 0);
-    });
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('loadHeightmap', () => {
-    it('should load heightmap from URL successfully', async () => {
-      const url = 'test-heightmap.png';
-
-      const result = await loadHeightmap(url);
+  describe('loadFromTexture', () => {
+    it('should load heightmap from texture successfully', () => {
+      const result = loadFromTexture(mockTexture);
 
       expect(result).toBeDefined();
       expect(result.heightmap).toBeInstanceOf(Float32Array);
       expect(result.heightMapTexture).toBe(mockTexture);
-      expect(mockLoad).toHaveBeenCalledWith(
-        url,
-        expect.any(Function),
-        undefined,
-        expect.any(Function),
-      );
     });
 
-    it('should handle loading errors', async () => {
-      const url = 'invalid-heightmap.png';
-      const errorMessage = 'Failed to load texture';
-
-      mockLoad.mockImplementation((url, onLoad, onProgress, onError) => {
-        setTimeout(() => onError(errorMessage), 0);
-      });
-
-      await expect(loadHeightmap(url)).rejects.toThrow(
-        'Failed to load texture: ' + errorMessage,
-      );
-    });
-
-    it('should throw error when canvas context is not available', async () => {
+    it('should throw error when canvas context is not available', () => {
       mockGetContext.mockReturnValueOnce(null);
 
-      const url = 'test-heightmap.png';
-
-      await expect(loadHeightmap(url)).rejects.toThrow(
+      expect(() => loadFromTexture(mockTexture)).toThrow(
         'Failed to get 2D rendering context',
       );
     });
 
-    it('should convert image data to Float32Array correctly', async () => {
-      const url = 'test-heightmap.png';
-
+    it('should convert image data to Float32Array correctly', () => {
       // Create test image data with known values
       const testData = new Uint8ClampedArray(4 * 4 * 4); // 4x4 pixels, RGBA
       for (let i = 0; i < testData.length; i += 4) {
@@ -130,10 +92,14 @@ describe('HeightmapUtils', () => {
       }
 
       mockGetImageData.mockReturnValueOnce({ data: testData });
-      mockTexture.image.width = 4;
-      mockTexture.image.height = 4;
 
-      const result = await loadHeightmap(url);
+      const testTexture = new THREE.Texture();
+      testTexture.image = {
+        width: 4,
+        height: 4,
+      };
+
+      const result = loadFromTexture(testTexture);
 
       expect(result.heightmap).toHaveLength(16); // 4x4 pixels
       // All heights should be 1.0 (255/255)
@@ -265,8 +231,7 @@ describe('HeightmapUtils', () => {
   });
 
   describe('integration tests', () => {
-    it('should work with complete workflow', async () => {
-      const url = 'test-heightmap.png';
+    it('should work with complete workflow', () => {
       const config: HeightmapConfig = {
         worldWidth: 512,
         worldHeight: 512,
@@ -274,8 +239,15 @@ describe('HeightmapUtils', () => {
         elevationRatio: 30,
       };
 
-      // Load heightmap
-      const heightmapData = await loadHeightmap(url);
+      // Create test texture
+      const testTexture = new THREE.Texture();
+      testTexture.image = {
+        width: 256,
+        height: 256,
+      };
+
+      // Load heightmap from texture
+      const heightmapData = loadFromTexture(testTexture);
 
       // Create utils
       const utils = createHeightmapUtils(heightmapData, config);

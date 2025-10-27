@@ -68,7 +68,7 @@ export type PostProcessingManager = {
  * Configuration for heightmap integration
  */
 export type HeightmapIntegrationConfig = {
-  heightmapUrl: string;
+  heightmapAssetId: string;
   worldWidth: number;
   worldHeight: number;
   resolution?: number;
@@ -76,14 +76,10 @@ export type HeightmapIntegrationConfig = {
 };
 
 /**
- * Heightmap manager for handling loading and initialization
+ * Heightmap manager for handling heightmap utilities
  */
 export type HeightmapManager = {
   utils: HeightmapUtils | null;
-  isLoading: boolean;
-  isLoaded: boolean;
-  error: Error | null;
-  initialize: () => Promise<void>;
   destroy: () => void;
 };
 
@@ -116,7 +112,7 @@ export type WorldConfig = {
     onUpdate?: UpdateCallback;
   };
   heightmap?: {
-    url: string;
+    assetId: string;
     resolution?: number;
     elevationRatio?: number;
   };

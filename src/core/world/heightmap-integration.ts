@@ -1,5 +1,6 @@
-import { loadHeightmap, createHeightmapUtils } from '../heightmap/index.js';
+import { loadFromTexture, createHeightmapUtils } from '../heightmap/index.js';
 import type { HeightmapUtils, HeightmapConfig } from '../../types/heightmap.js';
+import type { LoadedAssets } from '../../types/assets.js';
 import type {
   WorldConfig,
   HeightmapIntegrationConfig,
@@ -16,12 +17,12 @@ export const createHeightmapIntegrationConfig = (
 ): HeightmapIntegrationConfig | null => {
   const heightmapConfig = worldConfig.heightmap;
 
-  if (!heightmapConfig?.url) {
+  if (!heightmapConfig?.assetId) {
     return null;
   }
 
   return {
-    heightmapUrl: heightmapConfig.url,
+    heightmapAssetId: heightmapConfig.assetId,
     worldWidth: worldConfig.world.size.x,
     worldHeight: worldConfig.world.size.y,
     resolution: heightmapConfig.resolution ?? 256,
@@ -30,71 +31,44 @@ export const createHeightmapIntegrationConfig = (
 };
 
 /**
- * Creates a heightmap manager for handling heightmap loading and utilities
+ * Creates a heightmap manager for handling heightmap utilities
  * @param config - Configuration for heightmap integration
+ * @param loadedAssets - The loaded assets containing the heightmap texture
  * @returns Heightmap manager instance
  */
 export const createHeightmapManager = (
   config: HeightmapIntegrationConfig,
+  loadedAssets: LoadedAssets,
 ): HeightmapManager => {
   let utils: HeightmapUtils | null = null;
-  let isLoading = false;
-  let isLoaded = false;
-  let error: Error | null = null;
 
-  const initialize = async (): Promise<void> => {
-    if (isLoading || isLoaded) {
-      return;
-    }
+  // Initialize heightmap utils immediately if texture is available
+  const texture = loadedAssets.textures[config.heightmapAssetId];
+  if (texture) {
+    const heightmapConfig: HeightmapConfig = {
+      worldWidth: config.worldWidth,
+      worldHeight: config.worldHeight,
+      resolution: config.resolution ?? 256,
+      elevationRatio: config.elevationRatio ?? 30,
+    };
 
-    isLoading = true;
-    error = null;
-
-    try {
-      // Create heightmap config using world dimensions
-      const heightmapConfig: HeightmapConfig = {
-        worldWidth: config.worldWidth,
-        worldHeight: config.worldHeight,
-        resolution: config.resolution ?? 256,
-        elevationRatio: config.elevationRatio ?? 30,
-      };
-
-      const heightmapData = await loadHeightmap(config.heightmapUrl);
-      utils = createHeightmapUtils(heightmapData, heightmapConfig);
-      isLoaded = true;
-    } catch (loadError) {
-      error =
-        loadError instanceof Error
-          ? loadError
-          : new Error('Failed to load heightmap');
-      console.error('Failed to auto-load heightmap:', error);
-    } finally {
-      isLoading = false;
-    }
-  };
+    const heightmapData = loadFromTexture(texture);
+    utils = createHeightmapUtils(heightmapData, heightmapConfig);
+  } else {
+    console.warn(
+      `Heightmap texture with ID '${config.heightmapAssetId}' not found in loaded assets`,
+    );
+  }
 
   const destroy = (): void => {
     // Clean up heightmap resources if needed
     utils = null;
-    isLoading = false;
-    isLoaded = false;
-    error = null;
   };
 
   return {
     get utils() {
       return utils;
     },
-    get isLoading() {
-      return isLoading;
-    },
-    get isLoaded() {
-      return isLoaded;
-    },
-    get error() {
-      return error;
-    },
-    initialize,
     destroy,
   };
 };
@@ -105,5 +79,5 @@ export const createHeightmapManager = (
  * @returns True if heightmap should be loaded
  */
 export const shouldLoadHeightmap = (worldConfig: WorldConfig): boolean => {
-  return Boolean(worldConfig.heightmap?.url);
+  return Boolean(worldConfig.heightmap?.assetId);
 };

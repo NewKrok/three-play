@@ -9,18 +9,11 @@ import type {
 } from '../../types/heightmap.js';
 
 /**
- * Load a heightmap from an image URL
- * @param url - URL of the heightmap image
- * @returns Promise resolving to heightmap data
+ * Load heightmap data from a texture
+ * @param texture - The loaded Three.js texture
+ * @returns Heightmap data extracted from the texture
  */
-export const loadHeightmap = async (url: string): Promise<HeightmapData> => {
-  const loader = new THREE.TextureLoader();
-  const texture = await new Promise<THREE.Texture>((resolve, reject) => {
-    loader.load(url, resolve, undefined, (err) =>
-      reject(new Error('Failed to load texture: ' + err)),
-    );
-  });
-
+export const loadFromTexture = (texture: THREE.Texture): HeightmapData => {
   const img = texture.image;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -193,6 +186,6 @@ export const createHeightmapUtils = (
  * Heightmap utility namespace
  */
 export const HeightmapUtilsNamespace = {
-  loadHeightmap,
+  loadFromTexture,
   createHeightmapUtils,
 };
