@@ -238,6 +238,7 @@ const TREE_COUNT = 1000;
 const CRATE_COUNT = 100;
 const TREE_COLLISION_RADIUS = 1.5;
 const CRATE_COLLISION_RADIUS = 1.2;
+const CRATE_INTERACTION_RADIUS = 3.0; // New radius for outline interaction
 const MIN_APPLES_PER_TREE = 2;
 const MAX_APPLES_PER_TREE = 6;
 const ENEMY_COUNT = 20;
@@ -271,6 +272,8 @@ let units = [];
 let trees = [];
 let apples = [];
 let crates = [];
+let nearbyCreateOutlines = new Map(); // Track crate outlines by crate index
+let crateProxyMeshes = new Map(); // Individual meshes for outlined crates
 let lastThrowTime = 0;
 let lastRollTime = 0;
 let isRolling = false;
@@ -1137,6 +1140,62 @@ worldInstance.onReady((assets) => {
         if (!isActive) continue;
 
         const dist = unit.position.distanceTo(position);
+
+        // Check if player is nearby for outline effect
+        if (unit === character.model) {
+          const isNearby = dist < CRATE_INTERACTION_RADIUS;
+          const hasOutline = nearbyCreateOutlines.has(index);
+
+          if (isNearby && !hasOutline) {
+            // Create individual mesh for this crate to apply outline
+            const crateGeometry = new THREE.BoxGeometry(1, 1, 1);
+            const crateMaterial = new THREE.MeshStandardMaterial({
+              map: loadedAssets.textures.crate,
+            });
+            const proxyMesh = new THREE.Mesh(crateGeometry, crateMaterial);
+            proxyMesh.position.copy(position);
+            proxyMesh.castShadow = true;
+            proxyMesh.receiveShadow = true;
+            scene.add(proxyMesh);
+
+            // Hide the original instance by moving it far away
+            dummy.position.set(0, -1000, 0);
+            dummy.updateMatrix();
+            crateMesh.setMatrixAt(index, dummy.matrix);
+            crateMesh.instanceMatrix.needsUpdate = true;
+
+            // Add outline to the individual mesh
+            const outlineId = worldInstance.addOutline(proxyMesh, {
+              color: '#ffffff',
+              strength: 0.8,
+              thickness: 1.5,
+              glow: 0.3,
+              priority: 1,
+            });
+
+            nearbyCreateOutlines.set(index, outlineId);
+            crateProxyMeshes.set(index, proxyMesh);
+          } else if (!isNearby && hasOutline) {
+            // Remove outline and restore original instance
+            const outlineId = nearbyCreateOutlines.get(index);
+            const proxyMesh = crateProxyMeshes.get(index);
+
+            worldInstance.removeOutline(outlineId);
+            scene.remove(proxyMesh);
+
+            // Restore original instance position
+            dummy.position.copy(position);
+            dummy.rotation.set(0, 0, 0);
+            dummy.scale.set(1, 1, 1);
+            dummy.updateMatrix();
+            crateMesh.setMatrixAt(index, dummy.matrix);
+            crateMesh.instanceMatrix.needsUpdate = true;
+
+            nearbyCreateOutlines.delete(index);
+            crateProxyMeshes.delete(index);
+          }
+        }
+
         if (dist < CRATE_COLLISION_RADIUS) {
           const away = unit.position.clone().sub(position).normalize();
           unit.position.addScaledVector(
@@ -1144,6 +1203,17 @@ worldInstance.onReady((assets) => {
             (CRATE_COLLISION_RADIUS - dist) * 0.2,
           );
           if (unit === character.model && isActive) {
+            // Remove outline and proxy mesh when crate is collected
+            if (nearbyCreateOutlines.has(index)) {
+              const outlineId = nearbyCreateOutlines.get(index);
+              const proxyMesh = crateProxyMeshes.get(index);
+
+              worldInstance.removeOutline(outlineId);
+              scene.remove(proxyMesh);
+              nearbyCreateOutlines.delete(index);
+              crateProxyMeshes.delete(index);
+            }
+
             crate.isActive = false;
             showFloatingLabel({
               text: effect,
