@@ -93,134 +93,6 @@ const terrainVertexShader = `
   vUvCustom = uv;
 `;
 
-const WaterFragmentShader = `
-  precision mediump float;
-
-  uniform float uTime;
-  uniform vec3 uDeepColor;
-  uniform vec3 uShallowColor;
-  uniform float uShallowStrength;
-  uniform vec3 uFoamColor;
-  uniform float uFoamWidth;
-  uniform float uFoamStrength;
-  uniform sampler2D uTerrainHeightMap;
-  uniform float uWaterLevel;
-  uniform float uWorldWidth;
-  uniform float uWorldHeight;
-  uniform float uMaxTerrainHeight;
-  uniform float uOpacity;
-
-  varying float vHeight;
-  varying vec2 vUv;
-  varying vec3 vNormal;
-  varying vec3 vWorldPos;
-  varying vec3 vOriginalWorldPos;
-
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-  }
-
-  float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-
-    float a = hash(i);
-    float b = hash(i + vec2(1.0, 0.0));
-    float c = hash(i + vec2(0.0, 1.0));
-    float d = hash(i + vec2(1.0, 1.0));
-
-    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-  }
-  
-  float fbm(vec2 p) {
-    float value = 0.0;
-    float amplitude = 0.5;
-    float frequency = 1.0;
-
-    for(int i = 0; i < 4; i++) {
-      value += amplitude * noise(p * frequency);
-      frequency *= 2.0;
-      amplitude *= 0.5;
-    }
-    return value;
-  }
-
-  void main() {
-    vec2 terrainUv = clamp(vec2(
-      vOriginalWorldPos.x / uWorldWidth,
-      1.0 - vOriginalWorldPos.z / uWorldHeight
-    ), 0.0, 1.0);
-
-    float terrainH = texture2D(uTerrainHeightMap, terrainUv).r * uMaxTerrainHeight;
-    float effectiveWaterLevel = uWaterLevel + vHeight;
-    float depth = effectiveWaterLevel - terrainH;
-
-    float shallowFactor = smoothstep(0.0, 3.0, depth);
-
-    float foamWidth = 2.0;
-    float foamFactor = 1.0 - smoothstep(0.0, uFoamWidth, depth);
-
-    vec2 noiseUv = vUv * 8.0 + uTime * 0.15;
-    float waterNoise = fbm(noiseUv);
-
-    vec3 waterColor = mix(uDeepColor, uShallowColor, shallowFactor * uShallowStrength);
-    waterColor = mix(waterColor, uFoamColor, foamFactor * uFoamStrength);
-
-    waterColor += (waterNoise - 0.5) * 0.25;
-    vec3 N = normalize(vNormal);
-    vec3 viewDir = normalize(vec3(0.0, 0.0, 1.0));
-    float fresnel = pow(1.0 - max(dot(N, viewDir), 0.0), 3.0);
-    waterColor += vec3(1.0) * 0.2 * fresnel;
-    gl_FragColor = vec4(waterColor, uOpacity);
-  }
-`;
-
-const WaterVertexShader = `
-  precision mediump float;
-
-  uniform float uTime;
-  uniform float uAmplitude;
-  uniform float uFrequency;
-  uniform float uSpeed;
-
-  varying vec2 vUv;
-  varying float vHeight;
-  varying vec3 vNormal;
-  varying vec3 vWorldPos;
-  varying vec3 vOriginalWorldPos;
-
-  float heightAt(vec2 uv){
-    float t = uTime * uSpeed;
-    vec2 uvScaled = uv * 20.0;
-
-    float h1 = sin(dot(uvScaled, vec2(1.0, 1.2)) * uFrequency + t) * 0.15;
-    float h2 = sin(dot(uvScaled, vec2(-1.3, 0.7)) * (uFrequency * 0.8) + t * 1.3) * 0.1;
-    float h3 = sin(dot(uvScaled, vec2(0.5, -1.5)) * (uFrequency * 1.4) + t * 0.08) * 0.08;
-    float h4 = sin(dot(uvScaled, vec2(0.7, 0.3)) * (uFrequency * 1.1) + t * 0.9) * 0.05;
-
-    return (h1 + h2 + h3 + h4) * uAmplitude;
-  }
-
-  void main() {
-    vUv = uv;
-    
-    vec4 originalWorldPosition = modelMatrix * vec4(position, 1.0);
-    vOriginalWorldPos = originalWorldPosition.xyz;
-  
-    float h = heightAt(uv);
-    vec3 displacedPosition = position;
-    displacedPosition.z += h;
-    vHeight = h;
-    vNormal = normalize(normalMatrix * normal);
-
-    vec4 worldPosition = modelMatrix * vec4(displacedPosition, 1.0);
-    vWorldPos = worldPosition.xyz;
-
-    gl_Position = projectionMatrix * viewMatrix * worldPosition;
-  }
-`;
-
 const WALK_SPEED = 5;
 const RUN_SPEED = 10;
 const ROLL_SPEED = 5;
@@ -244,7 +116,7 @@ const MAX_APPLES_PER_TREE = 6;
 const ENEMY_COUNT = 20;
 const APPLE_HIT_RADIUS = 1;
 const APPLE_PUSH_FORCE = 25;
-const MAX_STAMINA = 10.0;
+const MAX_STAMINA = 100.0;
 const STAMINA_RECOVERY = 1;
 const STAMINA_DRAIN = 2;
 const MAX_HEALTH = 100.0;
@@ -509,6 +381,20 @@ const worldInstance = createWorld({
     assetId: 'heightmap',
     resolution: HEIGHT_MAP_RESOLUTION,
     elevationRatio: ELEVATION_RATIO,
+  },
+  water: {
+    level: WATER_LEVEL,
+    deepColor: 0x013a5b,
+    shallowColor: 0x2fc7ff,
+    shallowStrength: 0.2,
+    foamColor: 0xf6f9ff,
+    foamWidth: 0.4,
+    foamStrength: 0.2,
+    opacity: 0.8,
+    amplitude: 1.0,
+    frequency: 4.0,
+    speed: 1.5,
+    resolution: 64,
   },
   assets: assetConfig, // Add assets configuration
 });
@@ -1583,52 +1469,6 @@ worldInstance.onReady((assets) => {
     }
   };
 
-  const createWater = () => {
-    const uniforms = {
-      uTime: { value: 0.0 },
-      uAmplitude: { value: 1.0 },
-      uFrequency: { value: 4.0 },
-      uSpeed: { value: 1.5 },
-      uDeepColor: { value: new THREE.Color(0x013a5b) },
-      uShallowColor: { value: new THREE.Color(0x2fc7ff) },
-      uShallowStrength: { value: 0.2 },
-      uFoamColor: { value: new THREE.Color(0xf6f9ff) },
-      uFoamWidth: { value: 0.4 },
-      uFoamStrength: { value: 0.2 },
-      uTerrainHeightMap: { value: heightMapTexture },
-      uWaterLevel: { value: WATER_LEVEL },
-      uMaxTerrainHeight: { value: 30 },
-      uWorldWidth: { value: WORLD_WIDTH },
-      uWorldHeight: { value: WORLD_HEIGHT },
-      uOpacity: { value: 0.8 },
-    };
-
-    const material = new THREE.ShaderMaterial({
-      vertexShader: WaterVertexShader,
-      fragmentShader: WaterFragmentShader,
-      uniforms,
-      side: THREE.DoubleSide,
-      transparent: true,
-    });
-
-    const geom = new THREE.PlaneGeometry(WORLD_WIDTH, WORLD_HEIGHT, 64, 64);
-    const mesh = new THREE.Mesh(geom, material);
-
-    return { mesh, uniforms };
-  };
-
-  const waters = [];
-  const water = createWater();
-  water.mesh.rotation.x = -Math.PI / 2;
-  water.mesh.position.x = WORLD_WIDTH / 2;
-  water.mesh.position.y = WATER_LEVEL;
-  water.mesh.position.z = WORLD_HEIGHT / 2;
-  scene.add(water.mesh);
-  waters.push(water);
-  const updateWaters = () => {
-    waters.forEach(({ uniforms }) => (uniforms.uTime.value += cycleData.delta));
-  };
-
   const cinamaticCameraController = createCinematicCameraController(camera, [
     {
       from: new THREE.Vector3(
@@ -1673,7 +1513,6 @@ worldInstance.onReady((assets) => {
     updateApples();
     updateLight();
     updateStaminaUi();
-    updateWaters();
 
     cinamaticCameraController.update(cycleData.delta);
 

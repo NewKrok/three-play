@@ -8,6 +8,21 @@ const assetConfig: AssetsConfig = {
       wrapS: THREE.MirroredRepeatWrapping,
       wrapT: THREE.MirroredRepeatWrapping,
     },
+    cliff: {
+      url: 'assets/textures/cliff-256.webp',
+      wrapS: THREE.MirroredRepeatWrapping,
+      wrapT: THREE.MirroredRepeatWrapping,
+    },
+    mud: {
+      url: 'assets/textures/mud-256.webp',
+      wrapS: THREE.MirroredRepeatWrapping,
+      wrapT: THREE.MirroredRepeatWrapping,
+    },
+    sand: {
+      url: 'assets/textures/sand-256.webp',
+      wrapS: THREE.MirroredRepeatWrapping,
+      wrapT: THREE.MirroredRepeatWrapping,
+    },
     crate: {
       url: 'assets/textures/crate-256.webp',
     },
