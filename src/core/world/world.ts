@@ -2,13 +2,15 @@ import { DisposeUtils } from '@newkrok/three-utils';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { AssetLoader } from '../assets/index.js';
-import { createOutlineManager } from '../effects/index.js';
+import {
+  createOutlineManager,
+  createPostProcessingManager,
+} from '../effects/index.js';
 import {
   createHeightmapIntegrationConfig,
   createHeightmapManager,
-} from './heightmap-integration.js';
-import { createPostProcessingManager } from './post-processing-passes.js';
-import { createWaterInstance } from './water-utils.js';
+} from '../heightmap/index.js';
+import { createWaterInstance } from '../water/index.js';
 import type {
   AssetsConfig,
   LoadedAssets,

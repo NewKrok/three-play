@@ -384,17 +384,6 @@ const worldInstance = createWorld({
   },
   water: {
     level: WATER_LEVEL,
-    deepColor: 0x013a5b,
-    shallowColor: 0x2fc7ff,
-    shallowStrength: 0.2,
-    foamColor: 0xf6f9ff,
-    foamWidth: 0.4,
-    foamStrength: 0.2,
-    opacity: 0.8,
-    amplitude: 1.0,
-    frequency: 4.0,
-    speed: 1.5,
-    resolution: 64,
   },
   assets: assetConfig, // Add assets configuration
 });

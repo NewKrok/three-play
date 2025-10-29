@@ -6,7 +6,7 @@ import {
   createHeightmapIntegrationConfig,
   createHeightmapManager,
   shouldLoadHeightmap,
-} from '../core/world/heightmap-integration.js';
+} from '../core/heightmap/heightmap-integration.js';
 import type { HeightmapData } from '../types/heightmap.js';
 import type { LoadedAssets } from '../types/assets.js';
 import type { WorldConfig } from '../types/world.js';

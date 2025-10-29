@@ -9,7 +9,7 @@ export {
 } from './core/heightmap/index.js';
 
 // Water utilities
-export { WaterUtils, createWaterInstance } from './core/world/water-utils.js';
+export { WaterUtils, createWaterInstance } from './core/water/index.js';
 
 // Asset loading utilities
 export { AssetLoader } from './core/assets/index.js';
