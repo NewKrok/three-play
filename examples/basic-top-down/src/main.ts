@@ -32,6 +32,7 @@ console.log('Starting game with THREE Play engine');
 const terrainFragmentShaderPart1 = `
   uniform float uWaterLevel;
   uniform float uSandBlendDistance;
+  uniform sampler2D uSandTexture;
   varying vec3 vWorldPosition;
   varying vec2 vUvCustom;
     
@@ -74,17 +75,13 @@ const terrainFragmentShaderPart2 = `
     
   diffuseColor.rgb += terrainVariation;
   
-  float sandNoise1 = noise(vUvCustom * 50.0);
-  float sandNoise2 = noise(vUvCustom * 100.0) * 0.5;
-  float sandVariation = sandNoise1 * 0.7 + sandNoise2 * 0.3;
-    
-  vec3 sandBase = vec3(0.96, 0.87, 0.70);
-  vec3 sandColor = sandBase * (0.8 + sandVariation * 0.4);
+  // Sample sand texture instead of using noise
+  vec3 sandTexColor = texture2D(uSandTexture, vUvCustom * 100.0).rgb;
     
   float heightAboveWater = vWorldPosition.y - uWaterLevel;
   float sandBlend = 1.0 - smoothstep(0.0, uSandBlendDistance, heightAboveWater);
     
-  diffuseColor.rgb = mix(diffuseColor.rgb, sandColor, sandBlend);
+  diffuseColor.rgb = mix(diffuseColor.rgb, sandTexColor, sandBlend);
 `;
 
 const terrainVertexShader = `
@@ -392,6 +389,7 @@ worldInstance.onReady((assets) => {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uWaterLevel = { value: WATER_LEVEL };
     shader.uniforms.uSandBlendDistance = { value: 1.0 };
+    shader.uniforms.uSandTexture = { value: loadedAssets.textures.sand };
 
     shader.vertexShader =
       'varying vec3 vWorldPosition;\nvarying vec2 vUvCustom;\n' +
