@@ -18,15 +18,12 @@ export { AssetLoader } from './core/assets/index.js';
 export { createOutlineManager } from './core/effects/index.js';
 
 // Types
-export type { 
-  WorldConfig, 
+export type {
+  WorldConfig,
   WorldInstance,
   UpdateCallback,
 } from './types/world.js';
-export type {
-  WaterConfig,
-  WaterInstance,
-} from './types/water.js';
+export type { WaterConfig, WaterInstance } from './types/water.js';
 export type {
   OutlineConfig,
   OutlineEntry,

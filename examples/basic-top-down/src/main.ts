@@ -3,15 +3,15 @@ import {
   updateParticleSystems,
   createParticleSystem,
 } from 'https://esm.sh/@newkrok/three-particles';
-import {
-  CSS2DRenderer,
-  CSS2DObject,
-} from 'https://esm.sh/three/examples/jsm/renderers/CSS2DRenderer.js';
-import * as SkeletonUtils from 'https://esm.sh/three/examples/jsm/utils/SkeletonUtils.js';
 
 import * as THREE from 'three';
 import { runningEffect, dustEffect, splashEffect } from './effects-config.js';
 import assetConfig from './assets-config.js';
+import {
+  CSS2DRenderer,
+  CSS2DObject,
+  SkeletonUtils,
+} from 'three/examples/jsm/Addons.js';
 
 /**
  * @typedef {Object} GameState
@@ -176,50 +176,11 @@ const correctedDir = new THREE.Vector3();
 const rotationTargetQuaternion = new THREE.Quaternion();
 const dummy = new THREE.Object3D();
 
-/** @type {GameState} */
 const gameState = {
   collectedApples: 0,
   score: 0,
   health: MAX_HEALTH / 2,
   stamina: MAX_STAMINA,
-};
-
-const tutorial = document.getElementById('tutorial');
-const startBtn = document.getElementById('startBtn');
-
-startBtn.addEventListener('click', () => {
-  tutorial.classList.add('hidden');
-
-  setTimeout(() => tutorial.remove(), 400);
-});
-
-const updateAppleCount = () => {
-  const apples = document.querySelector('.apples');
-  const countEl = document.getElementById('apple-count');
-  countEl.textContent = gameState.collectedApples;
-
-  apples.classList.add('updated');
-  setTimeout(() => apples.classList.remove('updated'), 300);
-};
-
-const updateScore = () => {
-  const scoreWrapper = document.querySelector('.score-wrapper');
-  const scoreEl = document.getElementById('score');
-  scoreEl.textContent = gameState.score;
-
-  scoreWrapper.classList.add('updated');
-  setTimeout(() => scoreWrapper.classList.remove('updated'), 300);
-};
-
-const updateStaminaUi = () => {
-  const bar = document.getElementById('stamina-bar');
-  const container = document.getElementById('stamina-container');
-
-  const pct = Math.max(0, Math.min(1, gameState.stamina / MAX_STAMINA));
-  const pctInt = Math.round(pct * 100);
-
-  bar.style.transform = `scaleX(${pct})`;
-  bar.style.setProperty('--s', pct);
 };
 
 const labelRenderer = new CSS2DRenderer();
@@ -1125,7 +1086,6 @@ worldInstance.onReady((assets) => {
                 ) + effect.health.min;
             }
 
-            updateAppleCount();
             tree.appleIndices = null;
           }
         }
@@ -1394,7 +1354,6 @@ worldInstance.onReady((assets) => {
               position: unit.position,
             });
             gameState.score++;
-            updateScore();
 
             updateAppleInstance(
               apple.instanceId,
@@ -1425,7 +1384,6 @@ worldInstance.onReady((assets) => {
         gameState.collectedApples > 0
       ) {
         gameState.collectedApples--;
-        updateAppleCount();
         throwApple();
         lastThrowTime = now;
       }
@@ -1501,7 +1459,6 @@ worldInstance.onReady((assets) => {
     updateRollRoutine();
     updateApples();
     updateLight();
-    updateStaminaUi();
 
     cinamaticCameraController.update(cycleData.delta);
 

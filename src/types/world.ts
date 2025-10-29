@@ -11,11 +11,11 @@ import type {
   PostProcessingConfig,
   PostProcessingManager,
 } from './effects.js';
-import type { 
-  HeightmapUtils, 
-  HeightmapIntegrationConfig, 
+import type {
+  HeightmapUtils,
+  HeightmapIntegrationConfig,
   HeightmapManager,
-  WorldHeightmapConfig 
+  WorldHeightmapConfig,
 } from './heightmap.js';
 import type { WaterConfig, WaterInstance } from './water.js';
 import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
