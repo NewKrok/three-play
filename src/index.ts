@@ -18,18 +18,30 @@ export { AssetLoader } from './core/assets/index.js';
 export { createOutlineManager } from './core/effects/index.js';
 
 // Types
-export type {
-  WorldConfig,
+export type { 
+  WorldConfig, 
   WorldInstance,
+  UpdateCallback,
+} from './types/world.js';
+export type {
   WaterConfig,
   WaterInstance,
-} from './types/world.js';
+} from './types/water.js';
+export type {
+  OutlineConfig,
+  OutlineEntry,
+  PostProcessingConfig,
+  PostProcessingManager,
+} from './types/effects.js';
 export type {
   HeightmapData,
   HeightmapConfig,
   HeightmapUtils as HeightmapUtilsType,
   HeightmapPosition,
   ResolutionRatio,
+  WorldHeightmapConfig,
+  HeightmapIntegrationConfig,
+  HeightmapManager,
 } from './types/heightmap.js';
 export type {
   AssetsConfig,

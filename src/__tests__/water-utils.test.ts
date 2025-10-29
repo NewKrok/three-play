@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createWaterInstance, WaterUtils } from '../core/water/water-utils.js';
-import type { WaterConfig } from '../types/world.js';
+import type { WaterConfig } from '../types/water.js';
 import type { HeightmapUtils } from '../types/heightmap.js';
 
 // Mock console methods to avoid noise in tests

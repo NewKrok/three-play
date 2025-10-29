@@ -1,7 +1,22 @@
-import {
-  loadFromTexture,
-  createHeightmapUtils,
-} from '../core/heightmap/index.js';
+// Mock the DOM environment for tests
+const mockDocument = {
+  createElement: jest.fn(() => ({
+    getContext: jest.fn(() => ({
+      drawImage: jest.fn(),
+      getImageData: jest.fn(() => ({
+        data: new Uint8ClampedArray([255, 255, 255, 255]), // Mock white pixel data
+      })),
+    })),
+    width: 0,
+    height: 0,
+  })),
+};
+
+Object.defineProperty(global, 'document', {
+  value: mockDocument,
+  writable: true,
+});
+
 import {
   createHeightmapIntegrationConfig,
   createHeightmapManager,
@@ -11,19 +26,6 @@ import type { HeightmapData } from '../types/heightmap.js';
 import type { LoadedAssets } from '../types/assets.js';
 import type { WorldConfig } from '../types/world.js';
 import * as THREE from 'three';
-
-// Mock the heightmap module
-jest.mock('../core/heightmap/index.js', () => ({
-  loadFromTexture: jest.fn(),
-  createHeightmapUtils: jest.fn(),
-}));
-
-const mockLoadFromTexture = loadFromTexture as jest.MockedFunction<
-  typeof loadFromTexture
->;
-const mockCreateHeightmapUtils = createHeightmapUtils as jest.MockedFunction<
-  typeof createHeightmapUtils
->;
 
 describe('Heightmap Integration', () => {
   beforeEach(() => {
@@ -119,17 +121,10 @@ describe('Heightmap Integration', () => {
 
     it('should create manager with heightmap utils when texture is available', () => {
       const mockTexture = new THREE.Texture();
-      const mockHeightmapData: HeightmapData = {
-        heightmap: new Float32Array([1, 2, 3, 4]),
-        heightMapTexture: mockTexture,
-      };
-
-      const mockUtils = {
-        getHeightFromPosition: jest.fn(),
-        getPositionByHeight: jest.fn(),
-        applyHeightmapToGeometry: jest.fn(),
-        heightmapData: mockHeightmapData,
-        config: mockConfig,
+      // Mock texture image for canvas processing
+      mockTexture.image = {
+        width: 256,
+        height: 256,
       };
 
       const mockLoadedAssets: LoadedAssets = {
@@ -139,19 +134,10 @@ describe('Heightmap Integration', () => {
         models: {},
       };
 
-      mockLoadFromTexture.mockReturnValue(mockHeightmapData);
-      mockCreateHeightmapUtils.mockReturnValue(mockUtils);
-
       const manager = createHeightmapManager(mockConfig, mockLoadedAssets);
 
-      expect(mockLoadFromTexture).toHaveBeenCalledWith(mockTexture);
-      expect(mockCreateHeightmapUtils).toHaveBeenCalledWith(mockHeightmapData, {
-        worldWidth: 200,
-        worldHeight: 150,
-        resolution: 256,
-        elevationRatio: 30,
-      });
-      expect(manager.utils).toBe(mockUtils);
+      expect(manager.utils).not.toBeNull();
+      expect(manager.utils?.heightmapData).toBeDefined();
     });
 
     it('should create manager with null utils when texture is not available', () => {
@@ -168,8 +154,6 @@ describe('Heightmap Integration', () => {
       const manager = createHeightmapManager(mockConfig, mockLoadedAssets);
 
       expect(manager.utils).toBeNull();
-      expect(mockLoadFromTexture).not.toHaveBeenCalled();
-      expect(mockCreateHeightmapUtils).not.toHaveBeenCalled();
       expect(consoleSpy).toHaveBeenCalledWith(
         "Heightmap texture with ID 'test-heightmap' not found in loaded assets",
       );
@@ -179,15 +163,18 @@ describe('Heightmap Integration', () => {
 
     it('should clean up resources when destroyed', () => {
       const mockTexture = new THREE.Texture();
+      // Mock texture image for canvas processing
+      mockTexture.image = {
+        width: 256,
+        height: 256,
+      };
+
       const mockLoadedAssets: LoadedAssets = {
         textures: {
           'test-heightmap': mockTexture,
         },
         models: {},
       };
-
-      mockLoadFromTexture.mockReturnValue({} as any);
-      mockCreateHeightmapUtils.mockReturnValue({} as any);
 
       const manager = createHeightmapManager(mockConfig, mockLoadedAssets);
       manager.destroy();

@@ -9,6 +9,15 @@ export type HeightmapData = {
 };
 
 /**
+ * Configuration for heightmap in world config
+ */
+export type WorldHeightmapConfig = {
+  assetId: string;
+  resolution?: number;
+  elevationRatio?: number;
+};
+
+/**
  * Configuration for heightmap resolution and world dimensions
  */
 export type HeightmapConfig = {
@@ -20,6 +29,17 @@ export type HeightmapConfig = {
   resolution: number;
   /** Multiplier for height values from the heightmap */
   elevationRatio: number;
+};
+
+/**
+ * Configuration for heightmap integration
+ */
+export type HeightmapIntegrationConfig = {
+  heightmapAssetId: string;
+  worldWidth: number;
+  worldHeight: number;
+  resolution?: number;
+  elevationRatio?: number;
 };
 
 /**
@@ -54,4 +74,12 @@ export type HeightmapPosition = {
 export type ResolutionRatio = {
   width: number;
   depth: number;
+};
+
+/**
+ * Heightmap manager for handling heightmap utilities
+ */
+export type HeightmapManager = {
+  utils: HeightmapUtils | null;
+  destroy: () => void;
 };

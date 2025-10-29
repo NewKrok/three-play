@@ -10,7 +10,7 @@ import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import type {
   PostProcessingConfig,
   PostProcessingManager,
-} from '../../types/world.js';
+} from '../../types/effects.js';
 import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
 
 /**

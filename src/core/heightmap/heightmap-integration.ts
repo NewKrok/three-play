@@ -1,11 +1,12 @@
-import { loadFromTexture, createHeightmapUtils } from '../heightmap/index.js';
-import type { HeightmapUtils, HeightmapConfig } from '../../types/heightmap.js';
+import { loadFromTexture, createHeightmapUtils } from './heightmap-utils.js';
+import type { 
+  HeightmapUtils, 
+  HeightmapConfig, 
+  HeightmapIntegrationConfig, 
+  HeightmapManager 
+} from '../../types/heightmap.js';
 import type { LoadedAssets } from '../../types/assets.js';
-import type {
-  WorldConfig,
-  HeightmapIntegrationConfig,
-  HeightmapManager,
-} from '../../types/world.js';
+import type { WorldConfig } from '../../types/world.js';
 
 /**
  * Creates a heightmap integration configuration from world config

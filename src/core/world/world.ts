@@ -17,13 +17,15 @@ import type {
   ProgressCallback,
   ReadyCallback,
 } from '../../types/assets.js';
-import type { HeightmapUtils } from '../../types/heightmap.js';
 import type {
-  HeightmapManager,
   OutlineConfig,
   OutlineEntry,
+  PostProcessingConfig,
+} from '../../types/effects.js';
+import type { HeightmapUtils, HeightmapManager } from '../../types/heightmap.js';
+import type { WaterInstance } from '../../types/water.js';
+import type {
   UpdateCallback,
-  WaterInstance,
   WorldConfig,
   WorldInstance,
 } from '../../types/world.js';

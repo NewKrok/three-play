@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { WaterConfig, WaterInstance } from '../../types/world.js';
+import type { WaterConfig, WaterInstance } from '../../types/water.js';
 import type { HeightmapUtils } from '../../types/heightmap.js';
 
 /**
