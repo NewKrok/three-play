@@ -31,8 +31,20 @@ console.log('Starting game with THREE Play engine');
 
 const terrainFragmentShaderPart1 = `
   uniform float uWaterLevel;
-  uniform float uSandBlendDistance;
   uniform sampler2D uSandTexture;
+  uniform sampler2D uMudTexture;
+  
+  // Height ranges for each layer
+  uniform float uSandMinHeight;
+  uniform float uSandMaxHeight;
+  uniform float uMudMinHeight;
+  uniform float uMudMaxHeight;
+  uniform float uGrassMinHeight;
+  uniform float uGrassMaxHeight;
+  
+  // Blend distances for smooth transitions
+  uniform float uBlendDistance;
+  
   varying vec3 vWorldPosition;
   varying vec2 vUvCustom;
     
@@ -75,13 +87,52 @@ const terrainFragmentShaderPart2 = `
     
   diffuseColor.rgb += terrainVariation;
   
-  // Sample sand texture instead of using noise
+  float currentHeight = vWorldPosition.y;
+  
+  // Sample all textures
   vec3 sandTexColor = texture2D(uSandTexture, vUvCustom * 100.0).rgb;
-    
-  float heightAboveWater = vWorldPosition.y - uWaterLevel;
-  float sandBlend = 1.0 - smoothstep(0.0, uSandBlendDistance, heightAboveWater);
-    
-  diffuseColor.rgb = mix(diffuseColor.rgb, sandTexColor, sandBlend);
+  vec3 mudTexColor = texture2D(uMudTexture, vUvCustom * 80.0).rgb;
+  vec3 grassTexColor = diffuseColor.rgb; // Base grass texture from material
+  
+  // Calculate blend weights for each layer based on height ranges
+  float sandWeight = 0.0;
+  float mudWeight = 0.0;
+  float grassWeight = 0.0;
+  
+  // Sand layer blending
+  if (currentHeight >= uSandMinHeight && currentHeight <= uSandMaxHeight) {
+    float sandCenter = (uSandMinHeight + uSandMaxHeight) * 0.5;
+    float sandRange = (uSandMaxHeight - uSandMinHeight) * 0.5;
+    sandWeight = 1.0 - smoothstep(sandRange - uBlendDistance, sandRange, abs(currentHeight - sandCenter));
+  }
+  
+  // Mud layer blending  
+  if (currentHeight >= uMudMinHeight && currentHeight <= uMudMaxHeight) {
+    float mudCenter = (uMudMinHeight + uMudMaxHeight) * 0.5;
+    float mudRange = (uMudMaxHeight - uMudMinHeight) * 0.5;
+    mudWeight = 1.0 - smoothstep(mudRange - uBlendDistance, mudRange, abs(currentHeight - mudCenter));
+  }
+  
+  // Grass layer blending
+  if (currentHeight >= uGrassMinHeight && currentHeight <= uGrassMaxHeight) {
+    float grassCenter = (uGrassMinHeight + uGrassMaxHeight) * 0.5;
+    float grassRange = (uGrassMaxHeight - uGrassMinHeight) * 0.5;
+    grassWeight = 1.0 - smoothstep(grassRange - uBlendDistance, grassRange, abs(currentHeight - grassCenter));
+  }
+  
+  // Normalize weights to ensure they sum to 1.0
+  float totalWeight = sandWeight + mudWeight + grassWeight;
+  if (totalWeight > 0.0) {
+    sandWeight /= totalWeight;
+    mudWeight /= totalWeight;
+    grassWeight /= totalWeight;
+  } else {
+    // Fallback to grass if no other layer is active
+    grassWeight = 1.0;
+  }
+  
+  // Blend textures based on weights
+  diffuseColor.rgb = sandTexColor * sandWeight + mudTexColor * mudWeight + grassTexColor * grassWeight;
 `;
 
 const terrainVertexShader = `
@@ -387,9 +438,20 @@ worldInstance.onReady((assets) => {
   });
 
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.uWaterLevel = { value: WATER_LEVEL };
-    shader.uniforms.uSandBlendDistance = { value: 1.0 };
+    // Texture uniforms
     shader.uniforms.uSandTexture = { value: loadedAssets.textures.sand };
+    shader.uniforms.uMudTexture = { value: loadedAssets.textures.mud };
+
+    // Height ranges for each layer (customize these values as needed)
+    shader.uniforms.uSandMinHeight = { value: 0.0 };
+    shader.uniforms.uSandMaxHeight = { value: WATER_LEVEL + 1.5 };
+    shader.uniforms.uMudMinHeight = { value: WATER_LEVEL + 0.5 };
+    shader.uniforms.uMudMaxHeight = { value: WATER_LEVEL + 2.5 };
+    shader.uniforms.uGrassMinHeight = { value: WATER_LEVEL + 1.0 };
+    shader.uniforms.uGrassMaxHeight = { value: WATER_LEVEL + 25.0 };
+
+    // Blend distance for smooth transitions
+    shader.uniforms.uBlendDistance = { value: 1.5 };
 
     shader.vertexShader =
       'varying vec3 vWorldPosition;\nvarying vec2 vUvCustom;\n' +
