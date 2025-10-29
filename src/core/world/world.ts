@@ -8,6 +8,7 @@ import {
   createHeightmapManager,
 } from './heightmap-integration.js';
 import { createPostProcessingManager } from './post-processing-passes.js';
+import { createWaterInstance } from './water-utils.js';
 import type {
   AssetsConfig,
   LoadedAssets,
@@ -20,6 +21,7 @@ import type {
   OutlineConfig,
   OutlineEntry,
   UpdateCallback,
+  WaterInstance,
   WorldConfig,
   WorldInstance,
 } from '../../types/world.js';
@@ -57,6 +59,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   // Get heightmap configuration
   const heightmapIntegrationConfig = createHeightmapIntegrationConfig(config);
   let heightmapManager: HeightmapManager | null = null;
+
+  // Get water configuration
+  const waterConfig = config.water;
+  let waterInstance: WaterInstance | null = null;
 
   // Get assets configuration
   const assetsConfig = config.assets;
@@ -171,6 +177,18 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       );
     }
 
+    // Create water instance if water is configured
+    if (waterConfig && !waterInstance) {
+      const heightmapUtils = heightmapManager?.utils || null;
+      waterInstance = createWaterInstance(
+        waterConfig,
+        config.world.size.x,
+        config.world.size.y,
+        heightmapUtils,
+      );
+      scene.add(waterInstance.mesh);
+    }
+
     readyCallbacks.forEach((callback) => {
       try {
         callback(assets);
@@ -210,6 +228,11 @@ const createWorld = (config: WorldConfig): WorldInstance => {
 
     const deltaTime = clock.getDelta();
     const elapsedTime = clock.getElapsedTime();
+
+    // Update water if available
+    if (waterInstance) {
+      waterInstance.update(deltaTime);
+    }
 
     // Call all update callbacks
     updateCallbacks.forEach((callback) => {
@@ -320,6 +343,14 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     getLoadedAssets(): LoadedAssets | null {
       return loadedAssets;
+    },
+
+    /**
+     * Get the water instance
+     * @returns The water instance or null if water is not configured
+     */
+    getWaterInstance(): WaterInstance | null {
+      return waterInstance;
     },
 
     /**
@@ -531,6 +562,13 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       // Cleanup heightmap manager
       if (heightmapManager) {
         heightmapManager.destroy();
+      }
+
+      // Cleanup water instance
+      if (waterInstance) {
+        waterInstance.destroy();
+        scene.remove(waterInstance.mesh);
+        waterInstance = null;
       }
 
       // Cleanup post-processing

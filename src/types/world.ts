@@ -84,6 +84,24 @@ export type HeightmapManager = {
 };
 
 /**
+ * Water configuration type
+ */
+export type WaterConfig = {
+  level: number; // Water level Y position
+  deepColor?: THREE.ColorRepresentation; // Deep water color
+  shallowColor?: THREE.ColorRepresentation; // Shallow water color
+  shallowStrength?: number; // Strength of shallow color blending
+  foamColor?: THREE.ColorRepresentation; // Foam color at shallow edges
+  foamWidth?: number; // Width of foam effect
+  foamStrength?: number; // Strength of foam effect
+  opacity?: number; // Water transparency (0-1)
+  amplitude?: number; // Wave amplitude
+  frequency?: number; // Wave frequency
+  speed?: number; // Wave animation speed
+  resolution?: number; // Water mesh resolution (segments per side)
+};
+
+/**
  * Configuration type for world creation
  */
 export type WorldConfig = {
@@ -116,7 +134,18 @@ export type WorldConfig = {
     resolution?: number;
     elevationRatio?: number;
   };
+  water?: WaterConfig;
   assets?: AssetsConfig;
+};
+
+/**
+ * Water instance for managing water updates
+ */
+export type WaterInstance = {
+  mesh: THREE.Mesh;
+  uniforms: Record<string, { value: any }>;
+  update: (deltaTime: number) => void;
+  destroy: () => void;
 };
 
 /**
@@ -132,6 +161,7 @@ export type WorldInstance = {
   getDirectionalLight(): THREE.DirectionalLight;
   getHeightmapUtils(): HeightmapUtils | null; // Heightmap utilities if loaded
   getLoadedAssets(): LoadedAssets | null; // Loaded assets if available
+  getWaterInstance(): WaterInstance | null; // Water instance if water is enabled
 
   // Simple outline system methods
   addOutline(

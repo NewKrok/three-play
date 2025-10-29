@@ -8,6 +8,9 @@ export {
   createHeightmapUtils,
 } from './core/heightmap/index.js';
 
+// Water utilities
+export { WaterUtils, createWaterInstance } from './core/world/water-utils.js';
+
 // Asset loading utilities
 export { AssetLoader } from './core/assets/index.js';
 
@@ -15,7 +18,12 @@ export { AssetLoader } from './core/assets/index.js';
 export { createOutlineManager } from './core/effects/index.js';
 
 // Types
-export type { WorldConfig, WorldInstance } from './types/world.js';
+export type {
+  WorldConfig,
+  WorldInstance,
+  WaterConfig,
+  WaterInstance,
+} from './types/world.js';
 export type {
   HeightmapData,
   HeightmapConfig,
