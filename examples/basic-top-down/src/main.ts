@@ -399,7 +399,9 @@ const worldInstance = createWorld({
     textureFlowDirection: new THREE.Vector2(0.5, 1.0), // Diagonal flow direction
     textureFlowSpeed: 0.08, // Slightly faster flow for visible effect
     variationTextureAssetId: 'noise-a',
-    variationScale: 1.1,
+    variationScale: 5.1,
+    variationFlowDirection: new THREE.Vector2(-0.3, 0.4), // Different direction for more complex effect
+    variationFlowSpeed: 0.01, // Much slower variation flow for subtle effect
   },
   assets: assetConfig, // Add assets configuration
 });

@@ -63,6 +63,8 @@ describe('Water Utils', () => {
         textureFlowSpeed: 0.05,
         variationTexture: null,
         variationScale: 1.0,
+        variationFlowDirection: new THREE.Vector2(0.3, 0.7),
+        variationFlowSpeed: 0.02,
       });
     });
   });
@@ -497,6 +499,78 @@ describe('Water Utils', () => {
         );
 
         expect(waterInstance.uniforms.uVariationScale.value).toBe(1.0);
+      });
+
+      it('should create water instance with custom variation flow settings', () => {
+        const mockVariationTexture = new THREE.Texture();
+        const customVariationFlowDirection = new THREE.Vector2(0.2, 0.8);
+        const config: InternalWaterConfig = {
+          level: 5,
+          variationTexture: mockVariationTexture,
+          variationScale: 2.0,
+          variationFlowDirection: customVariationFlowDirection,
+          variationFlowSpeed: 0.05,
+        };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        expect(waterInstance.uniforms.uVariationTexture.value).toBe(
+          mockVariationTexture,
+        );
+        expect(waterInstance.uniforms.uUseVariationTexture.value).toBe(true);
+        expect(waterInstance.uniforms.uVariationScale.value).toBe(2.0);
+        expect(waterInstance.uniforms.uVariationFlowDirection.value).toEqual(
+          customVariationFlowDirection,
+        );
+        expect(waterInstance.uniforms.uVariationFlowSpeed.value).toBe(0.05);
+      });
+
+      it('should use default variation flow settings when not specified', () => {
+        const mockVariationTexture = new THREE.Texture();
+        const config: InternalWaterConfig = {
+          level: 5,
+          variationTexture: mockVariationTexture,
+        };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        expect(waterInstance.uniforms.uVariationFlowDirection.value).toEqual(
+          new THREE.Vector2(0.3, 0.7),
+        );
+        expect(waterInstance.uniforms.uVariationFlowSpeed.value).toBe(0.02);
+      });
+
+      it('should clone the variation flow direction vector to prevent mutation', () => {
+        const originalVariationDirection = new THREE.Vector2(0.4, 0.6);
+        const config: InternalWaterConfig = {
+          level: 5,
+          variationFlowDirection: originalVariationDirection,
+        };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        // Modify the original vector
+        originalVariationDirection.set(1.0, 1.0);
+
+        // The uniform should still have the original values
+        expect(waterInstance.uniforms.uVariationFlowDirection.value).toEqual(
+          new THREE.Vector2(0.4, 0.6),
+        );
       });
     });
   });

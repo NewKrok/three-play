@@ -30,6 +30,8 @@ const WATER_FRAGMENT_SHADER = `
   uniform sampler2D uVariationTexture;
   uniform bool uUseVariationTexture;
   uniform float uVariationScale;
+  uniform vec2 uVariationFlowDirection;
+  uniform float uVariationFlowSpeed;
 
   varying float vHeight;
   varying vec2 vUv;
@@ -56,8 +58,9 @@ const WATER_FRAGMENT_SHADER = `
   
   float getSurfaceVariationValue(vec2 p) {
     if (uUseVariationTexture) {
-      // Use texture-based surface variation for better performance
-      return texture2D(uVariationTexture, p * uVariationScale).r;
+      // Use texture-based surface variation with flow animation
+      vec2 variationUv = p * uVariationScale + uTime * uVariationFlowSpeed * uVariationFlowDirection;
+      return texture2D(uVariationTexture, variationUv).r;
     } else {
       // Fallback to procedural noise
       return noise(p);
@@ -92,7 +95,7 @@ const WATER_FRAGMENT_SHADER = `
     float foamWidth = 2.0;
     float foamFactor = 1.0 - smoothstep(0.0, uFoamWidth, depth);
 
-    vec2 noiseUv = vUv * 8.0 + uTime * 0.15;
+    vec2 noiseUv = vUv * 8.0;
     float surfaceVariation = fbm(noiseUv);
 
     vec3 waterColor = mix(uDeepColor, uShallowColor, shallowFactor * uShallowStrength);
@@ -198,6 +201,8 @@ const DEFAULT_WATER_CONFIG: Required<
   textureFlowSpeed: 0.05,
   variationTexture: null,
   variationScale: 1.0,
+  variationFlowDirection: new THREE.Vector2(0.3, 0.7),
+  variationFlowSpeed: 0.02,
 };
 
 /**
@@ -246,6 +251,12 @@ export const createWaterInstance = (
     uVariationTexture: { value: finalConfig.variationTexture || null },
     uUseVariationTexture: { value: !!finalConfig.variationTexture },
     uVariationScale: { value: finalConfig.variationScale },
+    uVariationFlowDirection: {
+      value:
+        finalConfig.variationFlowDirection?.clone() ||
+        new THREE.Vector2(0.3, 0.7),
+    },
+    uVariationFlowSpeed: { value: finalConfig.variationFlowSpeed },
   };
 
   // Create shader material

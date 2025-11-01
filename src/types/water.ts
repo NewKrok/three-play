@@ -23,6 +23,8 @@ export type WaterConfig = {
   textureFlowSpeed?: number; // Speed of texture flow animation
   variationTextureAssetId?: string; // Asset ID for surface variation texture from asset system
   variationScale?: number; // Scale factor for surface variation texture tiling
+  variationFlowDirection?: THREE.Vector2; // Direction of variation texture flow (x, z components)
+  variationFlowSpeed?: number; // Speed of variation texture flow animation
 };
 
 /**
