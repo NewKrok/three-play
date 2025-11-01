@@ -38,7 +38,7 @@ describe('Terrain Utils', () => {
 
     it('should return valid shader fragments', () => {
       const utils = createTerrainUtils();
-      const fragments = utils.getShaderFragments();
+      const fragments = utils.getShaderFragments(3); // Test with 3 layers
 
       expect(fragments).toBeDefined();
       expect(fragments.vertexShader).toContain('vWorldPosition');
@@ -47,8 +47,11 @@ describe('Terrain Utils', () => {
         'uniform float uBlendDistance',
       );
       expect(fragments.fragmentShaderPart1).toContain('fbm');
+      expect(fragments.fragmentShaderPart1).toContain('uLayerTexture0');
+      expect(fragments.fragmentShaderPart1).toContain('uLayerMinHeight0');
+      expect(fragments.fragmentShaderPart1).toContain('uLayerMaxHeight0');
       expect(fragments.fragmentShaderPart2).toContain('diffuseColor.rgb');
-      expect(fragments.fragmentShaderPart2).toContain('sandWeight');
+      expect(fragments.fragmentShaderPart2).toContain('layer0Weight');
     });
   });
 
@@ -585,5 +588,200 @@ describe('Terrain Configuration Validation', () => {
     expect(completeConfig.blendDistance).toBe(1.5);
     expect(completeConfig.noise?.scale).toBe(55);
     expect(completeConfig.castShadow).toBe(true);
+  });
+});
+
+describe('Dynamic Layer System', () => {
+  let mockTexture: THREE.Texture;
+
+  beforeEach(() => {
+    mockTexture = new THREE.Texture();
+  });
+
+  afterEach(() => {
+    mockTexture.dispose();
+  });
+
+  it('should support arbitrary layer names', () => {
+    const config: TerrainConfig = {
+      layers: [
+        {
+          textureAssetId: 'volcanic_rock',
+          minHeight: 0,
+          maxHeight: 20,
+          textureScale: 50,
+        },
+        {
+          textureAssetId: 'alien_moss',
+          minHeight: 20,
+          maxHeight: 40,
+          textureScale: 80,
+        },
+        {
+          textureAssetId: 'crystal_formations',
+          minHeight: 40,
+          maxHeight: 100,
+          textureScale: 30,
+        },
+      ],
+    };
+
+    const assets: LoadedAssets = {
+      textures: {
+        volcanic_rock: mockTexture.clone(),
+        alien_moss: mockTexture.clone(),
+        crystal_formations: mockTexture.clone(),
+      },
+      models: {},
+    };
+
+    const internalConfig = prepareTerrainConfig(config, assets);
+
+    expect(internalConfig.layerTextures).toBeDefined();
+    expect(internalConfig.layerTextures!.volcanic_rock).toBe(assets.textures.volcanic_rock);
+    expect(internalConfig.layerTextures!.alien_moss).toBe(assets.textures.alien_moss);
+    expect(internalConfig.layerTextures!.crystal_formations).toBe(assets.textures.crystal_formations);
+
+    // Clean up
+    Object.values(assets.textures).forEach(texture => texture.dispose());
+  });
+
+  it('should generate correct shader for different layer counts', () => {
+    const utils = createTerrainUtils();
+
+    // Test single layer
+    const singleLayerShader = utils.getShaderFragments(1);
+    expect(singleLayerShader.fragmentShaderPart1).toContain('uLayerTexture0');
+    expect(singleLayerShader.fragmentShaderPart1).not.toContain('uLayerTexture1');
+    expect(singleLayerShader.fragmentShaderPart2).toContain('layer0Weight');
+    expect(singleLayerShader.fragmentShaderPart2).not.toContain('layer1Weight');
+
+    // Test multiple layers
+    const multiLayerShader = utils.getShaderFragments(5);
+    expect(multiLayerShader.fragmentShaderPart1).toContain('uLayerTexture0');
+    expect(multiLayerShader.fragmentShaderPart1).toContain('uLayerTexture1');
+    expect(multiLayerShader.fragmentShaderPart1).toContain('uLayerTexture4');
+    expect(multiLayerShader.fragmentShaderPart2).toContain('layer0Weight');
+    expect(multiLayerShader.fragmentShaderPart2).toContain('layer4Weight');
+  });
+
+  it('should create material with custom layer configuration', () => {
+    const internalConfig: InternalTerrainConfig = {
+      layers: [
+        {
+          textureAssetId: 'rocky_ground',
+          minHeight: 0,
+          maxHeight: 30,
+          textureScale: 60,
+        },
+        {
+          textureAssetId: 'snow_covered',
+          minHeight: 30,
+          maxHeight: 80,
+          textureScale: 120,
+        },
+      ],
+      layerTextures: {
+        rocky_ground: mockTexture.clone(),
+        snow_covered: mockTexture.clone(),
+      },
+      blendDistance: 2.0,
+      noise: {
+        scale: 40,
+        amplitude: 0.5,
+        offset: -0.2,
+      },
+    };
+
+    const utils = createTerrainUtils();
+    const material = utils.createTerrainMaterial(internalConfig);
+
+    expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
+    expect(material.map).toBe(internalConfig.layerTextures!.rocky_ground);
+
+    // Clean up
+    Object.values(internalConfig.layerTextures!).forEach(texture => texture.dispose());
+  });
+
+  it('should handle empty layers array gracefully', () => {
+    const internalConfig: InternalTerrainConfig = {
+      layers: [],
+    };
+
+    const utils = createTerrainUtils();
+    
+    expect(() => {
+      utils.createTerrainMaterial(internalConfig);
+    }).not.toThrow();
+
+    expect(() => {
+      utils.getShaderFragments(0);
+    }).not.toThrow();
+  });
+
+  it('should support game-specific layer configurations', () => {
+    // Fantasy game layers
+    const fantasyConfig: TerrainConfig = {
+      layers: [
+        { textureAssetId: 'cursed_soil', minHeight: 0, maxHeight: 15 },
+        { textureAssetId: 'enchanted_grass', minHeight: 15, maxHeight: 50 },
+        { textureAssetId: 'mystical_stone', minHeight: 50, maxHeight: 100 },
+      ],
+    };
+
+    // Sci-fi game layers
+    const scifiConfig: TerrainConfig = {
+      layers: [
+        { textureAssetId: 'metallic_surface', minHeight: 0, maxHeight: 10 },
+        { textureAssetId: 'energy_crystal', minHeight: 10, maxHeight: 30 },
+        { textureAssetId: 'plasma_residue', minHeight: 30, maxHeight: 60 },
+        { textureAssetId: 'void_matter', minHeight: 60, maxHeight: 100 },
+      ],
+    };
+
+    // Both should be valid configurations
+    expect(fantasyConfig.layers).toHaveLength(3);
+    expect(scifiConfig.layers).toHaveLength(4);
+    
+    expect(fantasyConfig.layers[0].textureAssetId).toBe('cursed_soil');
+    expect(scifiConfig.layers[3].textureAssetId).toBe('void_matter');
+  });
+
+  it('should support many layers without hardcoded limits', () => {
+    const manyLayersConfig: TerrainConfig = {
+      layers: Array.from({ length: 8 }, (_, i) => ({
+        textureAssetId: `layer_texture_${i}`,
+        minHeight: i * 10,
+        maxHeight: (i + 1) * 10,
+        textureScale: 50 + i * 10,
+      })),
+    };
+
+    const assets: LoadedAssets = {
+      textures: Object.fromEntries(
+        manyLayersConfig.layers.map(layer => [
+          layer.textureAssetId, 
+          mockTexture.clone()
+        ])
+      ),
+      models: {},
+    };
+
+    const internalConfig = prepareTerrainConfig(manyLayersConfig, assets);
+    const utils = createTerrainUtils();
+
+    expect(() => {
+      utils.createTerrainMaterial(internalConfig);
+    }).not.toThrow();
+
+    expect(() => {
+      utils.getShaderFragments(8);
+    }).not.toThrow();
+
+    expect(internalConfig.layerTextures).toBeDefined();
+    expect(Object.keys(internalConfig.layerTextures!)).toHaveLength(8);
+
+    // Clean up
+    Object.values(assets.textures).forEach(texture => texture.dispose());
   });
 });

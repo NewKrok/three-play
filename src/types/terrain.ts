@@ -83,7 +83,7 @@ export type TerrainUtils = {
     config: InternalTerrainConfig,
   ): THREE.MeshStandardMaterial;
   /** Get terrain shader fragments */
-  getShaderFragments(): {
+  getShaderFragments(layerCount: number): {
     vertexShader: string;
     fragmentShaderPart1: string;
     fragmentShaderPart2: string;
