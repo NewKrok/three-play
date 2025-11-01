@@ -21,12 +21,15 @@ const getShaderFragments = (layerCount: number) => {
   `;
 
   // Generate dynamic uniform declarations for layers
-  const layerUniformDeclarations = Array.from({ length: layerCount }, (_, i) => `
+  const layerUniformDeclarations = Array.from(
+    { length: layerCount },
+    (_, i) => `
     uniform sampler2D uLayerTexture${i};
     uniform float uLayerMinHeight${i};
     uniform float uLayerMaxHeight${i};
     uniform float uLayerTextureScale${i};
-  `).join('');
+  `,
+  ).join('');
 
   const fragmentShaderPart1 = `
     uniform float uWaterLevel;
@@ -78,7 +81,9 @@ const getShaderFragments = (layerCount: number) => {
   `;
 
   // Generate dynamic layer blending code
-  const layerBlendingCode = Array.from({ length: layerCount }, (_, i) => `
+  const layerBlendingCode = Array.from(
+    { length: layerCount },
+    (_, i) => `
     // Layer ${i} blending
     float layer${i}Weight = 0.0;
     if (currentHeight >= uLayerMinHeight${i} && currentHeight <= uLayerMaxHeight${i}) {
@@ -86,23 +91,36 @@ const getShaderFragments = (layerCount: number) => {
       float layerRange = (uLayerMaxHeight${i} - uLayerMinHeight${i}) * 0.5;
       layer${i}Weight = 1.0 - smoothstep(layerRange - uBlendDistance, layerRange, abs(currentHeight - layerCenter));
     }
-  `).join('');
+  `,
+  ).join('');
 
-  const layerTexturesampling = Array.from({ length: layerCount }, (_, i) => `
+  const layerTexturesampling = Array.from(
+    { length: layerCount },
+    (_, i) => `
     vec3 layer${i}Color = texture2D(uLayerTexture${i}, vUvCustom * uLayerTextureScale${i}).rgb;
-  `).join('');
+  `,
+  ).join('');
 
-  const layerWeightSum = Array.from({ length: layerCount }, (_, i) => `layer${i}Weight`).join(' + ');
-  
-  const layerNormalization = Array.from({ length: layerCount }, (_, i) => `
+  const layerWeightSum = Array.from(
+    { length: layerCount },
+    (_, i) => `layer${i}Weight`,
+  ).join(' + ');
+
+  const layerNormalization = Array.from(
+    { length: layerCount },
+    (_, i) => `
     layer${i}Weight /= totalWeight;
-  `).join('');
+  `,
+  ).join('');
 
-  const layerBlending = layerCount > 0 
-    ? Array.from({ length: layerCount }, (_, i) => 
-        i === 0 ? `layer${i}Color * layer${i}Weight` : ` + layer${i}Color * layer${i}Weight`
-      ).join('')
-    : 'vec3(0.5, 0.5, 0.5)'; // Fallback gray color
+  const layerBlending =
+    layerCount > 0
+      ? Array.from({ length: layerCount }, (_, i) =>
+          i === 0
+            ? `layer${i}Color * layer${i}Weight`
+            : ` + layer${i}Color * layer${i}Weight`,
+        ).join('')
+      : 'vec3(0.5, 0.5, 0.5)'; // Fallback gray color
 
   const fragmentShaderPart2 = `
     #include <color_fragment>
@@ -150,7 +168,7 @@ const createTerrainMaterial = (
 ): THREE.MeshStandardMaterial => {
   const layers = config.layers || [];
   const layerCount = Math.max(1, layers.length); // Ensure at least 1 layer
-  
+
   // Use the first layer's texture as the base material texture, or create a basic material
   const firstLayer = layers[0];
   const firstLayerTexture =
@@ -181,7 +199,7 @@ const createTerrainMaterial = (
           value: config.layerTextures[layer.textureAssetId],
         };
       }
-      
+
       // Add height range uniforms
       shader.uniforms[`uLayerMinHeight${index}`] = {
         value: layer.minHeight,
@@ -189,7 +207,7 @@ const createTerrainMaterial = (
       shader.uniforms[`uLayerMaxHeight${index}`] = {
         value: layer.maxHeight,
       };
-      
+
       // Add texture scale uniform
       shader.uniforms[`uLayerTextureScale${index}`] = {
         value: layer.textureScale || 100.0,

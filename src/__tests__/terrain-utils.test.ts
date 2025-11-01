@@ -638,12 +638,18 @@ describe('Dynamic Layer System', () => {
     const internalConfig = prepareTerrainConfig(config, assets);
 
     expect(internalConfig.layerTextures).toBeDefined();
-    expect(internalConfig.layerTextures!.volcanic_rock).toBe(assets.textures.volcanic_rock);
-    expect(internalConfig.layerTextures!.alien_moss).toBe(assets.textures.alien_moss);
-    expect(internalConfig.layerTextures!.crystal_formations).toBe(assets.textures.crystal_formations);
+    expect(internalConfig.layerTextures!.volcanic_rock).toBe(
+      assets.textures.volcanic_rock,
+    );
+    expect(internalConfig.layerTextures!.alien_moss).toBe(
+      assets.textures.alien_moss,
+    );
+    expect(internalConfig.layerTextures!.crystal_formations).toBe(
+      assets.textures.crystal_formations,
+    );
 
     // Clean up
-    Object.values(assets.textures).forEach(texture => texture.dispose());
+    Object.values(assets.textures).forEach((texture) => texture.dispose());
   });
 
   it('should generate correct shader for different layer counts', () => {
@@ -652,7 +658,9 @@ describe('Dynamic Layer System', () => {
     // Test single layer
     const singleLayerShader = utils.getShaderFragments(1);
     expect(singleLayerShader.fragmentShaderPart1).toContain('uLayerTexture0');
-    expect(singleLayerShader.fragmentShaderPart1).not.toContain('uLayerTexture1');
+    expect(singleLayerShader.fragmentShaderPart1).not.toContain(
+      'uLayerTexture1',
+    );
     expect(singleLayerShader.fragmentShaderPart2).toContain('layer0Weight');
     expect(singleLayerShader.fragmentShaderPart2).not.toContain('layer1Weight');
 
@@ -700,7 +708,9 @@ describe('Dynamic Layer System', () => {
     expect(material.map).toBe(internalConfig.layerTextures!.rocky_ground);
 
     // Clean up
-    Object.values(internalConfig.layerTextures!).forEach(texture => texture.dispose());
+    Object.values(internalConfig.layerTextures!).forEach((texture) =>
+      texture.dispose(),
+    );
   });
 
   it('should handle empty layers array gracefully', () => {
@@ -709,7 +719,7 @@ describe('Dynamic Layer System', () => {
     };
 
     const utils = createTerrainUtils();
-    
+
     expect(() => {
       utils.createTerrainMaterial(internalConfig);
     }).not.toThrow();
@@ -742,7 +752,7 @@ describe('Dynamic Layer System', () => {
     // Both should be valid configurations
     expect(fantasyConfig.layers).toHaveLength(3);
     expect(scifiConfig.layers).toHaveLength(4);
-    
+
     expect(fantasyConfig.layers[0].textureAssetId).toBe('cursed_soil');
     expect(scifiConfig.layers[3].textureAssetId).toBe('void_matter');
   });
@@ -759,10 +769,10 @@ describe('Dynamic Layer System', () => {
 
     const assets: LoadedAssets = {
       textures: Object.fromEntries(
-        manyLayersConfig.layers.map(layer => [
-          layer.textureAssetId, 
-          mockTexture.clone()
-        ])
+        manyLayersConfig.layers.map((layer) => [
+          layer.textureAssetId,
+          mockTexture.clone(),
+        ]),
       ),
       models: {},
     };
@@ -782,6 +792,6 @@ describe('Dynamic Layer System', () => {
     expect(Object.keys(internalConfig.layerTextures!)).toHaveLength(8);
 
     // Clean up
-    Object.values(assets.textures).forEach(texture => texture.dispose());
+    Object.values(assets.textures).forEach((texture) => texture.dispose());
   });
 });
