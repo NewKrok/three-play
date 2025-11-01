@@ -16,6 +16,10 @@ export type WaterConfig = {
   frequency?: number; // Wave frequency
   speed?: number; // Wave animation speed
   resolution?: number; // Water mesh resolution (segments per side)
+  texture?: THREE.Texture; // Optional water texture overlay
+  textureStrength?: number; // Strength of texture overlay (0-1)
+  textureScale?: number; // Scale factor for texture tiling
+  textureAssetId?: string; // Asset ID for texture (alternative to direct texture)
 };
 
 /**

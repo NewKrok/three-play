@@ -393,6 +393,9 @@ const worldInstance = createWorld({
   },
   water: {
     level: WATER_LEVEL,
+    textureAssetId: 'water',
+    textureStrength: 0.1,
+    textureScale: 40.0,
   },
   assets: assetConfig, // Add assets configuration
 });

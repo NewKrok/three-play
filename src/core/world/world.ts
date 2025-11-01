@@ -187,8 +187,18 @@ const createWorld = (config: WorldConfig): WorldInstance => {
     // Create water instance if water is configured
     if (waterConfig && !waterInstance) {
       const heightmapUtils = heightmapManager?.utils || null;
+
+      // Prepare final water config with texture if textureAssetId is provided
+      let finalWaterConfig = { ...waterConfig };
+      if (waterConfig.textureAssetId && assets.textures) {
+        const waterTexture = assets.textures[waterConfig.textureAssetId];
+        if (waterTexture) {
+          finalWaterConfig.texture = waterTexture;
+        }
+      }
+
       waterInstance = createWaterInstance(
-        waterConfig,
+        finalWaterConfig,
         config.world.size.x,
         config.world.size.y,
         heightmapUtils,

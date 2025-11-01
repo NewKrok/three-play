@@ -23,6 +23,11 @@ const assetConfig: AssetsConfig = {
       wrapS: THREE.MirroredRepeatWrapping,
       wrapT: THREE.MirroredRepeatWrapping,
     },
+    water: {
+      url: 'assets/textures/water-256.webp',
+      wrapS: THREE.MirroredRepeatWrapping,
+      wrapT: THREE.MirroredRepeatWrapping,
+    },
     crate: {
       url: 'assets/textures/crate-256.webp',
     },

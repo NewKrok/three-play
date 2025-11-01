@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import type { WaterConfig, WaterInstance } from '../../types/water.js';
 import type { HeightmapUtils } from '../../types/heightmap.js';
+import type { WaterConfig, WaterInstance } from '../../types/water.js';
 
 /**
  * Water fragment shader for realistic water rendering
@@ -21,6 +21,10 @@ const WATER_FRAGMENT_SHADER = `
   uniform float uWorldHeight;
   uniform float uMaxTerrainHeight;
   uniform float uOpacity;
+  uniform sampler2D uWaterTexture;
+  uniform float uTextureStrength;
+  uniform float uTextureScale;
+  uniform bool uHasTexture;
 
   varying float vHeight;
   varying vec2 vUv;
@@ -78,6 +82,13 @@ const WATER_FRAGMENT_SHADER = `
 
     vec3 waterColor = mix(uDeepColor, uShallowColor, shallowFactor * uShallowStrength);
     waterColor = mix(waterColor, uFoamColor, foamFactor * uFoamStrength);
+
+    // Apply texture overlay if available
+    if (uHasTexture) {
+      vec2 textureUv = vUv * uTextureScale + uTime * 0.05;
+      vec3 textureColor = texture2D(uWaterTexture, textureUv).rgb;
+      waterColor = mix(waterColor, textureColor, uTextureStrength);
+    }
 
     waterColor += (waterNoise - 0.5) * 0.25;
     vec3 N = normalize(vNormal);
@@ -139,7 +150,12 @@ const WATER_VERTEX_SHADER = `
 /**
  * Default water configuration values
  */
-const DEFAULT_WATER_CONFIG: Required<WaterConfig> = {
+const DEFAULT_WATER_CONFIG: Required<
+  Omit<WaterConfig, 'texture' | 'textureAssetId'>
+> & {
+  texture: THREE.Texture | null;
+  textureAssetId?: string;
+} = {
   level: 0,
   deepColor: 0x013a5b,
   shallowColor: 0x2fc7ff,
@@ -152,6 +168,9 @@ const DEFAULT_WATER_CONFIG: Required<WaterConfig> = {
   frequency: 4.0,
   speed: 1.5,
   resolution: 64,
+  texture: null,
+  textureStrength: 0.3,
+  textureScale: 4.0,
 };
 
 /**
@@ -187,6 +206,10 @@ export const createWaterInstance = (
     uWorldWidth: { value: worldWidth },
     uWorldHeight: { value: worldHeight },
     uOpacity: { value: finalConfig.opacity },
+    uWaterTexture: { value: finalConfig.texture || null },
+    uTextureStrength: { value: finalConfig.textureStrength },
+    uTextureScale: { value: finalConfig.textureScale },
+    uHasTexture: { value: !!finalConfig.texture },
   };
 
   // Create shader material
