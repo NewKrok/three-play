@@ -10,7 +10,7 @@ export const generateNoiseTexture = (
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
-  
+
   const context = canvas.getContext('2d');
   if (!context) {
     throw new Error('Failed to get 2D context from canvas');
@@ -23,27 +23,27 @@ export const generateNoiseTexture = (
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const index = (y * size + x) * 4;
-      
+
       // Generate noise value
       const noiseValue = Math.random();
-      
+
       // Apply some basic smoothing by averaging with neighbors
       let smoothedValue = noiseValue;
       if (x > 0 && y > 0 && x < size - 1 && y < size - 1) {
-        const neighborSum = 
+        const neighborSum =
           data[((y - 1) * size + x) * 4] / 255 +
           data[(y * size + (x - 1)) * 4] / 255;
         smoothedValue = (noiseValue + neighborSum * 0.3) / 1.6;
       }
-      
+
       // Scale the noise
       const scaledValue = Math.pow(smoothedValue, 1.0 / scale) * 255;
-      
+
       // Set RGB values (grayscale noise)
-      data[index] = scaledValue;     // Red
+      data[index] = scaledValue; // Red
       data[index + 1] = scaledValue; // Green
       data[index + 2] = scaledValue; // Blue
-      data[index + 3] = 255;         // Alpha
+      data[index + 3] = 255; // Alpha
     }
   }
 
@@ -71,7 +71,7 @@ export const generatePerlinNoiseTexture = (
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
-  
+
   const context = canvas.getContext('2d');
   if (!context) {
     throw new Error('Failed to get 2D context from canvas');
@@ -113,14 +113,15 @@ export const generatePerlinNoiseTexture = (
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const index = (y * size + x) * 4;
-      
+
       let value = 0;
       let amplitude = 1;
       let frequency = 1;
       let maxValue = 0;
 
       for (let i = 0; i < octaves; i++) {
-        value += noise(x * frequency / size, y * frequency / size) * amplitude;
+        value +=
+          noise((x * frequency) / size, (y * frequency) / size) * amplitude;
         maxValue += amplitude;
         amplitude *= persistence;
         frequency *= 2;
@@ -129,10 +130,10 @@ export const generatePerlinNoiseTexture = (
       value /= maxValue;
       const colorValue = Math.floor(value * 255);
 
-      data[index] = colorValue;     // Red
-      data[index + 1] = colorValue; // Green  
+      data[index] = colorValue; // Red
+      data[index + 1] = colorValue; // Green
       data[index + 2] = colorValue; // Blue
-      data[index + 3] = 255;        // Alpha
+      data[index + 3] = 255; // Alpha
     }
   }
 

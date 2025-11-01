@@ -164,7 +164,10 @@ const WATER_VERTEX_SHADER = `
  * Default water configuration values
  */
 const DEFAULT_WATER_CONFIG: Required<
-  Omit<InternalWaterConfig, 'texture' | 'textureAssetId' | 'noiseTexture' | 'noiseTextureAssetId'>
+  Omit<
+    InternalWaterConfig,
+    'texture' | 'textureAssetId' | 'noiseTexture' | 'noiseTextureAssetId'
+  >
 > & {
   texture: THREE.Texture | null;
   textureAssetId?: string;

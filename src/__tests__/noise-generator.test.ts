@@ -1,5 +1,9 @@
 import * as THREE from 'three';
-import { generateNoiseTexture, generatePerlinNoiseTexture, NoiseGenerator } from '../core/water/noise-generator.js';
+import {
+  generateNoiseTexture,
+  generatePerlinNoiseTexture,
+  NoiseGenerator,
+} from '../core/water/noise-generator.js';
 
 // Mock canvas and context for testing
 const mockCanvas = {
@@ -32,10 +36,10 @@ const originalConsoleWarn = console.warn;
 beforeEach(() => {
   console.error = jest.fn();
   console.warn = jest.fn();
-  
+
   // Reset mocks
   jest.clearAllMocks();
-  
+
   // Setup default mock behavior
   mockCanvas.getContext = jest.fn(() => mockContext);
   mockContext.createImageData = jest.fn(() => mockImageData);
@@ -57,7 +61,11 @@ describe('Noise Generator', () => {
       expect(mockCanvas.height).toBe(256);
       expect(mockCanvas.getContext).toHaveBeenCalledWith('2d');
       expect(mockContext.createImageData).toHaveBeenCalledWith(256, 256);
-      expect(mockContext.putImageData).toHaveBeenCalledWith(mockImageData, 0, 0);
+      expect(mockContext.putImageData).toHaveBeenCalledWith(
+        mockImageData,
+        0,
+        0,
+      );
       expect(texture).toBeInstanceOf(THREE.CanvasTexture);
     });
 
@@ -67,14 +75,19 @@ describe('Noise Generator', () => {
 
       expect(mockCanvas.width).toBe(customSize);
       expect(mockCanvas.height).toBe(customSize);
-      expect(mockContext.createImageData).toHaveBeenCalledWith(customSize, customSize);
+      expect(mockContext.createImageData).toHaveBeenCalledWith(
+        customSize,
+        customSize,
+      );
       expect(texture).toBeInstanceOf(THREE.CanvasTexture);
     });
 
     it('should throw error when canvas context is not available', () => {
       mockCanvas.getContext = jest.fn(() => null);
 
-      expect(() => generateNoiseTexture()).toThrow('Failed to get 2D context from canvas');
+      expect(() => generateNoiseTexture()).toThrow(
+        'Failed to get 2D context from canvas',
+      );
     });
 
     it('should set proper texture properties', () => {
@@ -97,7 +110,11 @@ describe('Noise Generator', () => {
       expect(mockCanvas.height).toBe(256);
       expect(mockCanvas.getContext).toHaveBeenCalledWith('2d');
       expect(mockContext.createImageData).toHaveBeenCalledWith(256, 256);
-      expect(mockContext.putImageData).toHaveBeenCalledWith(mockImageData, 0, 0);
+      expect(mockContext.putImageData).toHaveBeenCalledWith(
+        mockImageData,
+        0,
+        0,
+      );
       expect(texture).toBeInstanceOf(THREE.CanvasTexture);
     });
 
@@ -105,19 +122,28 @@ describe('Noise Generator', () => {
       const customSize = 128;
       const customOctaves = 6;
       const customPersistence = 0.7;
-      
-      const texture = generatePerlinNoiseTexture(customSize, customOctaves, customPersistence);
+
+      const texture = generatePerlinNoiseTexture(
+        customSize,
+        customOctaves,
+        customPersistence,
+      );
 
       expect(mockCanvas.width).toBe(customSize);
       expect(mockCanvas.height).toBe(customSize);
-      expect(mockContext.createImageData).toHaveBeenCalledWith(customSize, customSize);
+      expect(mockContext.createImageData).toHaveBeenCalledWith(
+        customSize,
+        customSize,
+      );
       expect(texture).toBeInstanceOf(THREE.CanvasTexture);
     });
 
     it('should throw error when canvas context is not available', () => {
       mockCanvas.getContext = jest.fn(() => null);
 
-      expect(() => generatePerlinNoiseTexture()).toThrow('Failed to get 2D context from canvas');
+      expect(() => generatePerlinNoiseTexture()).toThrow(
+        'Failed to get 2D context from canvas',
+      );
     });
 
     it('should set proper texture properties', () => {
@@ -134,7 +160,9 @@ describe('Noise Generator', () => {
   describe('NoiseGenerator namespace', () => {
     it('should export the noise generation functions', () => {
       expect(NoiseGenerator.generateNoiseTexture).toBe(generateNoiseTexture);
-      expect(NoiseGenerator.generatePerlinNoiseTexture).toBe(generatePerlinNoiseTexture);
+      expect(NoiseGenerator.generatePerlinNoiseTexture).toBe(
+        generatePerlinNoiseTexture,
+      );
     });
   });
 });

@@ -325,9 +325,9 @@ describe('Water Utils', () => {
 
     describe('Noise Texture Support', () => {
       it('should create water instance without noise texture (procedural noise)', () => {
-        const config: InternalWaterConfig = { 
+        const config: InternalWaterConfig = {
           level: 5,
-          noiseTexture: undefined 
+          noiseTexture: undefined,
         };
 
         const waterInstance = createWaterInstance(
@@ -344,10 +344,10 @@ describe('Water Utils', () => {
 
       it('should create water instance with noise texture', () => {
         const mockNoiseTexture = new THREE.Texture();
-        const config: InternalWaterConfig = { 
+        const config: InternalWaterConfig = {
           level: 5,
           noiseTexture: mockNoiseTexture,
-          noiseScale: 2.0
+          noiseScale: 2.0,
         };
 
         const waterInstance = createWaterInstance(
@@ -357,16 +357,18 @@ describe('Water Utils', () => {
           mockHeightmapUtils,
         );
 
-        expect(waterInstance.uniforms.uNoiseTexture.value).toBe(mockNoiseTexture);
+        expect(waterInstance.uniforms.uNoiseTexture.value).toBe(
+          mockNoiseTexture,
+        );
         expect(waterInstance.uniforms.uUseNoiseTexture.value).toBe(true);
         expect(waterInstance.uniforms.uNoiseScale.value).toBe(2.0);
       });
 
       it('should use default noise scale when not specified', () => {
         const mockNoiseTexture = new THREE.Texture();
-        const config: InternalWaterConfig = { 
+        const config: InternalWaterConfig = {
           level: 5,
-          noiseTexture: mockNoiseTexture
+          noiseTexture: mockNoiseTexture,
         };
 
         const waterInstance = createWaterInstance(
