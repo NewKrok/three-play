@@ -25,6 +25,9 @@ export type WaterConfig = {
   variationScale?: number; // Scale factor for surface variation texture tiling
   variationFlowDirection?: THREE.Vector2; // Direction of variation texture flow (x, z components)
   variationFlowSpeed?: number; // Speed of variation texture flow animation
+  waveInfluencedFlow?: boolean; // Enable wave-influenced texture flow
+  waveFlowStrength?: number; // Strength of wave influence on texture flow (0-1)
+  waveFlowFrequency?: number; // Frequency of wave influence on texture flow
 };
 
 /**

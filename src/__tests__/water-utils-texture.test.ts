@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { WaterUtils } from '../core/water/water-utils.js';
-import type { InternalInternalWaterConfig } from '../types/water.js';
+import type { InternalWaterConfig } from '../types/water.js';
 
 // Mock console.warn to avoid warnings in tests
 const originalWarn = console.warn;
@@ -294,6 +294,66 @@ describe('WaterUtils with Texture Support', () => {
     expect(waterInstance.uniforms.uTextureStrength.value).toBe(0.6);
     expect(waterInstance.uniforms.uTextureScale.value).toBe(10.0);
     expect(waterInstance.uniforms.uWaterTexture.value).toBe(mockTexture);
+
+    waterInstance.destroy();
+  });
+
+  test('should create water instance with wave influenced flow enabled', () => {
+    const config: InternalWaterConfig = {
+      level: 5.0,
+      texture: mockTexture,
+      waveInfluencedFlow: true,
+      waveFlowStrength: 0.25,
+      waveFlowFrequency: 3.0,
+    };
+
+    const waterInstance = WaterUtils.createWaterInstance(
+      config,
+      512,
+      512,
+      mockHeightmapUtils,
+    );
+
+    expect(waterInstance.uniforms.uWaveInfluencedFlow.value).toBe(true);
+    expect(waterInstance.uniforms.uWaveFlowStrength.value).toBe(0.25);
+    expect(waterInstance.uniforms.uWaveFlowFrequency.value).toBe(3.0);
+
+    waterInstance.destroy();
+  });
+
+  test('should handle wave influenced flow with texture configuration', () => {
+    const config: InternalWaterConfig = {
+      level: 8.0,
+      texture: mockTexture,
+      textureStrength: 0.7,
+      textureScale: 15.0,
+      textureFlowDirection: new THREE.Vector2(0.8, 0.6),
+      textureFlowSpeed: 0.12,
+      waveInfluencedFlow: true,
+      waveFlowStrength: 0.15,
+      waveFlowFrequency: 2.5,
+    };
+
+    const waterInstance = WaterUtils.createWaterInstance(
+      config,
+      256,
+      256,
+      mockHeightmapUtils,
+    );
+
+    // Check texture configuration
+    expect(waterInstance.uniforms.uHasTexture.value).toBe(true);
+    expect(waterInstance.uniforms.uTextureStrength.value).toBe(0.7);
+    expect(waterInstance.uniforms.uTextureScale.value).toBe(15.0);
+    expect(waterInstance.uniforms.uTextureFlowDirection.value).toEqual(
+      new THREE.Vector2(0.8, 0.6),
+    );
+    expect(waterInstance.uniforms.uTextureFlowSpeed.value).toBe(0.12);
+
+    // Check wave influenced flow configuration
+    expect(waterInstance.uniforms.uWaveInfluencedFlow.value).toBe(true);
+    expect(waterInstance.uniforms.uWaveFlowStrength.value).toBe(0.15);
+    expect(waterInstance.uniforms.uWaveFlowFrequency.value).toBe(2.5);
 
     waterInstance.destroy();
   });

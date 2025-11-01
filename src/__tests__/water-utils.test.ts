@@ -65,6 +65,9 @@ describe('Water Utils', () => {
         variationScale: 1.0,
         variationFlowDirection: new THREE.Vector2(0.3, 0.7),
         variationFlowSpeed: 0.02,
+        waveInfluencedFlow: false,
+        waveFlowStrength: 0.1,
+        waveFlowFrequency: 2.0,
       });
     });
   });
@@ -571,6 +574,83 @@ describe('Water Utils', () => {
         expect(waterInstance.uniforms.uVariationFlowDirection.value).toEqual(
           new THREE.Vector2(0.4, 0.6),
         );
+      });
+    });
+
+    describe('Wave Influenced Flow Configuration', () => {
+      it('should create water instance with default wave influenced flow settings', () => {
+        const config: InternalWaterConfig = { level: 5 };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        expect(waterInstance.uniforms.uWaveInfluencedFlow.value).toBe(false);
+        expect(waterInstance.uniforms.uWaveFlowStrength.value).toBe(0.1);
+        expect(waterInstance.uniforms.uWaveFlowFrequency.value).toBe(2.0);
+      });
+
+      it('should create water instance with custom wave influenced flow settings', () => {
+        const config: InternalWaterConfig = {
+          level: 5,
+          waveInfluencedFlow: true,
+          waveFlowStrength: 0.3,
+          waveFlowFrequency: 4.0,
+        };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        expect(waterInstance.uniforms.uWaveInfluencedFlow.value).toBe(true);
+        expect(waterInstance.uniforms.uWaveFlowStrength.value).toBe(0.3);
+        expect(waterInstance.uniforms.uWaveFlowFrequency.value).toBe(4.0);
+      });
+
+      it('should handle edge case wave flow configurations', () => {
+        const config: InternalWaterConfig = {
+          level: 5,
+          waveInfluencedFlow: true,
+          waveFlowStrength: 0.0,
+          waveFlowFrequency: 0.1,
+        };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        expect(waterInstance.uniforms.uWaveInfluencedFlow.value).toBe(true);
+        expect(waterInstance.uniforms.uWaveFlowStrength.value).toBe(0.0);
+        expect(waterInstance.uniforms.uWaveFlowFrequency.value).toBe(0.1);
+      });
+
+      it('should handle high wave flow strength values', () => {
+        const config: InternalWaterConfig = {
+          level: 5,
+          waveInfluencedFlow: true,
+          waveFlowStrength: 1.0,
+          waveFlowFrequency: 10.0,
+        };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        expect(waterInstance.uniforms.uWaveInfluencedFlow.value).toBe(true);
+        expect(waterInstance.uniforms.uWaveFlowStrength.value).toBe(1.0);
+        expect(waterInstance.uniforms.uWaveFlowFrequency.value).toBe(10.0);
       });
     });
   });

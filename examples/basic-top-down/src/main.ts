@@ -396,12 +396,15 @@ const worldInstance = createWorld({
     textureAssetId: 'water',
     textureStrength: 0.1,
     textureScale: 40.0,
-    textureFlowDirection: new THREE.Vector2(0.5, 1.0), // Diagonal flow direction
-    textureFlowSpeed: 0.08, // Slightly faster flow for visible effect
+    textureFlowDirection: new THREE.Vector2(0.5, 1.0),
+    textureFlowSpeed: 0.08,
     variationTextureAssetId: 'noise-a',
-    variationScale: 5.1,
-    variationFlowDirection: new THREE.Vector2(-0.3, 0.4), // Different direction for more complex effect
-    variationFlowSpeed: 0.01, // Much slower variation flow for subtle effect
+    variationScale: 1.3,
+    variationFlowDirection: new THREE.Vector2(0.5, 1.0),
+    variationFlowSpeed: 0.01,
+    waveInfluencedFlow: true,
+    waveFlowStrength: 1.2,
+    waveFlowFrequency: 1.0,
   },
   assets: assetConfig, // Add assets configuration
 });

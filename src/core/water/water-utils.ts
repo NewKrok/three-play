@@ -32,6 +32,9 @@ const WATER_FRAGMENT_SHADER = `
   uniform float uVariationScale;
   uniform vec2 uVariationFlowDirection;
   uniform float uVariationFlowSpeed;
+  uniform bool uWaveInfluencedFlow;
+  uniform float uWaveFlowStrength;
+  uniform float uWaveFlowFrequency;
 
   varying float vHeight;
   varying vec2 vUv;
@@ -103,8 +106,22 @@ const WATER_FRAGMENT_SHADER = `
 
     // Apply texture overlay if available
     if (uHasTexture) {
-      vec2 textureUv = vUv * uTextureScale + uTime * uTextureFlowSpeed * uTextureFlowDirection;
-      vec3 textureColor = texture2D(uWaterTexture, textureUv).rgb;
+      vec2 baseTextureUv = vUv * uTextureScale + uTime * uTextureFlowSpeed * uTextureFlowDirection;
+      
+      // Add wave-influenced flow if enabled
+      if (uWaveInfluencedFlow) {
+        // Calculate wave perturbation based on position and time
+        float wavePhase1 = sin(dot(vUv * uWaveFlowFrequency, vec2(1.0, 0.5)) + uTime * 2.0);
+        float wavePhase2 = cos(dot(vUv * uWaveFlowFrequency, vec2(0.7, 1.2)) + uTime * 1.5);
+        
+        // Create wave-based UV offset (not affecting flow direction)
+        vec2 waveUvOffset = vec2(wavePhase1, wavePhase2) * uWaveFlowStrength * 0.01;
+        
+        // Add the wave offset to the UV coordinates
+        baseTextureUv += waveUvOffset;
+      }
+      
+      vec3 textureColor = texture2D(uWaterTexture, baseTextureUv).rgb;
       waterColor = mix(waterColor, textureColor, uTextureStrength);
     }
 
@@ -203,6 +220,9 @@ const DEFAULT_WATER_CONFIG: Required<
   variationScale: 1.0,
   variationFlowDirection: new THREE.Vector2(0.3, 0.7),
   variationFlowSpeed: 0.02,
+  waveInfluencedFlow: false,
+  waveFlowStrength: 0.1,
+  waveFlowFrequency: 2.0,
 };
 
 /**
@@ -257,6 +277,9 @@ export const createWaterInstance = (
         new THREE.Vector2(0.3, 0.7),
     },
     uVariationFlowSpeed: { value: finalConfig.variationFlowSpeed },
+    uWaveInfluencedFlow: { value: finalConfig.waveInfluencedFlow },
+    uWaveFlowStrength: { value: finalConfig.waveFlowStrength },
+    uWaveFlowFrequency: { value: finalConfig.waveFlowFrequency },
   };
 
   // Create shader material
