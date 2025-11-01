@@ -59,8 +59,8 @@ describe('Water Utils', () => {
         texture: null,
         textureStrength: 0.3,
         textureScale: 4.0,
-        noiseTexture: null,
-        noiseScale: 1.0,
+        variationTexture: null,
+        variationScale: 1.0,
       });
     });
   });
@@ -323,11 +323,11 @@ describe('Water Utils', () => {
       expect(waterInstance.uniforms.uWorldHeight.value).toBe(largeWorldHeight);
     });
 
-    describe('Noise Texture Support', () => {
-      it('should create water instance without noise texture (procedural noise)', () => {
+    describe('Surface Variation Texture Support', () => {
+      it('should create water instance without surface variation texture (procedural noise)', () => {
         const config: InternalWaterConfig = {
           level: 5,
-          noiseTexture: undefined,
+          variationTexture: undefined,
         };
 
         const waterInstance = createWaterInstance(
@@ -337,17 +337,17 @@ describe('Water Utils', () => {
           mockHeightmapUtils,
         );
 
-        expect(waterInstance.uniforms.uNoiseTexture.value).toBeNull();
-        expect(waterInstance.uniforms.uUseNoiseTexture.value).toBe(false);
-        expect(waterInstance.uniforms.uNoiseScale.value).toBe(1.0);
+        expect(waterInstance.uniforms.uVariationTexture.value).toBeNull();
+        expect(waterInstance.uniforms.uUseVariationTexture.value).toBe(false);
+        expect(waterInstance.uniforms.uVariationScale.value).toBe(1.0);
       });
 
-      it('should create water instance with noise texture', () => {
-        const mockNoiseTexture = new THREE.Texture();
+      it('should create water instance with surface variation texture', () => {
+        const mockVariationTexture = new THREE.Texture();
         const config: InternalWaterConfig = {
           level: 5,
-          noiseTexture: mockNoiseTexture,
-          noiseScale: 2.0,
+          variationTexture: mockVariationTexture,
+          variationScale: 2.0,
         };
 
         const waterInstance = createWaterInstance(
@@ -357,18 +357,18 @@ describe('Water Utils', () => {
           mockHeightmapUtils,
         );
 
-        expect(waterInstance.uniforms.uNoiseTexture.value).toBe(
-          mockNoiseTexture,
+        expect(waterInstance.uniforms.uVariationTexture.value).toBe(
+          mockVariationTexture,
         );
-        expect(waterInstance.uniforms.uUseNoiseTexture.value).toBe(true);
-        expect(waterInstance.uniforms.uNoiseScale.value).toBe(2.0);
+        expect(waterInstance.uniforms.uUseVariationTexture.value).toBe(true);
+        expect(waterInstance.uniforms.uVariationScale.value).toBe(2.0);
       });
 
-      it('should use default noise scale when not specified', () => {
-        const mockNoiseTexture = new THREE.Texture();
+      it('should use default variation scale when not specified', () => {
+        const mockVariationTexture = new THREE.Texture();
         const config: InternalWaterConfig = {
           level: 5,
-          noiseTexture: mockNoiseTexture,
+          variationTexture: mockVariationTexture,
         };
 
         const waterInstance = createWaterInstance(
@@ -378,7 +378,7 @@ describe('Water Utils', () => {
           mockHeightmapUtils,
         );
 
-        expect(waterInstance.uniforms.uNoiseScale.value).toBe(1.0);
+        expect(waterInstance.uniforms.uVariationScale.value).toBe(1.0);
       });
     });
   });

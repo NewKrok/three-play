@@ -34,7 +34,12 @@ const assetConfig: AssetsConfig = {
     heightmap: {
       url: 'assets/textures/heightmap-island-256.webp',
     },
-    noise: {
+    surfaceVariation: {
+      url: 'assets/textures/noise-a-256.webp',
+      wrapS: THREE.RepeatWrapping,
+      wrapT: THREE.RepeatWrapping,
+    },
+    'noise-b': {
       url: 'assets/textures/noise-a-256.webp',
       wrapS: THREE.RepeatWrapping,
       wrapT: THREE.RepeatWrapping,

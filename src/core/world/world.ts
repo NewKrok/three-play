@@ -196,10 +196,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
           finalWaterConfig.texture = waterTexture;
         }
       }
-      if (waterConfig.noiseTextureAssetId && assets.textures) {
-        const noiseTexture = assets.textures[waterConfig.noiseTextureAssetId];
-        if (noiseTexture) {
-          finalWaterConfig.noiseTexture = noiseTexture;
+      if (waterConfig.variationTextureAssetId && assets.textures) {
+        const variationTexture = assets.textures[waterConfig.variationTextureAssetId];
+        if (variationTexture) {
+          finalWaterConfig.variationTexture = variationTexture;
         }
       }
 

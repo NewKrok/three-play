@@ -1,4 +1,4 @@
-import { createWorld } from '@newkrok/three-play';
+import { createWorld, WorldConfig } from '@newkrok/three-play';
 import {
   updateParticleSystems,
   createParticleSystem,
@@ -396,11 +396,11 @@ const worldInstance = createWorld({
     textureAssetId: 'water',
     textureStrength: 0.1,
     textureScale: 40.0,
-    noiseTextureAssetId: 'noise',
-    noiseScale: 2.0,
+    variationTextureAssetId: 'surfaceVariation',
+    variationScale: 2.0,
   },
   assets: assetConfig, // Add assets configuration
-});
+} as WorldConfig);
 
 // Add progress tracking for asset loading
 worldInstance.onProgress((progress) => {

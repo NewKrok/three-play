@@ -25,9 +25,9 @@ const WATER_FRAGMENT_SHADER = `
   uniform float uTextureStrength;
   uniform float uTextureScale;
   uniform bool uHasTexture;
-  uniform sampler2D uNoiseTexture;
-  uniform bool uUseNoiseTexture;
-  uniform float uNoiseScale;
+  uniform sampler2D uVariationTexture;
+  uniform bool uUseVariationTexture;
+  uniform float uVariationScale;
 
   varying float vHeight;
   varying vec2 vUv;
@@ -52,10 +52,10 @@ const WATER_FRAGMENT_SHADER = `
     return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
   }
   
-  float getNoiseValue(vec2 p) {
-    if (uUseNoiseTexture) {
-      // Use texture-based noise for better performance
-      return texture2D(uNoiseTexture, p * uNoiseScale).r;
+  float getSurfaceVariationValue(vec2 p) {
+    if (uUseVariationTexture) {
+      // Use texture-based surface variation for better performance
+      return texture2D(uVariationTexture, p * uVariationScale).r;
     } else {
       // Fallback to procedural noise
       return noise(p);
@@ -68,7 +68,7 @@ const WATER_FRAGMENT_SHADER = `
     float frequency = 1.0;
 
     for(int i = 0; i < 4; i++) {
-      value += amplitude * getNoiseValue(p * frequency);
+      value += amplitude * getSurfaceVariationValue(p * frequency);
       frequency *= 2.0;
       amplitude *= 0.5;
     }
@@ -91,7 +91,7 @@ const WATER_FRAGMENT_SHADER = `
     float foamFactor = 1.0 - smoothstep(0.0, uFoamWidth, depth);
 
     vec2 noiseUv = vUv * 8.0 + uTime * 0.15;
-    float waterNoise = fbm(noiseUv);
+    float surfaceVariation = fbm(noiseUv);
 
     vec3 waterColor = mix(uDeepColor, uShallowColor, shallowFactor * uShallowStrength);
     waterColor = mix(waterColor, uFoamColor, foamFactor * uFoamStrength);
@@ -103,7 +103,7 @@ const WATER_FRAGMENT_SHADER = `
       waterColor = mix(waterColor, textureColor, uTextureStrength);
     }
 
-    waterColor += (waterNoise - 0.5) * 0.25;
+    waterColor += (surfaceVariation - 0.5) * 0.25;
     vec3 N = normalize(vNormal);
     vec3 viewDir = normalize(vec3(0.0, 0.0, 1.0));
     float fresnel = pow(1.0 - max(dot(N, viewDir), 0.0), 3.0);
@@ -164,15 +164,12 @@ const WATER_VERTEX_SHADER = `
  * Default water configuration values
  */
 const DEFAULT_WATER_CONFIG: Required<
-  Omit<
-    InternalWaterConfig,
-    'texture' | 'textureAssetId' | 'noiseTexture' | 'noiseTextureAssetId'
-  >
+  Omit<InternalWaterConfig, 'texture' | 'textureAssetId' | 'variationTexture' | 'variationTextureAssetId'>
 > & {
   texture: THREE.Texture | null;
   textureAssetId?: string;
-  noiseTexture: THREE.Texture | null;
-  noiseTextureAssetId?: string;
+  variationTexture: THREE.Texture | null;
+  variationTextureAssetId?: string;
 } = {
   level: 0,
   deepColor: 0x013a5b,
@@ -189,8 +186,8 @@ const DEFAULT_WATER_CONFIG: Required<
   texture: null,
   textureStrength: 0.3,
   textureScale: 4.0,
-  noiseTexture: null,
-  noiseScale: 1.0,
+  variationTexture: null,
+  variationScale: 1.0,
 };
 
 /**
@@ -230,9 +227,9 @@ export const createWaterInstance = (
     uTextureStrength: { value: finalConfig.textureStrength },
     uTextureScale: { value: finalConfig.textureScale },
     uHasTexture: { value: !!finalConfig.texture },
-    uNoiseTexture: { value: finalConfig.noiseTexture || null },
-    uUseNoiseTexture: { value: !!finalConfig.noiseTexture },
-    uNoiseScale: { value: finalConfig.noiseScale },
+    uVariationTexture: { value: finalConfig.variationTexture || null },
+    uUseVariationTexture: { value: !!finalConfig.variationTexture },
+    uVariationScale: { value: finalConfig.variationScale },
   };
 
   // Create shader material
