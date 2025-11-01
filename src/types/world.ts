@@ -18,6 +18,7 @@ import type {
   WorldHeightmapConfig,
 } from './heightmap.js';
 import type { WaterConfig, WaterInstance } from './water.js';
+import type { TerrainConfig, TerrainInstance } from './terrain.js';
 import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
 
 /**
@@ -55,6 +56,7 @@ export type WorldConfig = {
   };
   heightmap?: WorldHeightmapConfig;
   water?: WaterConfig;
+  terrain?: TerrainConfig;
   assets?: AssetsConfig;
 };
 
@@ -72,6 +74,7 @@ export type WorldInstance = {
   getHeightmapUtils(): HeightmapUtils | null; // Heightmap utilities if loaded
   getLoadedAssets(): LoadedAssets | null; // Loaded assets if available
   getWaterInstance(): WaterInstance | null; // Water instance if water is enabled
+  getTerrainInstance(): TerrainInstance | null; // Terrain instance if terrain is enabled
 
   // Simple outline system methods
   addOutline(

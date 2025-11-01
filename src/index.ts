@@ -15,6 +15,13 @@ export {
   NoiseGenerator,
 } from './core/water/index.js';
 
+// Terrain utilities
+export {
+  createTerrainInstance,
+  createTerrainUtils,
+  prepareTerrainConfig,
+} from './core/terrain/index.js';
+
 // Asset loading utilities
 export { AssetLoader } from './core/assets/index.js';
 
@@ -32,6 +39,14 @@ export type {
   WaterInstance,
   InternalWaterConfig,
 } from './types/water.js';
+export type {
+  TerrainConfig,
+  TerrainInstance,
+  InternalTerrainConfig,
+  TerrainLayerConfig,
+  TerrainNoiseConfig,
+  TerrainUtils,
+} from './types/terrain.js';
 export type {
   OutlineConfig,
   OutlineEntry,

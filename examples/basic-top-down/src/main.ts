@@ -29,118 +29,6 @@ import {
 // Initialize THREE Play engine
 console.log('Starting game with THREE Play engine');
 
-const terrainFragmentShaderPart1 = `
-  uniform float uWaterLevel;
-  uniform sampler2D uSandTexture;
-  uniform sampler2D uMudTexture;
-  
-  // Height ranges for each layer
-  uniform float uSandMinHeight;
-  uniform float uSandMaxHeight;
-  uniform float uMudMinHeight;
-  uniform float uMudMaxHeight;
-  uniform float uGrassMinHeight;
-  uniform float uGrassMaxHeight;
-  
-  // Blend distances for smooth transitions
-  uniform float uBlendDistance;
-  
-  varying vec3 vWorldPosition;
-  varying vec2 vUvCustom;
-    
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-  }
-    
-  float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-      
-    float a = hash(i);
-    float b = hash(i + vec2(1.0, 0.0));
-    float c = hash(i + vec2(0.0, 1.0));
-    float d = hash(i + vec2(1.0, 1.0));
-      
-    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-  }
-  
-  float fbm(vec2 p) {
-    float value = 0.0;
-    float amplitude = 0.5;
-    float frequency = 1.0;
-      
-    for(int i = 0; i < 3; i++) {
-      value += amplitude * noise(p * frequency);
-      frequency *= 2.0;
-      amplitude *= 0.5;
-    }
-    return value;
-  }
-`;
-
-const terrainFragmentShaderPart2 = `
-  #include <color_fragment>
-  
-  float terrainNoise = fbm(vUvCustom * 55.0);
-  float terrainVariation = terrainNoise * 0.3 - 0.35;
-    
-  diffuseColor.rgb += terrainVariation;
-  
-  float currentHeight = vWorldPosition.y;
-  
-  // Sample all textures
-  vec3 sandTexColor = texture2D(uSandTexture, vUvCustom * 100.0).rgb;
-  vec3 mudTexColor = texture2D(uMudTexture, vUvCustom * 80.0).rgb;
-  vec3 grassTexColor = diffuseColor.rgb; // Base grass texture from material
-  
-  // Calculate blend weights for each layer based on height ranges
-  float sandWeight = 0.0;
-  float mudWeight = 0.0;
-  float grassWeight = 0.0;
-  
-  // Sand layer blending
-  if (currentHeight >= uSandMinHeight && currentHeight <= uSandMaxHeight) {
-    float sandCenter = (uSandMinHeight + uSandMaxHeight) * 0.5;
-    float sandRange = (uSandMaxHeight - uSandMinHeight) * 0.5;
-    sandWeight = 1.0 - smoothstep(sandRange - uBlendDistance, sandRange, abs(currentHeight - sandCenter));
-  }
-  
-  // Mud layer blending  
-  if (currentHeight >= uMudMinHeight && currentHeight <= uMudMaxHeight) {
-    float mudCenter = (uMudMinHeight + uMudMaxHeight) * 0.5;
-    float mudRange = (uMudMaxHeight - uMudMinHeight) * 0.5;
-    mudWeight = 1.0 - smoothstep(mudRange - uBlendDistance, mudRange, abs(currentHeight - mudCenter));
-  }
-  
-  // Grass layer blending
-  if (currentHeight >= uGrassMinHeight && currentHeight <= uGrassMaxHeight) {
-    float grassCenter = (uGrassMinHeight + uGrassMaxHeight) * 0.5;
-    float grassRange = (uGrassMaxHeight - uGrassMinHeight) * 0.5;
-    grassWeight = 1.0 - smoothstep(grassRange - uBlendDistance, grassRange, abs(currentHeight - grassCenter));
-  }
-  
-  // Normalize weights to ensure they sum to 1.0
-  float totalWeight = sandWeight + mudWeight + grassWeight;
-  if (totalWeight > 0.0) {
-    sandWeight /= totalWeight;
-    mudWeight /= totalWeight;
-    grassWeight /= totalWeight;
-  } else {
-    // Fallback to grass if no other layer is active
-    grassWeight = 1.0;
-  }
-  
-  // Blend textures based on weights
-  diffuseColor.rgb = sandTexColor * sandWeight + mudTexColor * mudWeight + grassTexColor * grassWeight;
-`;
-
-const terrainVertexShader = `
-  #include <worldpos_vertex>
-  vWorldPosition = worldPosition.xyz;
-  vUvCustom = uv;
-`;
-
 const WALK_SPEED = 5;
 const RUN_SPEED = 10;
 const ROLL_SPEED = 5;
@@ -406,6 +294,34 @@ const worldInstance = createWorld({
     waveFlowStrength: 1.2,
     waveFlowFrequency: 1.0,
   },
+  terrain: {
+    layers: [
+      {
+        textureAssetId: 'sand',
+        minHeight: 0.0,
+        maxHeight: WATER_LEVEL + 1.5,
+        textureScale: 100.0,
+      },
+      {
+        textureAssetId: 'mud',
+        minHeight: WATER_LEVEL + 0.5,
+        maxHeight: WATER_LEVEL + 2.5,
+        textureScale: 80.0,
+      },
+      {
+        textureAssetId: 'grass',
+        minHeight: WATER_LEVEL + 1.0,
+        maxHeight: WATER_LEVEL + 25.0,
+        textureScale: WORLD_WIDTH / 4,
+      },
+    ],
+    blendDistance: 1.5,
+    noise: {
+      scale: 55.0,
+      amplitude: 0.3,
+      offset: -0.35,
+    },
+  },
   assets: assetConfig, // Add assets configuration
 });
 
@@ -439,69 +355,6 @@ worldInstance.onReady((assets) => {
 
   // Append renderer to DOM
   document.querySelector('#demo').appendChild(renderer.domElement);
-
-  // Add terrain to the scene
-  const grassTexture = loadedAssets.textures.grass;
-  grassTexture.repeat.x = WORLD_WIDTH / 4;
-  grassTexture.repeat.y = WORLD_HEIGHT / 4;
-
-  const material = new THREE.MeshStandardMaterial({
-    map: grassTexture,
-  });
-
-  material.onBeforeCompile = (shader) => {
-    // Texture uniforms
-    shader.uniforms.uSandTexture = { value: loadedAssets.textures.sand };
-    shader.uniforms.uMudTexture = { value: loadedAssets.textures.mud };
-
-    // Height ranges for each layer (customize these values as needed)
-    shader.uniforms.uSandMinHeight = { value: 0.0 };
-    shader.uniforms.uSandMaxHeight = { value: WATER_LEVEL + 1.5 };
-    shader.uniforms.uMudMinHeight = { value: WATER_LEVEL + 0.5 };
-    shader.uniforms.uMudMaxHeight = { value: WATER_LEVEL + 2.5 };
-    shader.uniforms.uGrassMinHeight = { value: WATER_LEVEL + 1.0 };
-    shader.uniforms.uGrassMaxHeight = { value: WATER_LEVEL + 25.0 };
-
-    // Blend distance for smooth transitions
-    shader.uniforms.uBlendDistance = { value: 1.5 };
-
-    shader.vertexShader =
-      'varying vec3 vWorldPosition;\nvarying vec2 vUvCustom;\n' +
-      shader.vertexShader;
-
-    shader.vertexShader = shader.vertexShader.replace(
-      '#include <worldpos_vertex>',
-      terrainVertexShader,
-    );
-
-    shader.fragmentShader = terrainFragmentShaderPart1 + shader.fragmentShader;
-
-    shader.fragmentShader = shader.fragmentShader.replace(
-      '#include <color_fragment>',
-      terrainFragmentShaderPart2,
-    );
-  };
-
-  const geometry = new THREE.PlaneGeometry(
-    WORLD_WIDTH,
-    WORLD_HEIGHT,
-    HEIGHT_MAP_RESOLUTION - 1,
-    HEIGHT_MAP_RESOLUTION - 1,
-  );
-
-  // Apply heightmap to geometry using engine utilities
-  heightmapUtils.applyHeightmapToGeometry(geometry);
-
-  geometry.rotateX(-Math.PI / 2);
-  geometry.attributes.position.needsUpdate = true;
-  geometry.computeVertexNormals();
-
-  const plane = new THREE.Mesh(geometry, material);
-  plane.castShadow = true;
-  plane.receiveShadow = true;
-  plane.position.x = WORLD_WIDTH / 2;
-  plane.position.z = WORLD_HEIGHT / 2;
-  scene.add(plane);
 
   const cycleData = {
     now: 0,
@@ -1491,13 +1344,30 @@ worldInstance.onReady((assets) => {
   const cinamaticCameraController = createCinematicCameraController(camera, [
     {
       from: new THREE.Vector3(
-        startingPosition.x + 150,
-        40,
-        startingPosition.z + 50,
+        startingPosition.x - 15,
+        11,
+        startingPosition.z - 15,
       ),
       to: new THREE.Vector3(startingPosition.x - 10, 12, startingPosition.z),
-      lookAt: new THREE.Vector3(250, 20, 200),
-      duration: 0.4,
+      lookAt: new THREE.Vector3(
+        character.model.position.x,
+        12,
+        character.model.position.z,
+      ),
+      duration: 0.5,
+    },
+    /* {
+      to: new THREE.Vector3(
+        startingPosition.x - 0,
+        12,
+        startingPosition.z + 20,
+      ),
+      lookAt: new THREE.Vector3(
+        character.model.position.x,
+        12,
+        character.model.position.z,
+      ),
+      duration: 5.0,
     },
     {
       to: new THREE.Vector3(
@@ -1506,8 +1376,8 @@ worldInstance.onReady((assets) => {
         character.model.position.z + 8,
       ),
       lookAt: character.model.position,
-      duration: 0.2,
-    },
+      duration: 5.0,
+    }, */
   ]);
 
   camera.lookAt(150, 20, 200);

@@ -11,6 +11,10 @@ import {
   createHeightmapManager,
 } from '../heightmap/index.js';
 import { createWaterInstance } from '../water/index.js';
+import {
+  createTerrainInstance,
+  prepareTerrainConfig,
+} from '../terrain/index.js';
 import type {
   AssetsConfig,
   LoadedAssets,
@@ -27,6 +31,11 @@ import type {
   HeightmapManager,
 } from '../../types/heightmap.js';
 import type { InternalWaterConfig, WaterInstance } from '../../types/water.js';
+import type {
+  TerrainConfig,
+  InternalTerrainConfig,
+  TerrainInstance,
+} from '../../types/terrain.js';
 import type {
   UpdateCallback,
   WorldConfig,
@@ -70,6 +79,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   // Get water configuration
   const waterConfig = config.water;
   let waterInstance: WaterInstance | null = null;
+
+  // Get terrain configuration
+  const terrainConfig = config.terrain;
+  let terrainInstance: TerrainInstance | null = null;
 
   // Get assets configuration
   const assetsConfig = config.assets;
@@ -211,6 +224,31 @@ const createWorld = (config: WorldConfig): WorldInstance => {
         heightmapUtils,
       );
       scene.add(waterInstance.mesh);
+    }
+
+    // Create terrain instance if terrain is configured
+    if (terrainConfig && !terrainInstance && heightmapManager) {
+      const heightmapUtils = heightmapManager.utils;
+
+      if (heightmapUtils) {
+        const heightmapData = heightmapUtils.heightmapData;
+        const heightmapConfig = heightmapUtils.config;
+
+        // Prepare terrain config with loaded textures
+        const finalTerrainConfig: InternalTerrainConfig = prepareTerrainConfig(
+          terrainConfig,
+          assets,
+        );
+
+        terrainInstance = createTerrainInstance(
+          finalTerrainConfig,
+          config.world.size.x,
+          config.world.size.y,
+          heightmapConfig.resolution,
+          heightmapUtils,
+        );
+        scene.add(terrainInstance.mesh);
+      }
     }
 
     readyCallbacks.forEach((callback) => {
@@ -375,6 +413,14 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     getWaterInstance(): WaterInstance | null {
       return waterInstance;
+    },
+
+    /**
+     * Get the terrain instance
+     * @returns The terrain instance or null if terrain is not configured
+     */
+    getTerrainInstance(): TerrainInstance | null {
+      return terrainInstance;
     },
 
     /**
@@ -593,6 +639,13 @@ const createWorld = (config: WorldConfig): WorldInstance => {
         waterInstance.destroy();
         scene.remove(waterInstance.mesh);
         waterInstance = null;
+      }
+
+      // Cleanup terrain instance
+      if (terrainInstance) {
+        terrainInstance.destroy();
+        scene.remove(terrainInstance.mesh);
+        terrainInstance = null;
       }
 
       // Cleanup post-processing
