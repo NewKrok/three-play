@@ -42,9 +42,11 @@ const getShaderFragments = (layerCount: number) => {
     uniform float uBlendDistance;
     
     // Noise configuration
+    uniform sampler2D uNoiseTexture;
     uniform float uNoiseScale;
     uniform float uNoiseAmplitude;
     uniform float uNoiseOffset;
+    uniform bool uUseNoiseTexture;
     
     varying vec3 vWorldPosition;
     varying vec2 vUvCustom;
@@ -123,12 +125,16 @@ const getShaderFragments = (layerCount: number) => {
       : 'vec3(0.5, 0.5, 0.5)'; // Fallback gray color
 
   const fragmentShaderPart2 = `
-    #include <color_fragment>
-    
-    float terrainNoise = fbm(vUvCustom * uNoiseScale);
+    // Calculate terrain noise - use texture if available, otherwise use procedural
+    float terrainNoise;
+    if (uUseNoiseTexture) {
+      terrainNoise = texture2D(uNoiseTexture, vUvCustom * uNoiseScale).r;
+    } else {
+      terrainNoise = fbm(vUvCustom * uNoiseScale);
+    }
     float terrainVariation = terrainNoise * uNoiseAmplitude + uNoiseOffset;
-      
-    diffuseColor.rgb += terrainVariation;
+    
+    #include <color_fragment>
     
     float currentHeight = vWorldPosition.y;
     
@@ -147,8 +153,14 @@ const getShaderFragments = (layerCount: number) => {
       ${layerCount > 0 ? 'layer0Weight = 1.0;' : '// No layers available'}
     }
     
-    // Blend textures based on weights
+    // Blend textures based on weights FIRST
     diffuseColor.rgb = ${layerBlending};
+    
+    // THEN apply terrain variation as brightness modulation
+    // Convert variation to a brightness factor: 0.0 = dark, 1.0 = normal, >1.0 = bright
+    float brightnessFactor = 1.0 + terrainVariation;
+    brightnessFactor = clamp(brightnessFactor, 0.1, 2.0); // Prevent complete black or excessive brightness
+    diffuseColor.rgb *= brightnessFactor;
   `;
 
   return {
@@ -226,11 +238,16 @@ const createTerrainMaterial = (
 
     // Noise uniforms
     const noise = config.noise || {};
-    shader.uniforms.uNoiseScale = { value: noise.scale ?? 55.0 };
-    shader.uniforms.uNoiseAmplitude = { value: noise.amplitude ?? 0.3 };
-    shader.uniforms.uNoiseOffset = { value: noise.offset ?? -0.35 };
+    const hasNoiseTexture = config.noiseTexture !== undefined;
 
-    // Add custom varyings to vertex shader
+    // Support both 'strength' and 'amplitude' for backwards compatibility
+    const noiseStrength = noise.strength ?? noise.amplitude ?? 0.2;
+
+    shader.uniforms.uNoiseTexture = { value: config.noiseTexture || null };
+    shader.uniforms.uUseNoiseTexture = { value: hasNoiseTexture };
+    shader.uniforms.uNoiseScale = { value: noise.scale ?? 1.0 };
+    shader.uniforms.uNoiseAmplitude = { value: noiseStrength };
+    shader.uniforms.uNoiseOffset = { value: noise.offset ?? 0.0 }; // Add custom varyings to vertex shader
     shader.vertexShader =
       'varying vec3 vWorldPosition;\nvarying vec2 vUvCustom;\n' +
       shader.vertexShader;
@@ -249,6 +266,18 @@ const createTerrainMaterial = (
       '#include <color_fragment>',
       shaderFragments.fragmentShaderPart2,
     );
+
+    // Apply terrain noise effect
+    const lastBraceIndex = shader.fragmentShader.lastIndexOf('}');
+    if (lastBraceIndex !== -1) {
+      // No debug colors, just the noise effect
+      shader.fragmentShader =
+        shader.fragmentShader.slice(0, lastBraceIndex) +
+        shader.fragmentShader.slice(lastBraceIndex);
+    }
+
+    console.log('Final fragment shader:', shader.fragmentShader);
+    console.log('Vertex shader:', shader.vertexShader);
   };
 
   return material;
@@ -395,6 +424,20 @@ export const prepareTerrainConfig = (
         }
       }
     });
+  }
+
+  // Load noise texture if specified
+  if (config.noise?.textureAssetId && assets.textures) {
+    console.log('Looking for noise texture:', config.noise.textureAssetId);
+    const noiseTexture = assets.textures[config.noise.textureAssetId];
+    if (noiseTexture) {
+      console.log('Found noise texture:', noiseTexture);
+      internalConfig.noiseTexture = noiseTexture;
+    } else {
+      console.warn('Noise texture not found:', config.noise.textureAssetId);
+    }
+  } else {
+    console.log('No noise texture specified or no assets.textures');
   }
 
   return internalConfig;

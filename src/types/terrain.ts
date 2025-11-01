@@ -18,14 +18,18 @@ export type TerrainLayerConfig = {
  * Configuration for terrain noise generation
  */
 export type TerrainNoiseConfig = {
+  /** Asset ID for the noise texture to use */
+  textureAssetId?: string;
   /** Scale factor for noise UV coordinates */
   scale?: number;
-  /** Noise amplitude (how much variation) */
-  amplitude?: number;
+  /** Noise strength (how much variation) */
+  strength?: number;
   /** Noise offset (brightness adjustment) */
   offset?: number;
-  /** Number of octaves for fractal noise */
+  /** Number of octaves for fractal noise (only for procedural noise) */
   octaves?: number;
+  /** @deprecated Use strength instead */
+  amplitude?: number;
 };
 
 /**
@@ -50,6 +54,8 @@ export type TerrainConfig = {
 export type InternalTerrainConfig = TerrainConfig & {
   /** Loaded layer textures mapped by asset ID */
   layerTextures?: { [key: string]: THREE.Texture };
+  /** Loaded noise texture */
+  noiseTexture?: THREE.Texture;
 };
 
 /**

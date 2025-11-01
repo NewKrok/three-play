@@ -317,9 +317,10 @@ const worldInstance = createWorld({
     ],
     blendDistance: 1.5,
     noise: {
-      scale: 55.0,
-      amplitude: 0.3,
-      offset: -0.35,
+      textureAssetId: 'noise-a',
+      scale: 30,
+      strength: 0.8,
+      offset: -0.5,
     },
   },
   assets: assetConfig, // Add assets configuration

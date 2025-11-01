@@ -36,13 +36,13 @@ const assetConfig: AssetsConfig = {
     },
     'noise-a': {
       url: 'assets/textures/noise-a-256.webp',
-      wrapS: THREE.RepeatWrapping,
-      wrapT: THREE.RepeatWrapping,
+      wrapS: THREE.MirroredRepeatWrapping,
+      wrapT: THREE.MirroredRepeatWrapping,
     },
     'noise-b': {
       url: 'assets/textures/noise-a-256.webp',
-      wrapS: THREE.RepeatWrapping,
-      wrapT: THREE.RepeatWrapping,
+      wrapS: THREE.MirroredRepeatWrapping,
+      wrapT: THREE.MirroredRepeatWrapping,
     },
   },
   models: {
