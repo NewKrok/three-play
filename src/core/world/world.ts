@@ -197,7 +197,8 @@ const createWorld = (config: WorldConfig): WorldInstance => {
         }
       }
       if (waterConfig.variationTextureAssetId && assets.textures) {
-        const variationTexture = assets.textures[waterConfig.variationTextureAssetId];
+        const variationTexture =
+          assets.textures[waterConfig.variationTextureAssetId];
         if (variationTexture) {
           finalWaterConfig.variationTexture = variationTexture;
         }

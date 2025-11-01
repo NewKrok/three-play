@@ -396,8 +396,8 @@ const worldInstance = createWorld({
     textureAssetId: 'water',
     textureStrength: 0.1,
     textureScale: 40.0,
-    variationTextureAssetId: 'surfaceVariation',
-    variationScale: 2.0,
+    variationTextureAssetId: 'noise-a',
+    variationScale: 1.1,
   },
   assets: assetConfig, // Add assets configuration
 } as WorldConfig);
