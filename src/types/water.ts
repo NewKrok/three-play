@@ -19,6 +19,8 @@ export type WaterConfig = {
   textureAssetId?: string; // Asset ID for texture from asset system
   textureStrength?: number; // Strength of texture overlay (0-1)
   textureScale?: number; // Scale factor for texture tiling
+  textureFlowDirection?: THREE.Vector2; // Direction of texture flow (x, z components)
+  textureFlowSpeed?: number; // Speed of texture flow animation
   variationTextureAssetId?: string; // Asset ID for surface variation texture from asset system
   variationScale?: number; // Scale factor for surface variation texture tiling
 };

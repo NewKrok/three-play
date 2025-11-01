@@ -24,6 +24,8 @@ const WATER_FRAGMENT_SHADER = `
   uniform sampler2D uWaterTexture;
   uniform float uTextureStrength;
   uniform float uTextureScale;
+  uniform vec2 uTextureFlowDirection;
+  uniform float uTextureFlowSpeed;
   uniform bool uHasTexture;
   uniform sampler2D uVariationTexture;
   uniform bool uUseVariationTexture;
@@ -98,7 +100,7 @@ const WATER_FRAGMENT_SHADER = `
 
     // Apply texture overlay if available
     if (uHasTexture) {
-      vec2 textureUv = vUv * uTextureScale + uTime * 0.05;
+      vec2 textureUv = vUv * uTextureScale + uTime * uTextureFlowSpeed * uTextureFlowDirection;
       vec3 textureColor = texture2D(uWaterTexture, textureUv).rgb;
       waterColor = mix(waterColor, textureColor, uTextureStrength);
     }
@@ -192,6 +194,8 @@ const DEFAULT_WATER_CONFIG: Required<
   texture: null,
   textureStrength: 0.3,
   textureScale: 4.0,
+  textureFlowDirection: new THREE.Vector2(1.0, 0.0),
+  textureFlowSpeed: 0.05,
   variationTexture: null,
   variationScale: 1.0,
 };
@@ -232,6 +236,12 @@ export const createWaterInstance = (
     uWaterTexture: { value: finalConfig.texture || null },
     uTextureStrength: { value: finalConfig.textureStrength },
     uTextureScale: { value: finalConfig.textureScale },
+    uTextureFlowDirection: {
+      value:
+        finalConfig.textureFlowDirection?.clone() ||
+        new THREE.Vector2(1.0, 0.0),
+    },
+    uTextureFlowSpeed: { value: finalConfig.textureFlowSpeed },
     uHasTexture: { value: !!finalConfig.texture },
     uVariationTexture: { value: finalConfig.variationTexture || null },
     uUseVariationTexture: { value: !!finalConfig.variationTexture },

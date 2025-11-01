@@ -59,6 +59,8 @@ describe('Water Utils', () => {
         texture: null,
         textureStrength: 0.3,
         textureScale: 4.0,
+        textureFlowDirection: new THREE.Vector2(1.0, 0.0),
+        textureFlowSpeed: 0.05,
         variationTexture: null,
         variationScale: 1.0,
       });
@@ -321,6 +323,122 @@ describe('Water Utils', () => {
       expect(waterInstance.mesh.position.z).toBe(largeWorldHeight / 2);
       expect(waterInstance.uniforms.uWorldWidth.value).toBe(largeWorldWidth);
       expect(waterInstance.uniforms.uWorldHeight.value).toBe(largeWorldHeight);
+    });
+
+    describe('Texture Flow Configuration', () => {
+      it('should create water instance with default texture flow settings', () => {
+        const config: InternalWaterConfig = { level: 5 };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        expect(waterInstance.uniforms.uTextureFlowDirection.value).toEqual(
+          new THREE.Vector2(1.0, 0.0),
+        );
+        expect(waterInstance.uniforms.uTextureFlowSpeed.value).toBe(0.05);
+      });
+
+      it('should create water instance with custom texture flow settings', () => {
+        const customFlowDirection = new THREE.Vector2(0.5, 1.0);
+        const config: InternalWaterConfig = {
+          level: 5,
+          textureFlowDirection: customFlowDirection,
+          textureFlowSpeed: 0.08,
+        };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        expect(waterInstance.uniforms.uTextureFlowDirection.value).toEqual(
+          customFlowDirection,
+        );
+        expect(waterInstance.uniforms.uTextureFlowSpeed.value).toBe(0.08);
+      });
+
+      it('should clone the texture flow direction vector to prevent mutation', () => {
+        const originalDirection = new THREE.Vector2(0.7, 0.3);
+        const config: InternalWaterConfig = {
+          level: 5,
+          textureFlowDirection: originalDirection,
+        };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        // Modify the original vector
+        originalDirection.set(1.0, 1.0);
+
+        // The uniform should still have the original values
+        expect(waterInstance.uniforms.uTextureFlowDirection.value).toEqual(
+          new THREE.Vector2(0.7, 0.3),
+        );
+      });
+
+      it('should handle edge case texture flow configurations', () => {
+        const config: InternalWaterConfig = {
+          level: 5,
+          textureFlowDirection: new THREE.Vector2(0.0, 0.0),
+          textureFlowSpeed: 0.0,
+        };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        expect(waterInstance.uniforms.uTextureFlowDirection.value).toEqual(
+          new THREE.Vector2(0.0, 0.0),
+        );
+        expect(waterInstance.uniforms.uTextureFlowSpeed.value).toBe(0.0);
+      });
+
+      it('should handle very high texture flow speed', () => {
+        const config: InternalWaterConfig = {
+          level: 5,
+          textureFlowSpeed: 10.0,
+        };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        expect(waterInstance.uniforms.uTextureFlowSpeed.value).toBe(10.0);
+      });
+
+      it('should handle negative texture flow direction', () => {
+        const config: InternalWaterConfig = {
+          level: 5,
+          textureFlowDirection: new THREE.Vector2(-1.0, -0.5),
+        };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        expect(waterInstance.uniforms.uTextureFlowDirection.value).toEqual(
+          new THREE.Vector2(-1.0, -0.5),
+        );
+      });
     });
 
     describe('Surface Variation Texture Support', () => {

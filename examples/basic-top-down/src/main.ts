@@ -396,11 +396,13 @@ const worldInstance = createWorld({
     textureAssetId: 'water',
     textureStrength: 0.1,
     textureScale: 40.0,
+    textureFlowDirection: new THREE.Vector2(0.5, 1.0), // Diagonal flow direction
+    textureFlowSpeed: 0.08, // Slightly faster flow for visible effect
     variationTextureAssetId: 'noise-a',
     variationScale: 1.1,
   },
   assets: assetConfig, // Add assets configuration
-} as WorldConfig);
+});
 
 // Add progress tracking for asset loading
 worldInstance.onProgress((progress) => {
