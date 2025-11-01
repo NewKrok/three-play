@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { WaterUtils } from '../core/water/water-utils.js';
-import type { WaterConfig } from '../types/water.js';
+import type { InternalInternalWaterConfig } from '../types/water.js';
 
 // Mock console.warn to avoid warnings in tests
 const originalWarn = console.warn;
@@ -52,7 +52,7 @@ describe('WaterUtils with Texture Support', () => {
   });
 
   test('should create water instance with default configuration', () => {
-    const config: WaterConfig = {
+    const config: InternalWaterConfig = {
       level: 5.0,
     };
 
@@ -79,7 +79,7 @@ describe('WaterUtils with Texture Support', () => {
   });
 
   test('should create water instance with texture configuration', () => {
-    const config: WaterConfig = {
+    const config: InternalWaterConfig = {
       level: 7.8,
       texture: mockTexture,
       textureStrength: 0.5,
@@ -106,7 +106,7 @@ describe('WaterUtils with Texture Support', () => {
   });
 
   test('should handle partial texture configuration', () => {
-    const config: WaterConfig = {
+    const config: InternalWaterConfig = {
       level: 10.0,
       texture: mockTexture,
       // Only texture provided, strength and scale should use defaults
@@ -128,7 +128,7 @@ describe('WaterUtils with Texture Support', () => {
   });
 
   test('should update time uniform correctly', () => {
-    const config: WaterConfig = {
+    const config: InternalWaterConfig = {
       level: 5.0,
       texture: mockTexture,
     };
@@ -151,7 +151,7 @@ describe('WaterUtils with Texture Support', () => {
   });
 
   test('should work without heightmap utils', () => {
-    const config: WaterConfig = {
+    const config: InternalWaterConfig = {
       level: 0.0,
       texture: mockTexture,
       textureStrength: 0.7,
@@ -172,7 +172,7 @@ describe('WaterUtils with Texture Support', () => {
   });
 
   test('should properly dispose resources', () => {
-    const config: WaterConfig = {
+    const config: InternalWaterConfig = {
       level: 5.0,
       texture: mockTexture,
     };
@@ -198,7 +198,7 @@ describe('WaterUtils with Texture Support', () => {
   });
 
   test('should position water mesh correctly', () => {
-    const config: WaterConfig = {
+    const config: InternalWaterConfig = {
       level: 12.5,
     };
 
@@ -221,7 +221,7 @@ describe('WaterUtils with Texture Support', () => {
   });
 
   test('should handle custom water properties with texture', () => {
-    const config: WaterConfig = {
+    const config: InternalWaterConfig = {
       level: 8.0,
       deepColor: 0x001122,
       shallowColor: 0x66aaff,
@@ -277,7 +277,7 @@ describe('WaterUtils with Texture Support', () => {
     };
 
     // Simulate the processing done in world.ts
-    const finalConfig: WaterConfig = { ...configWithAssetId };
+    const finalConfig: InternalWaterConfig = { ...configWithAssetId };
     if (configWithAssetId.textureAssetId) {
       // In real scenario, this would come from loaded assets
       finalConfig.texture = mockTexture;

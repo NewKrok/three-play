@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 /**
- * Water configuration type
+ * Water configuration type for public API
  */
 export type WaterConfig = {
   level: number; // Water level Y position
@@ -16,10 +16,16 @@ export type WaterConfig = {
   frequency?: number; // Wave frequency
   speed?: number; // Wave animation speed
   resolution?: number; // Water mesh resolution (segments per side)
-  texture?: THREE.Texture; // Optional water texture overlay
+  textureAssetId?: string; // Asset ID for texture from asset system
   textureStrength?: number; // Strength of texture overlay (0-1)
   textureScale?: number; // Scale factor for texture tiling
-  textureAssetId?: string; // Asset ID for texture (alternative to direct texture)
+};
+
+/**
+ * Internal water configuration type with resolved texture
+ */
+export type InternalWaterConfig = WaterConfig & {
+  texture?: THREE.Texture; // Resolved texture from asset system
 };
 
 /**

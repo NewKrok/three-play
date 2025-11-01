@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { HeightmapUtils } from '../../types/heightmap.js';
-import type { WaterConfig, WaterInstance } from '../../types/water.js';
+import type { InternalWaterConfig, WaterInstance } from '../../types/water.js';
 
 /**
  * Water fragment shader for realistic water rendering
@@ -151,7 +151,7 @@ const WATER_VERTEX_SHADER = `
  * Default water configuration values
  */
 const DEFAULT_WATER_CONFIG: Required<
-  Omit<WaterConfig, 'texture' | 'textureAssetId'>
+  Omit<InternalWaterConfig, 'texture' | 'textureAssetId'>
 > & {
   texture: THREE.Texture | null;
   textureAssetId?: string;
@@ -177,7 +177,7 @@ const DEFAULT_WATER_CONFIG: Required<
  * Create water instance with specified configuration
  */
 export const createWaterInstance = (
-  config: WaterConfig,
+  config: InternalWaterConfig,
   worldWidth: number,
   worldHeight: number,
   heightmapUtils: HeightmapUtils | null,

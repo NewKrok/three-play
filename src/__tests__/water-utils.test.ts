@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createWaterInstance, WaterUtils } from '../core/water/water-utils.js';
-import type { WaterConfig } from '../types/water.js';
 import type { HeightmapUtils } from '../types/heightmap.js';
+import type { InternalWaterConfig } from '../types/water.js';
 
 // Mock console methods to avoid noise in tests
 const originalConsoleError = console.error;
@@ -56,6 +56,9 @@ describe('Water Utils', () => {
         frequency: 4.0,
         speed: 1.5,
         resolution: 64,
+        texture: null,
+        textureStrength: 0.3,
+        textureScale: 4.0,
       });
     });
   });
@@ -75,7 +78,7 @@ describe('Water Utils', () => {
     });
 
     it('should create water instance with default configuration', () => {
-      const config: WaterConfig = { level: 5 };
+      const config: InternalWaterConfig = { level: 5 };
 
       const waterInstance = createWaterInstance(
         config,
@@ -92,7 +95,7 @@ describe('Water Utils', () => {
     });
 
     it('should create water instance with custom configuration', () => {
-      const config: WaterConfig = {
+      const config: InternalWaterConfig = {
         level: 10,
         deepColor: 0x000080,
         shallowColor: 0x87ceeb,
@@ -124,7 +127,7 @@ describe('Water Utils', () => {
     });
 
     it('should position water mesh correctly', () => {
-      const config: WaterConfig = { level: 15 };
+      const config: InternalWaterConfig = { level: 15 };
 
       const waterInstance = createWaterInstance(
         config,
@@ -140,7 +143,7 @@ describe('Water Utils', () => {
     });
 
     it('should create proper geometry with specified resolution', () => {
-      const config: WaterConfig = { level: 5, resolution: 32 };
+      const config: InternalWaterConfig = { level: 5, resolution: 32 };
 
       const waterInstance = createWaterInstance(
         config,
@@ -160,7 +163,7 @@ describe('Water Utils', () => {
     });
 
     it('should set up uniforms correctly with heightmap data', () => {
-      const config: WaterConfig = { level: 8 };
+      const config: InternalWaterConfig = { level: 8 };
 
       const waterInstance = createWaterInstance(
         config,
@@ -179,7 +182,7 @@ describe('Water Utils', () => {
     });
 
     it('should handle null heightmap utils gracefully', () => {
-      const config: WaterConfig = { level: 5 };
+      const config: InternalWaterConfig = { level: 5 };
 
       const waterInstance = createWaterInstance(
         config,
@@ -193,7 +196,7 @@ describe('Water Utils', () => {
     });
 
     it('should create shader material with correct properties', () => {
-      const config: WaterConfig = { level: 5 };
+      const config: InternalWaterConfig = { level: 5 };
 
       const waterInstance = createWaterInstance(
         config,
@@ -211,7 +214,7 @@ describe('Water Utils', () => {
     });
 
     it('should update time uniform when update is called', () => {
-      const config: WaterConfig = { level: 5 };
+      const config: InternalWaterConfig = { level: 5 };
 
       const waterInstance = createWaterInstance(
         config,
@@ -227,7 +230,7 @@ describe('Water Utils', () => {
     });
 
     it('should properly dispose resources when destroyed', () => {
-      const config: WaterConfig = { level: 5 };
+      const config: InternalWaterConfig = { level: 5 };
 
       const waterInstance = createWaterInstance(
         config,
@@ -249,7 +252,7 @@ describe('Water Utils', () => {
     });
 
     it('should handle edge case configurations', () => {
-      const config: WaterConfig = {
+      const config: InternalWaterConfig = {
         level: 0,
         amplitude: 0,
         frequency: 0,
@@ -272,7 +275,7 @@ describe('Water Utils', () => {
     });
 
     it('should merge custom config with defaults correctly', () => {
-      const config: WaterConfig = {
+      const config: InternalWaterConfig = {
         level: 5,
         deepColor: 0xff0000,
         // Only specify partial config - others should use defaults
@@ -303,7 +306,7 @@ describe('Water Utils', () => {
     it('should handle very large world dimensions', () => {
       const largeWorldWidth = 10000;
       const largeWorldHeight = 8000;
-      const config: WaterConfig = { level: 100 };
+      const config: InternalWaterConfig = { level: 100 };
 
       const waterInstance = createWaterInstance(
         config,

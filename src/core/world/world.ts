@@ -26,7 +26,7 @@ import type {
   HeightmapUtils,
   HeightmapManager,
 } from '../../types/heightmap.js';
-import type { WaterInstance } from '../../types/water.js';
+import type { InternalWaterConfig, WaterInstance } from '../../types/water.js';
 import type {
   UpdateCallback,
   WorldConfig,
@@ -189,7 +189,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       const heightmapUtils = heightmapManager?.utils || null;
 
       // Prepare final water config with texture if textureAssetId is provided
-      let finalWaterConfig = { ...waterConfig };
+      let finalWaterConfig: InternalWaterConfig = { ...waterConfig };
       if (waterConfig.textureAssetId && assets.textures) {
         const waterTexture = assets.textures[waterConfig.textureAssetId];
         if (waterTexture) {
