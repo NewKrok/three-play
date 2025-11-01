@@ -59,6 +59,8 @@ describe('Water Utils', () => {
         texture: null,
         textureStrength: 0.3,
         textureScale: 4.0,
+        noiseTexture: null,
+        noiseScale: 1.0,
       });
     });
   });
@@ -319,6 +321,63 @@ describe('Water Utils', () => {
       expect(waterInstance.mesh.position.z).toBe(largeWorldHeight / 2);
       expect(waterInstance.uniforms.uWorldWidth.value).toBe(largeWorldWidth);
       expect(waterInstance.uniforms.uWorldHeight.value).toBe(largeWorldHeight);
+    });
+
+    describe('Noise Texture Support', () => {
+      it('should create water instance without noise texture (procedural noise)', () => {
+        const config: InternalWaterConfig = { 
+          level: 5,
+          noiseTexture: undefined 
+        };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        expect(waterInstance.uniforms.uNoiseTexture.value).toBeNull();
+        expect(waterInstance.uniforms.uUseNoiseTexture.value).toBe(false);
+        expect(waterInstance.uniforms.uNoiseScale.value).toBe(1.0);
+      });
+
+      it('should create water instance with noise texture', () => {
+        const mockNoiseTexture = new THREE.Texture();
+        const config: InternalWaterConfig = { 
+          level: 5,
+          noiseTexture: mockNoiseTexture,
+          noiseScale: 2.0
+        };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        expect(waterInstance.uniforms.uNoiseTexture.value).toBe(mockNoiseTexture);
+        expect(waterInstance.uniforms.uUseNoiseTexture.value).toBe(true);
+        expect(waterInstance.uniforms.uNoiseScale.value).toBe(2.0);
+      });
+
+      it('should use default noise scale when not specified', () => {
+        const mockNoiseTexture = new THREE.Texture();
+        const config: InternalWaterConfig = { 
+          level: 5,
+          noiseTexture: mockNoiseTexture
+        };
+
+        const waterInstance = createWaterInstance(
+          config,
+          worldWidth,
+          worldHeight,
+          mockHeightmapUtils,
+        );
+
+        expect(waterInstance.uniforms.uNoiseScale.value).toBe(1.0);
+      });
     });
   });
 });

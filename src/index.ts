@@ -9,7 +9,7 @@ export {
 } from './core/heightmap/index.js';
 
 // Water utilities
-export { WaterUtils, createWaterInstance } from './core/water/index.js';
+export { WaterUtils, createWaterInstance, NoiseGenerator } from './core/water/index.js';
 
 // Asset loading utilities
 export { AssetLoader } from './core/assets/index.js';
@@ -23,7 +23,7 @@ export type {
   WorldInstance,
   UpdateCallback,
 } from './types/world.js';
-export type { WaterConfig, WaterInstance } from './types/water.js';
+export type { WaterConfig, WaterInstance, InternalWaterConfig } from './types/water.js';
 export type {
   OutlineConfig,
   OutlineEntry,

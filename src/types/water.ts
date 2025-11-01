@@ -19,6 +19,8 @@ export type WaterConfig = {
   textureAssetId?: string; // Asset ID for texture from asset system
   textureStrength?: number; // Strength of texture overlay (0-1)
   textureScale?: number; // Scale factor for texture tiling
+  noiseTextureAssetId?: string; // Asset ID for noise texture from asset system
+  noiseScale?: number; // Scale factor for noise texture tiling
 };
 
 /**
@@ -26,6 +28,7 @@ export type WaterConfig = {
  */
 export type InternalWaterConfig = WaterConfig & {
   texture?: THREE.Texture; // Resolved texture from asset system
+  noiseTexture?: THREE.Texture; // Resolved noise texture from asset system
 };
 
 /**

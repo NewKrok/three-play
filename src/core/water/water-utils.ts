@@ -25,6 +25,9 @@ const WATER_FRAGMENT_SHADER = `
   uniform float uTextureStrength;
   uniform float uTextureScale;
   uniform bool uHasTexture;
+  uniform sampler2D uNoiseTexture;
+  uniform bool uUseNoiseTexture;
+  uniform float uNoiseScale;
 
   varying float vHeight;
   varying vec2 vUv;
@@ -49,13 +52,23 @@ const WATER_FRAGMENT_SHADER = `
     return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
   }
   
+  float getNoiseValue(vec2 p) {
+    if (uUseNoiseTexture) {
+      // Use texture-based noise for better performance
+      return texture2D(uNoiseTexture, p * uNoiseScale).r;
+    } else {
+      // Fallback to procedural noise
+      return noise(p);
+    }
+  }
+  
   float fbm(vec2 p) {
     float value = 0.0;
     float amplitude = 0.5;
     float frequency = 1.0;
 
     for(int i = 0; i < 4; i++) {
-      value += amplitude * noise(p * frequency);
+      value += amplitude * getNoiseValue(p * frequency);
       frequency *= 2.0;
       amplitude *= 0.5;
     }
@@ -151,10 +164,12 @@ const WATER_VERTEX_SHADER = `
  * Default water configuration values
  */
 const DEFAULT_WATER_CONFIG: Required<
-  Omit<InternalWaterConfig, 'texture' | 'textureAssetId'>
+  Omit<InternalWaterConfig, 'texture' | 'textureAssetId' | 'noiseTexture' | 'noiseTextureAssetId'>
 > & {
   texture: THREE.Texture | null;
   textureAssetId?: string;
+  noiseTexture: THREE.Texture | null;
+  noiseTextureAssetId?: string;
 } = {
   level: 0,
   deepColor: 0x013a5b,
@@ -171,6 +186,8 @@ const DEFAULT_WATER_CONFIG: Required<
   texture: null,
   textureStrength: 0.3,
   textureScale: 4.0,
+  noiseTexture: null,
+  noiseScale: 1.0,
 };
 
 /**
@@ -210,6 +227,9 @@ export const createWaterInstance = (
     uTextureStrength: { value: finalConfig.textureStrength },
     uTextureScale: { value: finalConfig.textureScale },
     uHasTexture: { value: !!finalConfig.texture },
+    uNoiseTexture: { value: finalConfig.noiseTexture || null },
+    uUseNoiseTexture: { value: !!finalConfig.noiseTexture },
+    uNoiseScale: { value: finalConfig.noiseScale },
   };
 
   // Create shader material
