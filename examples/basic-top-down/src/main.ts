@@ -5,7 +5,12 @@ import {
 } from 'https://esm.sh/@newkrok/three-particles';
 
 import * as THREE from 'three';
-import { runningEffect, dustEffect, splashEffect } from './effects-config.js';
+import {
+  runningEffect,
+  runningInWaterEffect,
+  dustEffect,
+  splashEffect,
+} from './effects-config.js';
 import assetConfig from './assets-config.js';
 import {
   CSS2DRenderer,
@@ -342,6 +347,7 @@ worldInstance.onReady((assets) => {
   console.log('All assets loaded successfully!', assets);
 
   runningEffect.map = assets.textures.smoke;
+  runningInWaterEffect.map = assets.textures.splash;
 
   // Get references to Three.js components
   const renderer = worldInstance.getRenderer();
@@ -474,11 +480,23 @@ worldInstance.onReady((assets) => {
     character.model.position.copy(position);
     scene.add(character.model);
 
-    const { instance: runningEffectInstance } = createParticleSystem(
+    character.effects = {};
+    const runningEffectParticleSystem = createParticleSystem(
       runningEffect,
       cycleData.now,
     );
+    const runningEffectInstance = runningEffectParticleSystem.instance;
+    character.effects.running = runningEffectParticleSystem;
     character.model.add(runningEffectInstance);
+
+    const runningInWaterEffectParticleSystem = createParticleSystem(
+      runningInWaterEffect,
+      cycleData.now,
+    );
+    const runningInWaterEffectInstance =
+      runningInWaterEffectParticleSystem.instance;
+    character.effects.runningInWater = runningInWaterEffectParticleSystem;
+    character.model.add(runningInWaterEffectInstance);
 
     return character;
   };
@@ -801,6 +819,7 @@ worldInstance.onReady((assets) => {
             : 1) *
           cycleData.delta,
       );
+
       if (isRunning) {
         playAnimation(character, 'run');
       } else {
@@ -955,6 +974,14 @@ worldInstance.onReady((assets) => {
   };
   const updateUnits = () => {
     units.forEach((_unit, index) => {
+      if (_unit.model.position.y < WATER_SPEED_LEVEL) {
+        _unit.effects.running.pauseEmitter();
+        _unit.effects.runningInWater.resumeEmitter();
+      } else {
+        _unit.effects.running.resumeEmitter();
+        _unit.effects.runningInWater.pauseEmitter();
+      }
+
       const { model: unit, mixer, actions } = _unit;
       mixer.update(cycleData.delta);
       if (unit.knockbackVelocity) {

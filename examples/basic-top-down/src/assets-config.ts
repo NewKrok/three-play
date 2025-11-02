@@ -47,6 +47,10 @@ const assetConfig: AssetsConfig = {
     smoke: {
       url: 'assets/textures/smoke-256.webp',
     },
+    splash: {
+      url: 'assets/textures/splash-256.webp',
+      flipY: false,
+    },
   },
   models: {
     'human-idle': {
