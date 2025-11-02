@@ -9,11 +9,7 @@ export {
 } from './core/heightmap/index.js';
 
 // Water utilities
-export {
-  WaterUtils,
-  createWaterInstance,
-  NoiseGenerator,
-} from './core/water/index.js';
+export { WaterUtils, createWaterInstance } from './core/water/index.js';
 
 // Terrain utilities
 export {
