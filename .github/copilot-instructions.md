@@ -39,3 +39,16 @@ This file contains coding conventions and guidelines for the THREE Play project 
 - Keep utilities in separate files by functionality
 - Use modular exports to support tree-shaking
 - Follow the existing file naming pattern (kebab-case)
+
+## Commit Message Guidelines
+
+- Use Conventional Commits format: `type(scope): description`
+- Common types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
+- Include scope when relevant (e.g., `feat(effects): add particle system`)
+- Keep descriptions concise and imperative mood
+- Add breaking change indicator with `!` if applicable
+- Examples:
+  - `feat(water): add ripple effect animation`
+  - `fix(terrain): resolve texture loading issue`
+  - `docs: update API documentation`
+  - `refactor(effects): improve performance of outline system`

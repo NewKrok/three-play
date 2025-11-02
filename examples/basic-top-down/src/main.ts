@@ -323,7 +323,7 @@ const worldInstance = createWorld({
       offset: -0.5,
     },
   },
-  assets: assetConfig, // Add assets configuration
+  assets: assetConfig,
 });
 
 // Add progress tracking for asset loading
@@ -341,6 +341,8 @@ worldInstance.onProgress((progress) => {
 worldInstance.onReady((assets) => {
   console.log('All assets loaded successfully!', assets);
 
+  runningEffect.map = assets.textures.smoke;
+
   // Get references to Three.js components
   const renderer = worldInstance.getRenderer();
   const scene = worldInstance.getScene();
@@ -350,8 +352,6 @@ worldInstance.onReady((assets) => {
 
   const heightmapUtils = worldInstance.getHeightmapUtils();
   const loadedAssets = worldInstance.getLoadedAssets();
-  const { heightmapData } = heightmapUtils;
-  const { heightMapTexture } = heightmapData;
   const getHeightFromPosition = heightmapUtils.getHeightFromPosition;
 
   // Append renderer to DOM
@@ -479,21 +479,6 @@ worldInstance.onReady((assets) => {
       cycleData.now,
     );
     character.model.add(runningEffectInstance);
-
-    /*character.updateMatrixWorld(true);
-  const exporter = new GLTFExporter();
-  exporter.parse(
-    character,
-    (gltf) => {
-      const blob = new Blob([JSON.stringify(gltf)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'character.gltf';
-      a.click();
-    },
-    { binary: false }
-  );*/
 
     return character;
   };

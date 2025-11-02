@@ -2,77 +2,9 @@
  * Particle effects and game effects configuration
  */
 
-export const runningEffect = {
-  duration: 0.36,
-  startLifetime: { min: 0.2, max: 0.6 },
-  startSpeed: { min: 0.93, max: 1.76 },
-  startSize: { min: 5, max: 7 },
-  startOpacity: { min: 1, max: 1 },
-  gravity: 0,
-  simulationSpace: 'WORLD',
-  maxParticles: 10,
-  emission: { rateOverTime: 0, rateOverDistance: 2 },
-  shape: {
-    shape: 'CONE',
-    cone: { angle: 16.8097, radius: 0.5 },
-    rectangle: { scale: { x: 0.5, y: 1.8 } },
-  },
-  renderer: { blending: 'THREE.AdditiveBlending' },
-  sizeOverLifetime: {
-    isActive: true,
-    lifetimeCurve: {
-      bezierPoints: [
-        { x: 0, y: 0.245, percentage: 0 },
-        { x: 0.1666, y: 0.4116 },
-        { x: 0.3766, y: 0.2182 },
-        { x: 0.5433, y: 0.385, percentage: 0.5433 },
-        { x: 0.7099, y: 0.5516 },
-        { x: 0.8333, y: 0.6333 },
-        { x: 1, y: 0.7, percentage: 1 },
-      ],
-    },
-  },
-  opacityOverLifetime: {
-    isActive: true,
-    lifetimeCurve: {
-      bezierPoints: [
-        { x: 0, y: 0.1, percentage: 0 },
-        { x: 0.1666, y: 0.15 },
-        { x: 0.3333, y: 0.2 },
-        { x: 0.5, y: 0.25, percentage: 0.5 },
-        { x: 0.6666, y: 0.3332 },
-        { x: 0.8333, y: 0.1665 },
-        { x: 1, y: 0, percentage: 1 },
-      ],
-    },
-  },
-  noise: { isActive: true, strength: 0.3, positionAmount: 0.278 },
-  _editorData: {
-    textureId: 'CLOUD',
-    simulation: {
-      movements: 'CIRCLE',
-      movementSpeed: 3.9,
-      rotation: 'FOLLOW_THE_MOVEMENT',
-      rotationSpeed: 0,
-    },
-    showLocalAxes: true,
-    showWorldAxes: false,
-    frustumCulled: true,
-    terrain: {
-      textureId: 'WIREFRAME',
-      movements: 'DISABLED',
-      movementSpeed: 1,
-      rotation: 'DISABLED',
-      rotationSpeed: 1,
-    },
-    metadata: {
-      name: 'Untitled-2',
-      createdAt: 1759099361252,
-      modifiedAt: 1759099361252,
-      editorVersion: '2.1.0',
-    },
-  },
-};
+export const runningEffect = JSON.parse(
+  '{"duration":0.36,"startLifetime":{"min":0.4,"max":0.9},"startSpeed":{"min":0.39,"max":0.66},"startSize":{"min":12.25,"max":18.65},"startOpacity":{"min":0.177,"max":0.25},"startRotation":{"min":-360,"max":360},"gravity":-1.69,"simulationSpace":"WORLD","maxParticles":16,"emission":{"rateOverTime":0,"rateOverDistance":19},"shape":{"sphere":{"radius":0.0001},"cone":{"angle":90,"radius":9.6502,"arc":0},"rectangle":{"scale":{"x":0.5,"y":1.8}}},"renderer":{"blending":"THREE.AdditiveBlending"},"sizeOverLifetime":{"isActive":true,"lifetimeCurve":{"bezierPoints":[{"x":0,"y":0.885,"percentage":0},{"x":0.1666,"y":1.0516},{"x":0.3099,"y":0.5583},{"x":0.4766,"y":0.725,"percentage":0.4766},{"x":0.6432,"y":0.8916},{"x":0.8333,"y":0.7082},{"x":1,"y":0.875,"percentage":1}]}},"opacityOverLifetime":{"isActive":true,"lifetimeCurve":{"bezierPoints":[{"x":0,"y":0.1,"percentage":0},{"x":0.1666,"y":0.15},{"x":0.3333,"y":0.2},{"x":0.5,"y":0.25,"percentage":0.5},{"x":0.6666,"y":0.3332},{"x":0.8333,"y":0.1665},{"x":1,"y":0,"percentage":1}]}},"rotationOverLifetime":{"isActive":true,"min":-64.8,"max":69.2},"noise":{"strength":0.3,"positionAmount":5,"rotationAmount":5,"sizeAmount":5},"_editorData":{"textureId":"CustomTexture-595","simulation":{"movements":"PROJECTILE_STRAIGHT","movementSpeed":3.9,"rotation":"FOLLOW_THE_MOVEMENT","rotationSpeed":0},"showLocalAxes":true,"showWorldAxes":false,"frustumCulled":true,"terrain":{"textureId":"WIREFRAME","movements":"DISABLED","movementSpeed":1,"rotation":"DISABLED","rotationSpeed":1},"metadata":{"name":"Untitled-2","createdAt":1759099361252,"modifiedAt":1762113347133,"editorVersion":"2.1.0"}}}',
+);
 
 export const dustEffect = {
   transform: { position: { y: 2 } },

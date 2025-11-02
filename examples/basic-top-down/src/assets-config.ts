@@ -44,6 +44,9 @@ const assetConfig: AssetsConfig = {
       wrapS: THREE.MirroredRepeatWrapping,
       wrapT: THREE.MirroredRepeatWrapping,
     },
+    smoke: {
+      url: 'assets/textures/smoke-256.webp',
+    },
   },
   models: {
     'human-idle': {
