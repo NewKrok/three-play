@@ -10,10 +10,10 @@ import type {
 
 /**
  * Get terrain shader fragments for material modification
- * 
+ *
  * This function generates GLSL shader code fragments that enable multi-layer terrain rendering
  * with height-based texture blending, noise variation, and smooth transitions between layers.
- * 
+ *
  * @param layerCount - Number of terrain layers to support (minimum 1)
  * @returns Object containing vertex and fragment shader parts for terrain material
  */
@@ -37,7 +37,7 @@ const getShaderFragments = (layerCount: number) => {
   `,
   ).join('');
 
-  // First part of fragment shader with uniforms, noise functions, and utilities
+  // First part of fragment shader with uniforms and utilities
   const fragmentShaderPart1 = `
     uniform float uWaterLevel;
     ${layerUniformDeclarations}
@@ -58,40 +58,6 @@ const getShaderFragments = (layerCount: number) => {
     // Varying variables passed from vertex shader
     varying vec3 vWorldPosition;
     varying vec2 vUvCustom;
-      
-    // Simple hash function for procedural noise generation
-    float hash(vec2 p) {
-      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-    }
-      
-    // 2D Perlin-style noise function
-    float noise(vec2 p) {
-      vec2 i = floor(p);
-      vec2 f = fract(p);
-      f = f * f * (3.0 - 2.0 * f);
-        
-      float a = hash(i);
-      float b = hash(i + vec2(1.0, 0.0));
-      float c = hash(i + vec2(0.0, 1.0));
-      float d = hash(i + vec2(1.0, 1.0));
-        
-      return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-    }
-    
-    // Fractal Brownian Motion (fBm) for more complex noise patterns
-    float fbm(vec2 p) {
-      float value = 0.0;
-      float amplitude = 0.5;
-      float frequency = 1.0;
-        
-      // Generate 3 octaves of noise for detailed terrain variation
-      for(int i = 0; i < 3; i++) {
-        value += amplitude * noise(p * frequency);
-        frequency *= 2.0;
-        amplitude *= 0.5;
-      }
-      return value;
-    }
   `;
 
   // Generate dynamic layer blending code for height-based texture transitions
@@ -142,12 +108,10 @@ const getShaderFragments = (layerCount: number) => {
 
   // Second part of fragment shader handling terrain noise and final color calculation
   const fragmentShaderPart2 = `
-    // Calculate terrain noise variation using either texture or procedural generation
-    float terrainNoise;
+    // Calculate terrain noise variation using provided noise texture
+    float terrainNoise = 0.0;
     if (uUseNoiseTexture) {
       terrainNoise = texture2D(uNoiseTexture, vUvCustom * uNoiseScale).r;
-    } else {
-      terrainNoise = fbm(vUvCustom * uNoiseScale);
     }
     float terrainVariation = terrainNoise * uNoiseAmplitude + uNoiseOffset;
     

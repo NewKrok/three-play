@@ -46,7 +46,7 @@ describe('Terrain Utils', () => {
       expect(fragments.fragmentShaderPart1).toContain(
         'uniform float uBlendDistance',
       );
-      expect(fragments.fragmentShaderPart1).toContain('fbm');
+      expect(fragments.fragmentShaderPart1).toContain('uNoiseTexture');
       expect(fragments.fragmentShaderPart1).toContain('uLayerTexture0');
       expect(fragments.fragmentShaderPart1).toContain('uLayerMinHeight0');
       expect(fragments.fragmentShaderPart1).toContain('uLayerMaxHeight0');
@@ -556,7 +556,6 @@ describe('Terrain Configuration Validation', () => {
         scale: 55,
         amplitude: 0.3,
         offset: -0.35,
-        octaves: 3,
       },
       castShadow: true,
       receiveShadow: true,

@@ -15,7 +15,8 @@ export type TerrainLayerConfig = {
 };
 
 /**
- * Configuration for terrain noise generation
+ * Configuration for terrain noise texture application
+ * Note: Terrain does not generate its own noise, it uses provided noise textures
  */
 export type TerrainNoiseConfig = {
   /** Asset ID for the noise texture to use */
@@ -26,8 +27,6 @@ export type TerrainNoiseConfig = {
   strength?: number;
   /** Noise offset (brightness adjustment) */
   offset?: number;
-  /** Number of octaves for fractal noise (only for procedural noise) */
-  octaves?: number;
   /** @deprecated Use strength instead */
   amplitude?: number;
 };
