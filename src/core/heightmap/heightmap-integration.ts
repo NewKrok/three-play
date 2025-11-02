@@ -1,11 +1,11 @@
 import { loadFromTexture, createHeightmapUtils } from './heightmap-utils.js';
+import type { LoadedAssets } from '../../types/assets.js';
 import type {
   HeightmapUtils,
   HeightmapConfig,
   HeightmapIntegrationConfig,
   HeightmapManager,
 } from '../../types/heightmap.js';
-import type { LoadedAssets } from '../../types/assets.js';
 import type { WorldConfig } from '../../types/world.js';
 
 /**

@@ -5,20 +5,10 @@ import type {
   ProgressCallback,
   ReadyCallback,
 } from './assets.js';
-import type {
-  OutlineConfig,
-  OutlineEntry,
-  PostProcessingConfig,
-  PostProcessingManager,
-} from './effects.js';
-import type {
-  HeightmapUtils,
-  HeightmapIntegrationConfig,
-  HeightmapManager,
-  WorldHeightmapConfig,
-} from './heightmap.js';
-import type { WaterConfig, WaterInstance } from './water.js';
+import type { OutlineConfig, OutlineEntry } from './effects.js';
+import type { HeightmapUtils, WorldHeightmapConfig } from './heightmap.js';
 import type { TerrainConfig, TerrainInstance } from './terrain.js';
+import type { WaterConfig, WaterInstance } from './water.js';
 import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
 
 /**

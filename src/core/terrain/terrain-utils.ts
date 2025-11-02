@@ -1,26 +1,32 @@
 import * as THREE from 'three';
+import type { LoadedAssets } from '../../types/assets.js';
+import type { HeightmapUtils } from '../../types/heightmap.js';
 import type {
   TerrainConfig,
   InternalTerrainConfig,
   TerrainInstance,
   TerrainUtils,
 } from '../../types/terrain.js';
-import type { HeightmapUtils } from '../../types/heightmap.js';
-import type { LoadedAssets } from '../../types/assets.js';
 
 /**
  * Get terrain shader fragments for material modification
- * @param layerCount - Number of terrain layers to support
- * @returns Object containing vertex and fragment shader parts
+ * 
+ * This function generates GLSL shader code fragments that enable multi-layer terrain rendering
+ * with height-based texture blending, noise variation, and smooth transitions between layers.
+ * 
+ * @param layerCount - Number of terrain layers to support (minimum 1)
+ * @returns Object containing vertex and fragment shader parts for terrain material
  */
 const getShaderFragments = (layerCount: number) => {
+  // Vertex shader fragment for world position and UV coordinates
   const vertexShader = `
     #include <worldpos_vertex>
     vWorldPosition = worldPosition.xyz;
     vUvCustom = uv;
   `;
 
-  // Generate dynamic uniform declarations for layers
+  // Generate dynamic uniform declarations for each terrain layer
+  // Each layer needs texture, height range, and scale uniforms
   const layerUniformDeclarations = Array.from(
     { length: layerCount },
     (_, i) => `
@@ -31,30 +37,34 @@ const getShaderFragments = (layerCount: number) => {
   `,
   ).join('');
 
+  // First part of fragment shader with uniforms, noise functions, and utilities
   const fragmentShaderPart1 = `
     uniform float uWaterLevel;
     ${layerUniformDeclarations}
     
-    // Number of layers
+    // Number of terrain layers for dynamic blending
     uniform int uLayerCount;
     
-    // Blend distances for smooth transitions
+    // Blend distance for smooth height-based transitions between layers
     uniform float uBlendDistance;
     
-    // Noise configuration
+    // Noise configuration uniforms for terrain variation
     uniform sampler2D uNoiseTexture;
     uniform float uNoiseScale;
     uniform float uNoiseAmplitude;
     uniform float uNoiseOffset;
     uniform bool uUseNoiseTexture;
     
+    // Varying variables passed from vertex shader
     varying vec3 vWorldPosition;
     varying vec2 vUvCustom;
       
+    // Simple hash function for procedural noise generation
     float hash(vec2 p) {
       return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
     }
       
+    // 2D Perlin-style noise function
     float noise(vec2 p) {
       vec2 i = floor(p);
       vec2 f = fract(p);
@@ -68,11 +78,13 @@ const getShaderFragments = (layerCount: number) => {
       return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
     }
     
+    // Fractal Brownian Motion (fBm) for more complex noise patterns
     float fbm(vec2 p) {
       float value = 0.0;
       float amplitude = 0.5;
       float frequency = 1.0;
         
+      // Generate 3 octaves of noise for detailed terrain variation
       for(int i = 0; i < 3; i++) {
         value += amplitude * noise(p * frequency);
         frequency *= 2.0;
@@ -82,11 +94,11 @@ const getShaderFragments = (layerCount: number) => {
     }
   `;
 
-  // Generate dynamic layer blending code
+  // Generate dynamic layer blending code for height-based texture transitions
   const layerBlendingCode = Array.from(
     { length: layerCount },
     (_, i) => `
-    // Layer ${i} blending
+    // Layer ${i} height-based blending calculation
     float layer${i}Weight = 0.0;
     if (currentHeight >= uLayerMinHeight${i} && currentHeight <= uLayerMaxHeight${i}) {
       float layerCenter = (uLayerMinHeight${i} + uLayerMaxHeight${i}) * 0.5;
@@ -96,6 +108,7 @@ const getShaderFragments = (layerCount: number) => {
   `,
   ).join('');
 
+  // Generate texture sampling code for each layer with individual scaling
   const layerTexturesampling = Array.from(
     { length: layerCount },
     (_, i) => `
@@ -103,11 +116,13 @@ const getShaderFragments = (layerCount: number) => {
   `,
   ).join('');
 
+  // Create expression for summing all layer weights for normalization
   const layerWeightSum = Array.from(
     { length: layerCount },
     (_, i) => `layer${i}Weight`,
   ).join(' + ');
 
+  // Generate code to normalize weights so they sum to 1.0
   const layerNormalization = Array.from(
     { length: layerCount },
     (_, i) => `
@@ -115,6 +130,7 @@ const getShaderFragments = (layerCount: number) => {
   `,
   ).join('');
 
+  // Generate final color blending expression combining all layers
   const layerBlending =
     layerCount > 0
       ? Array.from({ length: layerCount }, (_, i) =>
@@ -122,10 +138,11 @@ const getShaderFragments = (layerCount: number) => {
             ? `layer${i}Color * layer${i}Weight`
             : ` + layer${i}Color * layer${i}Weight`,
         ).join('')
-      : 'vec3(0.5, 0.5, 0.5)'; // Fallback gray color
+      : 'vec3(0.5, 0.5, 0.5)'; // Fallback gray color when no layers
 
+  // Second part of fragment shader handling terrain noise and final color calculation
   const fragmentShaderPart2 = `
-    // Calculate terrain noise - use texture if available, otherwise use procedural
+    // Calculate terrain noise variation using either texture or procedural generation
     float terrainNoise;
     if (uUseNoiseTexture) {
       terrainNoise = texture2D(uNoiseTexture, vUvCustom * uNoiseScale).r;
@@ -136,15 +153,16 @@ const getShaderFragments = (layerCount: number) => {
     
     #include <color_fragment>
     
+    // Get current world height for layer blending calculations
     float currentHeight = vWorldPosition.y;
     
-    // Sample all layer textures
+    // Sample all layer textures with their respective scaling
     ${layerTexturesampling}
     
-    // Calculate blend weights for each layer based on height ranges
+    // Calculate blend weights for each layer based on height ranges and blend distance
     ${layerBlendingCode}
     
-    // Normalize weights to ensure they sum to 1.0
+    // Normalize weights to ensure they sum to 1.0 for proper blending
     float totalWeight = ${layerWeightSum || '0.0'};
     if (totalWeight > 0.0) {
       ${layerNormalization}
@@ -153,10 +171,10 @@ const getShaderFragments = (layerCount: number) => {
       ${layerCount > 0 ? 'layer0Weight = 1.0;' : '// No layers available'}
     }
     
-    // Blend textures based on weights FIRST
+    // Blend textures based on calculated weights FIRST
     diffuseColor.rgb = ${layerBlending};
     
-    // THEN apply terrain variation as brightness modulation
+    // THEN apply terrain variation as brightness modulation for realistic surface detail
     // Convert variation to a brightness factor: 0.0 = dark, 1.0 = normal, >1.0 = bright
     float brightnessFactor = 1.0 + terrainVariation;
     brightnessFactor = clamp(brightnessFactor, 0.1, 2.0); // Prevent complete black or excessive brightness
@@ -275,9 +293,6 @@ const createTerrainMaterial = (
         shader.fragmentShader.slice(0, lastBraceIndex) +
         shader.fragmentShader.slice(lastBraceIndex);
     }
-
-    console.log('Final fragment shader:', shader.fragmentShader);
-    console.log('Vertex shader:', shader.vertexShader);
   };
 
   return material;
@@ -420,7 +435,6 @@ export const prepareTerrainConfig = (
         // Apply layer texture scaling (preserve original wrapping settings)
         if (layer.textureScale) {
           texture.repeat.set(layer.textureScale, layer.textureScale);
-          // Don't override wrapping - use the original settings from assets config
         }
       }
     });
@@ -428,7 +442,6 @@ export const prepareTerrainConfig = (
 
   // Load noise texture if specified
   if (config.noise?.textureAssetId && assets.textures) {
-    console.log('Looking for noise texture:', config.noise.textureAssetId);
     const noiseTexture = assets.textures[config.noise.textureAssetId];
     if (noiseTexture) {
       console.log('Found noise texture:', noiseTexture);

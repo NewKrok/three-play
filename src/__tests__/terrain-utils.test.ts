@@ -4,13 +4,13 @@ import {
   createTerrainUtils,
   prepareTerrainConfig,
 } from '../core/terrain/index.js';
+import type { LoadedAssets } from '../types/assets.js';
+import type { HeightmapUtils } from '../types/heightmap.js';
 import type {
   TerrainConfig,
   InternalTerrainConfig,
   TerrainLayerConfig,
 } from '../types/terrain.js';
-import type { HeightmapUtils } from '../types/heightmap.js';
-import type { LoadedAssets } from '../types/assets.js';
 
 // Mock console to avoid noise in tests
 const originalConsole = console;
@@ -139,25 +139,6 @@ describe('Terrain Utils', () => {
       mockAssets.textures.grass.wrapT = THREE.MirroredRepeatWrapping;
       mockAssets.textures.sand.wrapS = THREE.MirroredRepeatWrapping;
       mockAssets.textures.sand.wrapT = THREE.MirroredRepeatWrapping;
-
-      const config: TerrainConfig = {
-        layers: [
-          {
-            textureAssetId: 'grass',
-            minHeight: 10,
-            maxHeight: 100,
-            textureScale: 4,
-          },
-          {
-            textureAssetId: 'sand',
-            minHeight: 0,
-            maxHeight: 5,
-            textureScale: 100,
-          },
-        ],
-      };
-
-      const internalConfig = prepareTerrainConfig(config, mockAssets);
 
       // Check that wrapping settings are preserved
       expect(mockAssets.textures.grass.wrapS).toBe(

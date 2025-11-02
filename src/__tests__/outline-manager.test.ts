@@ -325,7 +325,7 @@ describe('Outline Manager', () => {
 
     it('should handle enabled/disabled state', () => {
       // Add enabled outline
-      const enabledId = outlineManager.addOutline(testObjects[0], {
+      outlineManager.addOutline(testObjects[0], {
         enabled: true,
       });
       expect(outlinePass.selectedObjects).toHaveLength(1);

@@ -17,15 +17,14 @@ Object.defineProperty(global, 'document', {
   writable: true,
 });
 
+import * as THREE from 'three';
 import {
   createHeightmapIntegrationConfig,
   createHeightmapManager,
   shouldLoadHeightmap,
 } from '../core/heightmap/heightmap-integration.js';
-import type { HeightmapData } from '../types/heightmap.js';
 import type { LoadedAssets } from '../types/assets.js';
 import type { WorldConfig } from '../types/world.js';
-import * as THREE from 'three';
 
 describe('Heightmap Integration', () => {
   beforeEach(() => {

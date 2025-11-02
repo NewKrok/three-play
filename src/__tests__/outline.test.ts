@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import createWorld from '../core/world/world.js';
-import type { WorldConfig } from '../types/world.js';
 import type { OutlineConfig } from '../types/effects.js';
+import type { WorldConfig } from '../types/world.js';
 
 // Mock Three.js WebGL dependencies
 jest.mock('three', () => {

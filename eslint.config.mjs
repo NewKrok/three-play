@@ -52,6 +52,7 @@ export default [
       // Temporary disabled
       'import/no-unresolved': 'off', // Ensure imports can be resolved
       'import/newline-after-import': 'error', // Enforce newline after import statements
+      'import/no-unused-modules': 'error', // Detect unused imports and exports
       'prettier/prettier': [
         'error',
         {

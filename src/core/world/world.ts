@@ -10,32 +10,27 @@ import {
   createHeightmapIntegrationConfig,
   createHeightmapManager,
 } from '../heightmap/index.js';
-import { createWaterInstance } from '../water/index.js';
 import {
   createTerrainInstance,
   prepareTerrainConfig,
 } from '../terrain/index.js';
+import { createWaterInstance } from '../water/index.js';
 import type {
   AssetsConfig,
   LoadedAssets,
   ProgressCallback,
   ReadyCallback,
 } from '../../types/assets.js';
-import type {
-  OutlineConfig,
-  OutlineEntry,
-  PostProcessingConfig,
-} from '../../types/effects.js';
+import type { OutlineConfig, OutlineEntry } from '../../types/effects.js';
 import type {
   HeightmapUtils,
   HeightmapManager,
 } from '../../types/heightmap.js';
-import type { InternalWaterConfig, WaterInstance } from '../../types/water.js';
 import type {
-  TerrainConfig,
   InternalTerrainConfig,
   TerrainInstance,
 } from '../../types/terrain.js';
+import type { InternalWaterConfig, WaterInstance } from '../../types/water.js';
 import type {
   UpdateCallback,
   WorldConfig,
@@ -231,7 +226,6 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       const heightmapUtils = heightmapManager.utils;
 
       if (heightmapUtils) {
-        const heightmapData = heightmapUtils.heightmapData;
         const heightmapConfig = heightmapUtils.config;
 
         // Prepare terrain config with loaded textures

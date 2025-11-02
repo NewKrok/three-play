@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import type { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import type { OutlineConfig, OutlineEntry } from '../../types/effects.js';
+import type { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 
 /**
  * Configuration for outline manager
