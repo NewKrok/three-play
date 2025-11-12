@@ -7,6 +7,7 @@ import type {
 } from './assets.js';
 import type { OutlineConfig, OutlineEntry } from './effects.js';
 import type { HeightmapUtils, WorldHeightmapConfig } from './heightmap.js';
+import type { InputManager, InputManagerConfig } from './input.js';
 import type { TerrainConfig, TerrainInstance } from './terrain.js';
 import type { WaterConfig, WaterInstance } from './water.js';
 import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
@@ -44,6 +45,7 @@ export type WorldConfig = {
     autoStart?: boolean;
     onUpdate?: UpdateCallback;
   };
+  input?: InputManagerConfig;
   heightmap?: WorldHeightmapConfig;
   water?: WaterConfig;
   terrain?: TerrainConfig;
@@ -65,6 +67,7 @@ export type WorldInstance = {
   getLoadedAssets(): LoadedAssets | null; // Loaded assets if available
   getWaterInstance(): WaterInstance | null; // Water instance if water is enabled
   getTerrainInstance(): TerrainInstance | null; // Terrain instance if terrain is enabled
+  getInputManager(): InputManager; // Input manager instance
 
   // Simple outline system methods
   addOutline(

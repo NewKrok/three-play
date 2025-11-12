@@ -21,6 +21,25 @@ export {
 // Asset loading utilities
 export { AssetLoader } from './core/assets/index.js';
 
+// Input utilities
+export {
+  createInputManager,
+  createKeyboardHandler,
+  createMouseHandler,
+  createGamepadHandler,
+  EasingFunctions,
+  applyEasing,
+  isEasingComplete,
+} from './core/input/index.js';
+export type {
+  KeyboardHandlerInstance,
+  KeyboardHandlerConfig,
+  MouseHandlerInstance,
+  MouseHandlerConfig,
+  GamepadHandlerInstance,
+  GamepadHandlerConfig,
+} from './core/input/index.js';
+
 // Effects utilities
 export { createOutlineManager } from './core/effects/index.js';
 
@@ -73,3 +92,17 @@ export type {
   OutlineManager,
   OutlineManagerConfig,
 } from './core/effects/index.js';
+export type {
+  InputManager as InputManagerType,
+  InputManagerConfig,
+  InputAction,
+  InputBinding,
+  KeyboardBinding,
+  MouseBinding,
+  GamepadBinding,
+  InputState,
+  InputDeviceType,
+  ActionType,
+  ValueType,
+  EasingType,
+} from './types/input.js';

@@ -1,6 +1,6 @@
 export default {
   preset: 'ts-jest/presets/default-esm',
-  testEnvironment: 'node',
+  testEnvironment: 'jsdom',
   extensionsToTreatAsEsm: ['.ts'],
   transform: {
     '^.+\\.m?[tj]sx?$': 'babel-jest',

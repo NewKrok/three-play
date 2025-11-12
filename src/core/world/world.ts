@@ -10,6 +10,8 @@ import {
   createHeightmapIntegrationConfig,
   createHeightmapManager,
 } from '../heightmap/index.js';
+import { createInputManager } from '../input/index.js';
+import type { InputManager } from '../../types/input.js';
 import {
   createTerrainInstance,
   prepareTerrainConfig,
@@ -82,6 +84,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   // Get assets configuration
   const assetsConfig = config.assets;
   const shouldLoadAssets = Boolean(assetsConfig);
+
+  // Get input configuration and create input manager
+  const inputConfig = config.input ?? {};
+  const inputManager = createInputManager(inputConfig);
 
   // Create renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -285,6 +291,9 @@ const createWorld = (config: WorldConfig): WorldInstance => {
     const deltaTime = clock.getDelta();
     const elapsedTime = clock.getElapsedTime();
 
+    // Update input manager
+    inputManager.update(deltaTime);
+
     // Update water if available
     if (waterInstance) {
       waterInstance.update(deltaTime);
@@ -415,6 +424,14 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     getTerrainInstance(): TerrainInstance | null {
       return terrainInstance;
+    },
+
+    /**
+     * Get the input manager
+     * @returns The input manager instance
+     */
+    getInputManager(): InputManager {
+      return inputManager;
     },
 
     /**
@@ -619,6 +636,9 @@ const createWorld = (config: WorldConfig): WorldInstance => {
 
       // Cleanup outline manager
       outlineManager.destroy();
+
+      // Cleanup input manager
+      inputManager.destroy();
 
       // Cleanup asset loader
       assetLoader.destroy();
