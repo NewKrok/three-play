@@ -115,7 +115,9 @@ describe('InputManager', () => {
         key: 'KeyW',
       };
 
-      inputManager.bindInput('non-existent', binding);
+      expect(() => {
+        inputManager.bindInput('non-existent', binding);
+      }).not.toThrow();
 
       expect(consoleSpy).toHaveBeenCalledWith(
         "Cannot bind input to unknown action 'non-existent'. Register the action first.",

@@ -12,10 +12,8 @@ const mockDocument = {
   })),
 };
 
-Object.defineProperty(global, 'document', {
-  value: mockDocument,
-  writable: true,
-});
+// JSDOM already provides document, just extend it with our mocks
+Object.assign(document, mockDocument);
 
 import * as THREE from 'three';
 import {

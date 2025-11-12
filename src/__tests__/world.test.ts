@@ -142,13 +142,19 @@ jest.mock('three/examples/jsm/postprocessing/OutlinePass.js', () => {
   };
 });
 
-// Mock window and global objects
-global.window = {
+// Set up window properties for JSDOM environment
+Object.assign(window, {
   innerWidth: 800,
   innerHeight: 600,
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-} as any;
+});
+
+// Create spies for window methods
+const addEventListenerSpy = jest
+  .spyOn(window, 'addEventListener')
+  .mockImplementation(() => {});
+const removeEventListenerSpy = jest
+  .spyOn(window, 'removeEventListener')
+  .mockImplementation(() => {});
 
 // Mock requestAnimationFrame and cancelAnimationFrame
 global.requestAnimationFrame = jest.fn((cb) => {
@@ -180,6 +186,8 @@ describe('createWorld', () => {
   beforeEach(() => {
     consoleSpy = jest.spyOn(console, 'log').mockImplementation();
     jest.clearAllMocks();
+    addEventListenerSpy.mockClear();
+    removeEventListenerSpy.mockClear();
     worldInstances = [];
   });
 
@@ -576,9 +584,6 @@ describe('createWorld', () => {
 
   it('should remove event listeners when destroyed', () => {
     const worldInstance = createTrackedWorld(mockConfig);
-
-    // Mock removeEventListener to track calls
-    const removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
 
     worldInstance.destroy();
 

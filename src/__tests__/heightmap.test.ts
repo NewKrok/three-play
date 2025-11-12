@@ -37,17 +37,12 @@ mockTexture.image = {
   getContext = mockGetContext;
 };
 
-// Mock document.createElement for canvas
-Object.defineProperty(global, 'document', {
-  value: {
-    createElement: jest.fn().mockImplementation((tagName) => {
-      if (tagName === 'canvas') {
-        return new (global as any).HTMLCanvasElement();
-      }
-      return {};
-    }),
-  },
-  writable: true,
+// Mock document.createElement for canvas (JSDOM already provides document)
+document.createElement = jest.fn().mockImplementation((tagName) => {
+  if (tagName === 'canvas') {
+    return new (global as any).HTMLCanvasElement();
+  }
+  return {};
 });
 
 // Mock performance.now for performance tests

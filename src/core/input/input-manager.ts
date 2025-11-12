@@ -139,6 +139,13 @@ export const createInputManager = (
       actionName: string,
       config: Omit<InputAction, 'bindings'>,
     ): void {
+      // Warn if action already exists
+      if (actions.has(actionName)) {
+        console.warn(
+          `Action '${actionName}' is already registered. Overwriting.`,
+        );
+      }
+
       const action: InputAction = {
         ...config,
         bindings: [],
@@ -154,9 +161,21 @@ export const createInputManager = (
     bindInput(actionName: string, binding: InputBinding): void {
       const action = actions.get(actionName);
       if (!action) {
-        throw new Error(
-          `Action "${actionName}" not found. Register the action first.`,
+        console.error(
+          `Cannot bind input to unknown action '${actionName}'. Register the action first.`,
         );
+        return;
+      }
+
+      // Check for duplicate bindings
+      const bindingKey = getBindingKey(binding);
+      const existingBinding = action.bindings.find(
+        (b) => getBindingKey(b) === bindingKey,
+      );
+
+      if (existingBinding) {
+        console.warn(`Binding already exists for action '${actionName}'.`);
+        return;
       }
 
       action.bindings.push(binding);
@@ -164,7 +183,6 @@ export const createInputManager = (
       // Initialize state for this binding
       const states = actionStates.get(actionName);
       if (states) {
-        const bindingKey = getBindingKey(binding);
         states.set(bindingKey, createInputState());
       }
     },
@@ -340,6 +358,11 @@ export const createInputManager = (
      * Remove an action completely
      */
     removeAction(actionName: string): void {
+      if (!actions.has(actionName)) {
+        console.warn(`Action '${actionName}' does not exist.`);
+        return;
+      }
+
       actions.delete(actionName);
       actionStates.delete(actionName);
     },

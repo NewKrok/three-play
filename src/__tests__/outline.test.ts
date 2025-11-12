@@ -98,16 +98,11 @@ jest.mock('three/examples/jsm/shaders/FXAAShader.js', () => ({
   FXAAShader: {},
 }));
 
-// Mock window and addEventListener
-Object.defineProperty(global, 'window', {
-  value: {
-    innerWidth: 1024,
-    innerHeight: 768,
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-  },
-  writable: true,
-});
+// Mock window properties (JSDOM environment already has window)
+Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+Object.defineProperty(window, 'innerHeight', { value: 768, writable: true });
+window.addEventListener = jest.fn();
+window.removeEventListener = jest.fn();
 
 global.requestAnimationFrame = jest.fn();
 global.cancelAnimationFrame = jest.fn();
