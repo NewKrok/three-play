@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { KeyboardBinding, InputState } from '../../types/input.js';
-import { applyEasing, isEasingComplete } from './easing-utils.js';
+import { applyEasing, isEasingComplete } from '../utils/easing-utils.js';
 
 /**
  * Keyboard input handler configuration

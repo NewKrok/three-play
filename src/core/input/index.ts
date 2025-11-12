@@ -18,4 +18,4 @@ export {
   EasingFunctions,
   applyEasing,
   isEasingComplete,
-} from './easing-utils.js';
+} from '../utils/easing-utils.js';

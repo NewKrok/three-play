@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { EasingType } from './common.js';
 
 /**
  * Input device types supported by the system
@@ -14,11 +15,6 @@ export type ActionType = 'continuous' | 'trigger';
  * Value types that actions can return
  */
 export type ValueType = 'boolean' | 'number' | 'vector2';
-
-/**
- * Easing function types for smooth input transitions
- */
-export type EasingType = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
 
 /**
  * Keyboard input binding configuration

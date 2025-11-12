@@ -1,7 +1,7 @@
-import type { EasingType } from '../../types/input.js';
+import type { EasingType } from '../../types/common.js';
 
 /**
- * Collection of easing functions for smooth input transitions
+ * Collection of easing functions for smooth transitions
  */
 export const EasingFunctions = {
   /**

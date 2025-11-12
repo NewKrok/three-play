@@ -104,5 +104,5 @@ export type {
   InputDeviceType,
   ActionType,
   ValueType,
-  EasingType,
 } from './types/input.js';
+export type { EasingType } from './types/common.js';
