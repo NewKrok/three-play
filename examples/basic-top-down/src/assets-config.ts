@@ -1,4 +1,4 @@
-import type { AssetsConfig } from '../../../src/types/assets.js';
+import type { AssetsConfig } from '@newkrok/three-play';
 import * as THREE from 'three';
 
 const assetConfig: AssetsConfig = {

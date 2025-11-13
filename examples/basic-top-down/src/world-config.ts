@@ -1,4 +1,4 @@
-import type { WorldConfig } from '../../../src/types/world.js';
+import type { WorldConfig } from '@newkrok/three-play';
 import * as THREE from 'three';
 import assetConfig from './assets-config.js';
 import terrainConfig from './terrain-config.js';

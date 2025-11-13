@@ -1,4 +1,4 @@
-import type { InputManagerConfig } from '../../../src/types/input.js';
+import type { InputManagerConfig } from '@newkrok/three-play';
 
 const inputConfig: InputManagerConfig = {
   enabled: true,

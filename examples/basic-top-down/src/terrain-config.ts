@@ -1,4 +1,4 @@
-import type { TerrainConfig } from '../../../src/types/terrain.js';
+import type { TerrainConfig } from '@newkrok/three-play';
 import { WATER_LEVEL } from './constants.js';
 
 const terrainConfig: TerrainConfig = {
