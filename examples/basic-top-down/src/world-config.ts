@@ -54,6 +54,11 @@ const worldConfig: WorldConfig = {
   terrain: terrainConfig,
   input: inputConfig,
   assets: assetConfig,
+  logging: {
+    level: 'info',
+    prefix: '[THREE-Play-Demo]',
+    timestamp: true,
+  },
 };
 
 export default worldConfig;

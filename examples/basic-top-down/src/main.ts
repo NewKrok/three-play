@@ -32,7 +32,7 @@ import {
  */
 
 // Initialize THREE Play engine
-console.log('Starting game with THREE Play engine');
+// Note: Logger will be initialized with world instance
 
 // Destructure constants for easier access
 const {
@@ -264,18 +264,20 @@ const worldInstance = createWorld(worldConfig);
 
 // Add progress tracking for asset loading
 worldInstance.onProgress((progress) => {
-  console.log(`Loading assets: ${progress.percentage}%`);
-  console.log(
+  const logger = worldInstance.getLogger();
+  logger.info(`Loading assets: ${progress.percentage}%`);
+  logger.info(
     `Textures: ${progress.loadedTextures.current}/${progress.loadedTextures.total}`,
   );
-  console.log(
+  logger.info(
     `Models: ${progress.loadedModels.current}/${progress.loadedModels.total}`,
   );
 });
 
 // Add ready callback for when assets are loaded
 worldInstance.onReady((assets) => {
-  console.log('All assets loaded successfully!', assets);
+  const logger = worldInstance.getLogger();
+  logger.info('All assets loaded successfully!', assets);
 
   // Get input manager (actions are already configured in world config)
   const inputManager = worldInstance.getInputManager();

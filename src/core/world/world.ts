@@ -2,6 +2,7 @@ import { DisposeUtils } from '@newkrok/three-utils';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { AssetLoader } from '../assets/index.js';
+import { createLogger, type Logger } from '../utils/logger.js';
 import {
   createOutlineManager,
   createPostProcessingManager,
@@ -46,7 +47,9 @@ import type { OutlineManager } from '../effects/index.js';
  * @returns World instance with methods to interact with the world
  */
 const createWorld = (config: WorldConfig): WorldInstance => {
-  console.log('Creating world with config:', config);
+  // Initialize logger first
+  const logger = createLogger(config.logging);
+  logger.debug('Creating world with config:', config);
 
   // Store the config in closure with deep copy to prevent external modifications
   const worldConfig = JSON.parse(JSON.stringify(config));
@@ -184,7 +187,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       try {
         callback(progress);
       } catch (error) {
-        console.error('Error in progress callback:', error);
+        logger.error('Error in progress callback:', error);
       }
     });
   };
@@ -255,7 +258,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       try {
         callback(assets);
       } catch (error) {
-        console.error('Error in ready callback:', error);
+        logger.error('Error in ready callback:', error);
       }
     });
   };
@@ -279,7 +282,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
 
       return assets;
     } catch (error) {
-      console.error('Failed to load assets:', error);
+      logger.error('Failed to load assets:', error);
       throw error;
     }
   };
@@ -304,7 +307,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       try {
         callback(deltaTime, elapsedTime);
       } catch (error) {
-        console.error('Error in update callback:', error);
+        logger.error('Error in update callback:', error);
       }
     });
 
@@ -326,7 +329,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   // Start auto-loading assets if configured
   if (shouldLoadAssets && assetsConfig) {
     loadAssetsInternal(assetsConfig).catch((error) => {
-      console.error('Failed to auto-load assets:', error);
+      logger.error('Failed to auto-load assets:', error);
     });
   }
 
@@ -435,6 +438,14 @@ const createWorld = (config: WorldConfig): WorldInstance => {
     },
 
     /**
+     * Get the logger instance for this world
+     * @returns The logger instance
+     */
+    getLogger(): Logger {
+      return logger;
+    },
+
+    /**
      * Add outline to objects with flexible configuration
      * @param objects - Single object or array of objects to outline
      * @param config - Outline configuration
@@ -445,7 +456,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       config: OutlineConfig,
     ): string {
       if (isDestroyed) {
-        console.warn('Cannot add outline: world instance is destroyed');
+        logger.warn('Cannot add outline: world instance is destroyed');
         return '';
       }
 
@@ -458,7 +469,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     removeOutline(outlineId: string): void {
       if (isDestroyed) {
-        console.warn('Cannot remove outline: world instance is destroyed');
+        logger.warn('Cannot remove outline: world instance is destroyed');
         return;
       }
 
@@ -472,7 +483,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     updateOutline(outlineId: string, config: Partial<OutlineConfig>): void {
       if (isDestroyed) {
-        console.warn('Cannot update outline: world instance is destroyed');
+        logger.warn('Cannot update outline: world instance is destroyed');
         return;
       }
 
@@ -484,7 +495,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     clearOutlines(): void {
       if (isDestroyed) {
-        console.warn('Cannot clear outlines: world instance is destroyed');
+        logger.warn('Cannot clear outlines: world instance is destroyed');
         return;
       }
 
@@ -497,7 +508,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     getOutlines(): OutlineEntry[] {
       if (isDestroyed) {
-        console.warn('Cannot get outlines: world instance is destroyed');
+        logger.warn('Cannot get outlines: world instance is destroyed');
         return [];
       }
 
@@ -509,7 +520,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     start(): void {
       if (isDestroyed) {
-        console.warn('Cannot start: world instance is destroyed');
+        logger.warn('Cannot start: world instance is destroyed');
         return;
       }
       if (isRunning) return;
@@ -538,7 +549,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     resume(): void {
       if (isDestroyed) {
-        console.warn('Cannot resume: world instance is destroyed');
+        logger.warn('Cannot resume: world instance is destroyed');
         return;
       }
       if (!isRunning || !isPaused) return;
@@ -554,7 +565,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     onUpdate(callback: UpdateCallback): () => void {
       if (isDestroyed) {
-        console.warn(
+        logger.warn(
           'Cannot subscribe to update events: world instance is destroyed',
         );
         return () => {};
@@ -575,7 +586,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     onProgress(callback: ProgressCallback): () => void {
       if (isDestroyed) {
-        console.warn(
+        logger.warn(
           'Cannot subscribe to progress events: world instance is destroyed',
         );
         return () => {};
@@ -596,7 +607,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     onReady(callback: ReadyCallback): () => void {
       if (isDestroyed) {
-        console.warn(
+        logger.warn(
           'Cannot subscribe to ready events: world instance is destroyed',
         );
         return () => {};
