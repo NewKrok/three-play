@@ -1,4 +1,8 @@
-import { createWorld, WorldConfig } from '@newkrok/three-play';
+import {
+  createWorld,
+  WorldConfig,
+  createInputManager,
+} from '@newkrok/three-play';
 import {
   updateParticleSystems,
   createParticleSystem,
@@ -328,6 +332,10 @@ const worldInstance = createWorld({
       offset: -0.5,
     },
   },
+  input: {
+    enabled: true,
+    preventDefaultKeyboard: true,
+  },
   assets: assetConfig,
 });
 
@@ -345,6 +353,20 @@ worldInstance.onProgress((progress) => {
 // Add ready callback for when assets are loaded
 worldInstance.onReady((assets) => {
   console.log('All assets loaded successfully!', assets);
+
+  // Set up input manager
+  const inputManager = worldInstance.getInputManager();
+
+  // Register the roll action
+  inputManager.registerAction('roll', {
+    type: 'trigger',
+    valueType: 'boolean',
+  });
+
+  inputManager.bindInput('roll', {
+    type: 'keyboard',
+    key: 'KeyR',
+  });
 
   runningEffect.map = assets.textures.smoke;
   runningInWaterEffect.map = assets.textures.splash;
@@ -1330,7 +1352,9 @@ worldInstance.onReady((assets) => {
 
   const updateRollRoutine = () => {
     const now = performance.now();
-    if (keys['KeyR'] && !isRolling) {
+    const rollActive = inputManager.isActionActive('roll');
+
+    if (rollActive && !isRolling) {
       if (now - lastRollTime > rollCooldown) {
         isRolling = true;
         playAnimation(character, 'roll');
@@ -1411,7 +1435,12 @@ worldInstance.onReady((assets) => {
     updateUnits();
     updateCharactersYPosition();
     updateAppleThrowRoutine();
+
+    // Update input manager
+    inputManager.update(cycleData.delta);
+
     updateRollRoutine();
+
     updateApples();
     updateLight();
 
