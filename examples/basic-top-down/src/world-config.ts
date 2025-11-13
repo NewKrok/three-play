@@ -55,7 +55,7 @@ const worldConfig: WorldConfig = {
   input: inputConfig,
   assets: assetConfig,
   logging: {
-    level: 'info',
+    level: 'debug',
     prefix: '[THREE-Play-Demo]',
     timestamp: true,
   },

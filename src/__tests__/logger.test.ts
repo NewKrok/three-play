@@ -12,7 +12,7 @@ describe('Logger', () => {
 
   it('should respect log levels', () => {
     const logger = createLogger({ level: 'error' });
-    
+
     expect(logger.isLevelEnabled('debug')).toBe(false);
     expect(logger.isLevelEnabled('info')).toBe(false);
     expect(logger.isLevelEnabled('warn')).toBe(false);
@@ -25,13 +25,13 @@ describe('Logger', () => {
       prefix: '[TEST]',
       timestamp: false,
     });
-    
+
     expect(logger.isLevelEnabled('debug')).toBe(true);
   });
 
   it('should handle silent level', () => {
     const logger = createLogger({ level: 'silent' });
-    
+
     expect(logger.isLevelEnabled('debug')).toBe(false);
     expect(logger.isLevelEnabled('info')).toBe(false);
     expect(logger.isLevelEnabled('warn')).toBe(false);

@@ -110,8 +110,4 @@ export type {
   ValueType,
 } from './types/input.js';
 export type { EasingType } from './types/common.js';
-export type {
-  Logger,
-  LoggerConfig,
-  LogLevel,
-} from './core/utils/logger.js';
+export type { Logger, LoggerConfig, LogLevel } from './core/utils/logger.js';

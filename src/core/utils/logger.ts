@@ -62,19 +62,19 @@ export const createLogger = (config: Partial<LoggerConfig> = {}): Logger => {
    */
   const formatMessage = (level: LogLevel, message: string): string => {
     let formatted = '';
-    
+
     if (finalConfig.timestamp) {
       const now = new Date();
       const timestamp = now.toISOString().substring(11, 23); // HH:mm:ss.SSS
       formatted += `[${timestamp}] `;
     }
-    
+
     if (finalConfig.prefix) {
       formatted += `${finalConfig.prefix} `;
     }
-    
+
     formatted += `[${level.toUpperCase()}] ${message}`;
-    
+
     return formatted;
   };
 
@@ -85,14 +85,14 @@ export const createLogger = (config: Partial<LoggerConfig> = {}): Logger => {
     return logLevelPriority[level] >= logLevelPriority[finalConfig.level];
   };
 
-  /**  
+  /**
    * Logs a message at the specified level
    */
   const log = (level: LogLevel, message: string, ...args: any[]): void => {
     if (!shouldLog(level)) return;
 
     const formattedMessage = formatMessage(level, message);
-    
+
     // Use appropriate console method based on log level
     switch (level) {
       case 'debug':

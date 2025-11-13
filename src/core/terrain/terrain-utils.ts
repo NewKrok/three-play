@@ -340,8 +340,8 @@ export const createTerrainInstance = (
 
     updateConfig(newConfig: Partial<TerrainConfig>): void {
       // Update configuration (would need to recreate material for full updates)
+      // Note: Full implementation would require recreating material
       Object.assign(config, newConfig);
-      console.warn('Terrain config update not fully implemented yet');
     },
 
     destroy(): void {
@@ -408,13 +408,8 @@ export const prepareTerrainConfig = (
   if (config.noise?.textureAssetId && assets.textures) {
     const noiseTexture = assets.textures[config.noise.textureAssetId];
     if (noiseTexture) {
-      console.log('Found noise texture:', noiseTexture);
       internalConfig.noiseTexture = noiseTexture;
-    } else {
-      console.warn('Noise texture not found:', config.noise.textureAssetId);
     }
-  } else {
-    console.log('No noise texture specified or no assets.textures');
   }
 
   return internalConfig;
