@@ -15,7 +15,8 @@ import {
   dustEffect,
   splashEffect,
 } from './effects-config.js';
-import assetConfig from './assets-config.js';
+import worldConfig from './world-config.js';
+import * as Constants from './constants.js';
 import {
   CSS2DRenderer,
   CSS2DObject,
@@ -33,51 +34,53 @@ import {
 // Initialize THREE Play engine
 console.log('Starting game with THREE Play engine');
 
-const WALK_SPEED = 5;
-const RUN_SPEED = 10;
-const ROLL_SPEED = 5;
-const FAST_ROLL_SPEED = 10;
-const WATER_SPEED_MULTIPLIER = 0.4;
-const WATER_SPEED_LEVEL = 7.8;
-const ENEMY_SPEED = 5;
-const WORLD_WIDTH = 512;
-const WORLD_HEIGHT = 512;
-const HEIGHT_MAP_RESOLUTION = 256;
-const ELEVATION_RATIO = 30;
-const DISTANCE_FROM_CAMERA = 16;
-const ROCK_COUNT = 1000;
-const TREE_COUNT = 1000;
-const CRATE_COUNT = 100;
-const TREE_COLLISION_RADIUS = 1.5;
-const CRATE_COLLISION_RADIUS = 1.2;
-const CRATE_INTERACTION_RADIUS = 3.0; // New radius for outline interaction
-const MIN_APPLES_PER_TREE = 2;
-const MAX_APPLES_PER_TREE = 6;
-const ENEMY_COUNT = 20;
-const APPLE_HIT_RADIUS = 1;
-const APPLE_PUSH_FORCE = 25;
-const MAX_STAMINA = 100.0;
-const STAMINA_RECOVERY = 1;
-const STAMINA_DRAIN = 2;
-const MAX_HEALTH = 100.0;
+// Destructure constants for easier access
+const {
+  WALK_SPEED,
+  RUN_SPEED,
+  ROLL_SPEED,
+  FAST_ROLL_SPEED,
+  WATER_SPEED_MULTIPLIER,
+  WATER_SPEED_LEVEL,
+  ENEMY_SPEED,
+  DISTANCE_FROM_CAMERA,
+  ROCK_COUNT,
+  TREE_COUNT,
+  CRATE_COUNT,
+  TREE_COLLISION_RADIUS,
+  CRATE_COLLISION_RADIUS,
+  CRATE_INTERACTION_RADIUS,
+  MIN_APPLES_PER_TREE,
+  MAX_APPLES_PER_TREE,
+  ENEMY_COUNT,
+  APPLE_HIT_RADIUS,
+  APPLE_PUSH_FORCE,
+  MAX_STAMINA,
+  STAMINA_RECOVERY,
+  STAMINA_DRAIN,
+  MAX_HEALTH,
+  DAY_LENGTH,
+  WATER_LEVEL,
+  LIGHT_ATTACK_KNOCKBACK,
+  LIGHT_ATTACK_ACTION_DELAY,
+  STAMINA_FOR_LIGHT_ATTACK,
+  LIGHT_ATTACK_COOLDOWN,
+  LIGHT_ATTACK_EFFECT_AREA,
+  LIGHT_ATTACK_STUN_DURATION,
+  HEAVY_ATTACK_KNOCKBACK,
+  HEAVY_ATTACK_ACTION_DELAY,
+  STAMINA_FOR_HEAVY_ATTACK,
+  HEAVY_ATTACK_COOLDOWN,
+  HEAVY_ATTACK_EFFECT_AREA,
+  HEAVY_ATTACK_STUN_DURATION,
+} = Constants;
+
 let timeOfDay = 0;
-const DAY_LENGTH = 1200;
-const WATER_LEVEL = 7.8;
-const startingPosition = new THREE.Vector3(88, 0, 132);
-
-const LIGHT_ATTACK_KNOCKBACK = 20;
-const LIGHT_ATTACK_ACTION_DELAY = 500;
-const STAMINA_FOR_LIGHT_ATTACK = 1;
-const LIGHT_ATTACK_COOLDOWN = 900;
-const LIGHT_ATTACK_EFFECT_AREA = 3;
-const LIGHT_ATTACK_STUN_DURATION = 1000;
-
-const HEAVY_ATTACK_KNOCKBACK = 40;
-const HEAVY_ATTACK_ACTION_DELAY = 1500;
-const STAMINA_FOR_HEAVY_ATTACK = 4;
-const HEAVY_ATTACK_COOLDOWN = 3000;
-const HEAVY_ATTACK_EFFECT_AREA = 8;
-const HEAVY_ATTACK_STUN_DURATION = 3000;
+const startingPosition = new THREE.Vector3(
+  Constants.startingPosition.x,
+  Constants.startingPosition.y,
+  Constants.startingPosition.z,
+);
 
 const appleEffects = [
   { health: { min: 5, max: 10 } },
@@ -257,207 +260,7 @@ const createCinematicCameraController = (
 };
 
 // Create THREE Play world instance with assets
-const worldInstance = createWorld({
-  world: {
-    size: {
-      x: WORLD_WIDTH,
-      y: WORLD_HEIGHT,
-    },
-  },
-  render: {
-    useComposer: true,
-  },
-  light: {
-    ambient: {
-      color: 0xffffff,
-      intensity: 0.9,
-    },
-    directional: {
-      color: 0xffffff,
-      intensity: 0.5,
-    },
-  },
-  heightmap: {
-    assetId: 'heightmap',
-    resolution: HEIGHT_MAP_RESOLUTION,
-    elevationRatio: ELEVATION_RATIO,
-  },
-  water: {
-    level: WATER_LEVEL,
-    textureAssetId: 'water',
-    textureStrength: 0.1,
-    textureScale: 40.0,
-    textureFlowDirection: new THREE.Vector2(0.5, 1.0),
-    textureFlowSpeed: 0.08,
-    variationTextureAssetId: 'noise-a',
-    variationScale: 1.3,
-    variationFlowDirection: new THREE.Vector2(0.5, 1.0),
-    variationFlowSpeed: 0.01,
-    waveInfluencedFlow: true,
-    waveFlowStrength: 1.2,
-    waveFlowFrequency: 1.0,
-  },
-  terrain: {
-    layers: [
-      {
-        textureAssetId: 'sand',
-        minHeight: 0.0,
-        maxHeight: WATER_LEVEL + 1.5,
-        textureScale: 100.0,
-      },
-      {
-        textureAssetId: 'mud',
-        minHeight: WATER_LEVEL + 0.5,
-        maxHeight: WATER_LEVEL + 2.5,
-        textureScale: 80.0,
-      },
-      {
-        textureAssetId: 'grass',
-        minHeight: WATER_LEVEL + 1.0,
-        maxHeight: WATER_LEVEL + 25.0,
-        textureScale: WORLD_WIDTH / 4,
-      },
-    ],
-    blendDistance: 1.5,
-    noise: {
-      textureAssetId: 'noise-a',
-      scale: 30,
-      strength: 0.8,
-      offset: -0.5,
-    },
-  },
-  input: {
-    enabled: true,
-    preventDefaultKeyboard: true,
-    actions: {
-      roll: {
-        action: {
-          type: 'trigger',
-          valueType: 'boolean',
-        },
-        bindings: [
-          {
-            type: 'keyboard',
-            key: 'KeyR',
-          },
-        ],
-      },
-      moveLeft: {
-        action: {
-          type: 'trigger',
-          valueType: 'boolean',
-        },
-        bindings: [
-          {
-            type: 'keyboard',
-            key: 'KeyA',
-          },
-          {
-            type: 'keyboard',
-            key: 'ArrowLeft',
-          },
-        ],
-      },
-      moveRight: {
-        action: {
-          type: 'trigger',
-          valueType: 'boolean',
-        },
-        bindings: [
-          {
-            type: 'keyboard',
-            key: 'KeyD',
-          },
-          {
-            type: 'keyboard',
-            key: 'ArrowRight',
-          },
-        ],
-      },
-      moveUp: {
-        action: {
-          type: 'trigger',
-          valueType: 'boolean',
-        },
-        bindings: [
-          {
-            type: 'keyboard',
-            key: 'KeyW',
-          },
-          {
-            type: 'keyboard',
-            key: 'ArrowUp',
-          },
-        ],
-      },
-      moveDown: {
-        action: {
-          type: 'trigger',
-          valueType: 'boolean',
-        },
-        bindings: [
-          {
-            type: 'keyboard',
-            key: 'KeyS',
-          },
-          {
-            type: 'keyboard',
-            key: 'ArrowDown',
-          },
-        ],
-      },
-      run: {
-        action: {
-          type: 'trigger',
-          valueType: 'boolean',
-        },
-        bindings: [
-          {
-            type: 'keyboard',
-            key: 'ShiftLeft',
-          },
-        ],
-      },
-      lightAttack: {
-        action: {
-          type: 'trigger',
-          valueType: 'boolean',
-        },
-        bindings: [
-          {
-            type: 'keyboard',
-            key: 'KeyE',
-          },
-        ],
-      },
-      heavyAttack: {
-        action: {
-          type: 'trigger',
-          valueType: 'boolean',
-        },
-        bindings: [
-          {
-            type: 'keyboard',
-            key: 'KeyT',
-          },
-        ],
-      },
-      throwApple: {
-        action: {
-          type: 'trigger',
-          valueType: 'boolean',
-        },
-        bindings: [
-          {
-            type: 'keyboard',
-            key: 'Space',
-          },
-        ],
-      },
-    },
-  },
-  assets: assetConfig,
-});
+const worldInstance = createWorld(worldConfig);
 
 // Add progress tracking for asset loading
 worldInstance.onProgress((progress) => {
