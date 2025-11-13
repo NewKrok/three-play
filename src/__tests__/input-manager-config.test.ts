@@ -78,7 +78,7 @@ describe('InputManager Configuration', () => {
     test('should initialize complex action configurations', () => {
       const config: InputManagerConfig = {
         actions: {
-          'roll': {
+          roll: {
             action: {
               type: 'trigger',
               valueType: 'boolean',
@@ -90,7 +90,7 @@ describe('InputManager Configuration', () => {
               },
             ],
           },
-          'move': {
+          move: {
             action: {
               type: 'continuous',
               valueType: 'vector2',
@@ -116,7 +116,7 @@ describe('InputManager Configuration', () => {
       expect(inputManager.hasAction('roll')).toBe(true);
       expect(inputManager.hasAction('move')).toBe(true);
       expect(inputManager.getActionNames()).toHaveLength(2);
-      
+
       // Test that actions return appropriate default values
       expect(inputManager.getActionValue('roll')).toBe(false);
       expect(inputManager.getActionValue('move')).toBeInstanceOf(Object);

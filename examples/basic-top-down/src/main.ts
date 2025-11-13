@@ -30,11 +30,6 @@ import {
  * @property {number} stamina
  */
 
-/**
- * @typedef {Object} Keys
- * @property {boolean} [key]
- */
-
 // Initialize THREE Play engine
 console.log('Starting game with THREE Play engine');
 
@@ -115,7 +110,6 @@ const rollCooldown = 500;
 const gravity = new THREE.Vector3(0, -9.8, 0);
 const throwStrength = 15;
 const throwSpread = 0.2;
-const keys = {};
 const charactersWorldDirection = new THREE.Vector3();
 const correctedDir = new THREE.Vector3();
 const rotationTargetQuaternion = new THREE.Quaternion();
@@ -345,6 +339,118 @@ const worldInstance = createWorld({
           {
             type: 'keyboard',
             key: 'KeyR',
+          },
+        ],
+      },
+      moveLeft: {
+        action: {
+          type: 'trigger',
+          valueType: 'boolean',
+        },
+        bindings: [
+          {
+            type: 'keyboard',
+            key: 'KeyA',
+          },
+          {
+            type: 'keyboard',
+            key: 'ArrowLeft',
+          },
+        ],
+      },
+      moveRight: {
+        action: {
+          type: 'trigger',
+          valueType: 'boolean',
+        },
+        bindings: [
+          {
+            type: 'keyboard',
+            key: 'KeyD',
+          },
+          {
+            type: 'keyboard',
+            key: 'ArrowRight',
+          },
+        ],
+      },
+      moveUp: {
+        action: {
+          type: 'trigger',
+          valueType: 'boolean',
+        },
+        bindings: [
+          {
+            type: 'keyboard',
+            key: 'KeyW',
+          },
+          {
+            type: 'keyboard',
+            key: 'ArrowUp',
+          },
+        ],
+      },
+      moveDown: {
+        action: {
+          type: 'trigger',
+          valueType: 'boolean',
+        },
+        bindings: [
+          {
+            type: 'keyboard',
+            key: 'KeyS',
+          },
+          {
+            type: 'keyboard',
+            key: 'ArrowDown',
+          },
+        ],
+      },
+      run: {
+        action: {
+          type: 'trigger',
+          valueType: 'boolean',
+        },
+        bindings: [
+          {
+            type: 'keyboard',
+            key: 'ShiftLeft',
+          },
+        ],
+      },
+      lightAttack: {
+        action: {
+          type: 'trigger',
+          valueType: 'boolean',
+        },
+        bindings: [
+          {
+            type: 'keyboard',
+            key: 'KeyE',
+          },
+        ],
+      },
+      heavyAttack: {
+        action: {
+          type: 'trigger',
+          valueType: 'boolean',
+        },
+        bindings: [
+          {
+            type: 'keyboard',
+            key: 'KeyT',
+          },
+        ],
+      },
+      throwApple: {
+        action: {
+          type: 'trigger',
+          valueType: 'boolean',
+        },
+        bindings: [
+          {
+            type: 'keyboard',
+            key: 'Space',
           },
         ],
       },
@@ -718,14 +824,6 @@ worldInstance.onReady((assets) => {
     crateMesh.instanceMatrix.needsUpdate = true;
   };
 
-  const createKeyListeners = () => {
-    const onKeyDown = (event) => (keys[event.code] = true);
-    const onKeyUp = (event) => (keys[event.code] = false);
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('keyup', onKeyUp);
-  };
-  createKeyListeners();
-
   const updateCamera = () => {
     camera.position.lerp(
       new THREE.Vector3(
@@ -768,30 +866,20 @@ worldInstance.onReady((assets) => {
   };
 
   const applyCharacterRotation = () => {
-    if (keys['KeyA'] || keys['ArrowLeft']) direction = Math.PI;
-    if (keys['KeyD'] || keys['ArrowRight']) direction = 0;
-    if (keys['KeyW'] || keys['ArrowUp']) direction = Math.PI / 2;
-    if (keys['KeyS'] || keys['ArrowDown']) direction = -Math.PI / 2;
-    if (
-      (keys['KeyA'] || keys['ArrowLeft']) &&
-      (keys['KeyW'] || keys['ArrowUp'])
-    )
-      direction = Math.PI - Math.PI / 4;
-    if (
-      (keys['KeyA'] || keys['ArrowLeft']) &&
-      (keys['KeyS'] || keys['ArrowDown'])
-    )
-      direction = Math.PI + Math.PI / 4;
-    if (
-      (keys['KeyD'] || keys['ArrowRight']) &&
-      (keys['KeyW'] || keys['ArrowUp'])
-    )
-      direction = Math.PI / 4;
-    if (
-      (keys['KeyD'] || keys['ArrowRight']) &&
-      (keys['KeyS'] || keys['ArrowDown'])
-    )
-      direction = Math.PI + (Math.PI / 4) * 3;
+    const moveLeft = inputManager.isActionActive('moveLeft');
+    const moveRight = inputManager.isActionActive('moveRight');
+    const moveUp = inputManager.isActionActive('moveUp');
+    const moveDown = inputManager.isActionActive('moveDown');
+
+    if (moveLeft) direction = Math.PI;
+    if (moveRight) direction = 0;
+    if (moveUp) direction = Math.PI / 2;
+    if (moveDown) direction = -Math.PI / 2;
+    if (moveLeft && moveUp) direction = Math.PI - Math.PI / 4;
+    if (moveLeft && moveDown) direction = Math.PI + Math.PI / 4;
+    if (moveRight && moveUp) direction = Math.PI / 4;
+    if (moveRight && moveDown) direction = Math.PI + (Math.PI / 4) * 3;
+
     rotationTargetQuaternion.setFromAxisAngle(
       new THREE.Vector3(0, 1, 0),
       direction,
@@ -805,16 +893,12 @@ worldInstance.onReady((assets) => {
     if (isRolling || isAttacking) return;
 
     const isMoving =
-      keys['KeyA'] ||
-      keys['KeyS'] ||
-      keys['KeyD'] ||
-      keys['KeyW'] ||
-      keys['ArrowLeft'] ||
-      keys['ArrowDown'] ||
-      keys['ArrowRight'] ||
-      keys['ArrowUp'];
+      inputManager.isActionActive('moveLeft') ||
+      inputManager.isActionActive('moveRight') ||
+      inputManager.isActionActive('moveUp') ||
+      inputManager.isActionActive('moveDown');
 
-    const isRunningKey = keys['ShiftLeft'];
+    const isRunningKey = inputManager.isActionActive('run');
     let isRunning = false;
 
     if (isMoving && isRunningKey) {
@@ -861,12 +945,13 @@ worldInstance.onReady((assets) => {
     if (
       isRolling ||
       isAttacking ||
-      !keys['KeyE'] ||
+      !inputManager.isActionActive('lightAttack') ||
       lastLightAttackTime + LIGHT_ATTACK_COOLDOWN > now
     )
       return;
 
     isAttacking = true;
+    lastLightAttackTime = now;
     const lightAttackAction = character.actions.lightAttack;
     setTimeout(() => {
       isAttacking = false;
@@ -907,12 +992,13 @@ worldInstance.onReady((assets) => {
     if (
       isRolling ||
       isAttacking ||
-      !keys['KeyT'] ||
+      !inputManager.isActionActive('heavyAttack') ||
       lastHeavyAttackTime + HEAVY_ATTACK_COOLDOWN > now
     )
       return;
 
     isAttacking = true;
+    lastHeavyAttackTime = now;
     const heavyAttackAction = character.actions.heavyAttack;
     setTimeout(() => {
       isAttacking = false;
@@ -1340,7 +1426,7 @@ worldInstance.onReady((assets) => {
   };
 
   const updateAppleThrowRoutine = () => {
-    if (keys['Space']) {
+    if (inputManager.isActionActive('throwApple')) {
       const now = performance.now();
       if (
         now - lastThrowTime > throwCooldown &&
@@ -1374,7 +1460,8 @@ worldInstance.onReady((assets) => {
         character.model.userData.oldPos = character.model.position.clone();
         character.model.position.addScaledVector(
           forward,
-          (keys['ShiftLeft'] ? FAST_ROLL_SPEED : ROLL_SPEED) * cycleData.delta,
+          (inputManager.isActionActive('run') ? FAST_ROLL_SPEED : ROLL_SPEED) *
+            cycleData.delta,
         );
         handleTerrainHeight(character);
       }

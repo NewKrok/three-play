@@ -401,7 +401,7 @@ export const createInputManager = (
   if (config.actions) {
     for (const [actionName, actionConfig] of Object.entries(config.actions)) {
       inputManagerInstance.registerAction(actionName, actionConfig.action);
-      
+
       // Bind all configured inputs
       for (const binding of actionConfig.bindings) {
         inputManagerInstance.bindInput(actionName, binding);
