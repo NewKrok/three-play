@@ -96,6 +96,7 @@ export type {
   InputManager as InputManagerType,
   InputManagerConfig,
   InputAction,
+  InputActionConfig,
   InputBinding,
   KeyboardBinding,
   MouseBinding,

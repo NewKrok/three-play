@@ -335,6 +335,20 @@ const worldInstance = createWorld({
   input: {
     enabled: true,
     preventDefaultKeyboard: true,
+    actions: {
+      roll: {
+        action: {
+          type: 'trigger',
+          valueType: 'boolean',
+        },
+        bindings: [
+          {
+            type: 'keyboard',
+            key: 'KeyR',
+          },
+        ],
+      },
+    },
   },
   assets: assetConfig,
 });
@@ -354,19 +368,8 @@ worldInstance.onProgress((progress) => {
 worldInstance.onReady((assets) => {
   console.log('All assets loaded successfully!', assets);
 
-  // Set up input manager
+  // Get input manager (actions are already configured in world config)
   const inputManager = worldInstance.getInputManager();
-
-  // Register the roll action
-  inputManager.registerAction('roll', {
-    type: 'trigger',
-    valueType: 'boolean',
-  });
-
-  inputManager.bindInput('roll', {
-    type: 'keyboard',
-    key: 'KeyR',
-  });
 
   runningEffect.map = assets.textures.smoke;
   runningInWaterEffect.map = assets.textures.splash;

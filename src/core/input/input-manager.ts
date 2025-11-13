@@ -131,7 +131,7 @@ export const createInputManager = (
     }
   };
 
-  return {
+  const inputManagerInstance = {
     /**
      * Register a new action with the input manager
      */
@@ -396,4 +396,18 @@ export const createInputManager = (
       actionStates.clear();
     },
   };
+
+  // Initialize actions from config if provided
+  if (config.actions) {
+    for (const [actionName, actionConfig] of Object.entries(config.actions)) {
+      inputManagerInstance.registerAction(actionName, actionConfig.action);
+      
+      // Bind all configured inputs
+      for (const binding of actionConfig.bindings) {
+        inputManagerInstance.bindInput(actionName, binding);
+      }
+    }
+  }
+
+  return inputManagerInstance;
 };

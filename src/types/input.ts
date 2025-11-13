@@ -172,6 +172,14 @@ export type InputManager = {
 };
 
 /**
+ * Input action configuration for world config
+ */
+export type InputActionConfig = {
+  action: Omit<InputAction, 'bindings'>;
+  bindings: InputBinding[];
+};
+
+/**
  * Input manager configuration
  */
 export type InputManagerConfig = {
@@ -194,4 +202,9 @@ export type InputManagerConfig = {
    * Whether to prevent context menu on right mouse click
    */
   preventDefaultMouse?: boolean;
+
+  /**
+   * Pre-configured actions with their bindings
+   */
+  actions?: Record<string, InputActionConfig>;
 };
