@@ -226,8 +226,9 @@ describe('createWorld', () => {
   it('should log the configuration during creation', () => {
     createTrackedWorld(mockConfig);
 
+    // Logger system now handles the logging with timestamp and prefix
     expect(consoleSpy).toHaveBeenCalledWith(
-      'Creating world with config:',
+      expect.stringContaining('[THREE-Play] [DEBUG] Creating world with config:'),
       mockConfig,
     );
   });
@@ -607,13 +608,13 @@ describe('createWorld', () => {
     expect(() => worldInstance.onUpdate(jest.fn())).not.toThrow();
 
     expect(consoleSpy).toHaveBeenCalledWith(
-      'Cannot start: world instance is destroyed',
+      expect.stringContaining('[THREE-Play] [WARN] Cannot start: world instance is destroyed'),
     );
     expect(consoleSpy).toHaveBeenCalledWith(
-      'Cannot resume: world instance is destroyed',
+      expect.stringContaining('[THREE-Play] [WARN] Cannot resume: world instance is destroyed'),
     );
     expect(consoleSpy).toHaveBeenCalledWith(
-      'Cannot subscribe to update events: world instance is destroyed',
+      expect.stringContaining('[THREE-Play] [WARN] Cannot subscribe to update events: world instance is destroyed'),
     );
 
     consoleSpy.mockRestore();
@@ -651,7 +652,7 @@ describe('createWorld', () => {
     const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
     worldInstance.onUpdate(jest.fn());
     expect(consoleSpy).toHaveBeenCalledWith(
-      'Cannot subscribe to update events: world instance is destroyed',
+      expect.stringContaining('[THREE-Play] [WARN] Cannot subscribe to update events: world instance is destroyed'),
     );
     consoleSpy.mockRestore();
   });
@@ -736,10 +737,10 @@ describe('createWorld', () => {
       const unsubscribeReady = world.onReady(readyCallback);
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Cannot subscribe to progress events: world instance is destroyed',
+        expect.stringContaining('[THREE-Play] [WARN] Cannot subscribe to progress events: world instance is destroyed'),
       );
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Cannot subscribe to ready events: world instance is destroyed',
+        expect.stringContaining('[THREE-Play] [WARN] Cannot subscribe to ready events: world instance is destroyed'),
       );
 
       expect(typeof unsubscribeProgress).toBe('function');
@@ -889,19 +890,19 @@ describe('createWorld', () => {
     worldInstance.updateOutline('invalid-id', { strength: 5.0 });
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Cannot add outline: world instance is destroyed',
+      expect.stringContaining('[THREE-Play] [WARN] Cannot add outline: world instance is destroyed'),
     );
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Cannot remove outline: world instance is destroyed',
+      expect.stringContaining('[THREE-Play] [WARN] Cannot remove outline: world instance is destroyed'),
     );
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Cannot clear outlines: world instance is destroyed',
+      expect.stringContaining('[THREE-Play] [WARN] Cannot clear outlines: world instance is destroyed'),
     );
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Cannot update outline: world instance is destroyed',
+      expect.stringContaining('[THREE-Play] [WARN] Cannot update outline: world instance is destroyed'),
     );
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Cannot get outlines: world instance is destroyed',
+      expect.stringContaining('[THREE-Play] [WARN] Cannot get outlines: world instance is destroyed'),
     );
 
     expect(outlines).toEqual([]);

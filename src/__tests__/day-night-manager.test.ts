@@ -393,6 +393,120 @@ describe('DayNightManager', () => {
     });
   });
 
+  describe('fog effects', () => {
+    beforeEach(() => {
+      // Add fog to scene for testing
+      scene.fog = new THREE.FogExp2(0xccddee, 0.005);
+    });
+
+    it('should update fog color based on time of day', () => {
+      const configWithFog = {
+        ...mockConfig,
+        colors: {
+          ...mockConfig.colors!,
+          fog: {
+            day: 0xffffff,
+            night: 0x000000,
+          },
+        },
+        fog: {
+          enabled: true,
+          density: { min: 0.001, max: 0.01 },
+        },
+      };
+
+      const manager = createDayNightManager(
+        configWithFog,
+        scene,
+        ambientLight,
+        directionalLight,
+      );
+
+      // Test at noon (day colors)
+      manager.setTimeOfDay(0.5);
+      const dayFogColor = scene.fog!.color;
+      expect(dayFogColor.r).toBeCloseTo(1, 1); // Should be closer to white
+
+      // Test at midnight (night colors)
+      manager.setTimeOfDay(0.0);
+      const nightFogColor = scene.fog!.color;
+      expect(nightFogColor.r).toBeLessThan(0.5); // Should be closer to black
+    });
+
+    it('should update fog density based on time of day', () => {
+      const configWithFog = {
+        ...mockConfig,
+        fog: {
+          enabled: true,
+          density: { min: 0.001, max: 0.01 },
+        },
+      };
+
+      const manager = createDayNightManager(
+        configWithFog,
+        scene,
+        ambientLight,
+        directionalLight,
+      );
+
+      // Test at noon (minimum density)
+      manager.setTimeOfDay(0.5);
+      const dayDensity = (scene.fog as THREE.FogExp2)!.density;
+      expect(dayDensity).toBeCloseTo(0.001, 3);
+
+      // Test at midnight (maximum density)
+      manager.setTimeOfDay(0.0);
+      const nightDensity = (scene.fog as THREE.FogExp2)!.density;
+      expect(nightDensity).toBeCloseTo(0.01, 3);
+    });
+
+    it('should not update fog when disabled', () => {
+      const configWithDisabledFog = {
+        ...mockConfig,
+        fog: {
+          enabled: false,
+          density: { min: 0.001, max: 0.01 },
+        },
+      };
+
+      const manager = createDayNightManager(
+        configWithDisabledFog,
+        scene,
+        ambientLight,
+        directionalLight,
+      );
+
+      const initialFogColor = scene.fog!.color.clone();
+      const initialFogDensity = (scene.fog as THREE.FogExp2)!.density;
+
+      manager.setTimeOfDay(0.5);
+
+      expect(scene.fog!.color.equals(initialFogColor)).toBe(true);
+      expect((scene.fog as THREE.FogExp2)!.density).toBe(initialFogDensity);
+    });
+
+    it('should handle missing fog gracefully', () => {
+      scene.fog = null;
+
+      const configWithFog = {
+        ...mockConfig,
+        fog: {
+          enabled: true,
+          density: { min: 0.001, max: 0.01 },
+        },
+      };
+
+      const manager = createDayNightManager(
+        configWithFog,
+        scene,
+        ambientLight,
+        directionalLight,
+      );
+
+      expect(() => manager.setTimeOfDay(0.5)).not.toThrow();
+    });
+  });
+
   describe('disabled state', () => {
     it('should not update when disabled', () => {
       const disabledConfig = { ...mockConfig, enabled: false };

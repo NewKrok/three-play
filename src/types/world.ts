@@ -33,16 +33,7 @@ export type WorldConfig = {
     useComposer?: boolean;
     customPasses?: Pass[];
   };
-  light?: {
-    ambient?: {
-      color?: THREE.ColorRepresentation;
-      intensity?: number;
-    };
-    directional?: {
-      color?: THREE.ColorRepresentation;
-      intensity?: number;
-    };
-  };
+
   update?: {
     autoStart?: boolean;
     onUpdate?: UpdateCallback;

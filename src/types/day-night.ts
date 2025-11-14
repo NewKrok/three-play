@@ -25,6 +25,10 @@ export type DayNightColors = {
     day: THREE.ColorRepresentation;
     night: THREE.ColorRepresentation;
   };
+  fog: {
+    day: THREE.ColorRepresentation;
+    night: THREE.ColorRepresentation;
+  };
 };
 
 /**
@@ -36,6 +40,19 @@ export type LightIntensityConfig = {
     max: number;
   };
   directional: {
+    min: number;
+    max: number;
+  };
+};
+
+/**
+ * Fog configuration for different times of day
+ */
+export type FogConfig = {
+  /** Enable fog changes based on time of day */
+  enabled: boolean;
+  /** Fog density configuration */
+  density: {
     min: number;
     max: number;
   };
@@ -71,6 +88,8 @@ export type DayNightConfig = {
   colors: DayNightColors;
   /** Light intensity configuration */
   intensity: LightIntensityConfig;
+  /** Fog configuration for atmospheric effects */
+  fog: FogConfig;
   /** Sun position and movement configuration */
   sunPosition: SunPositionConfig;
   /** Easing function for smooth transitions */

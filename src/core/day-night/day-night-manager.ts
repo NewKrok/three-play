@@ -25,10 +25,18 @@ const DEFAULT_CONFIG: DayNightConfig = {
       day: 0xffffff,
       night: 0xffd18b,
     },
+    fog: {
+      day: 0xe6f3ff, // Light blue-white for day
+      night: 0x2a3a5c, // Dark blue-grey for night
+    },
   },
   intensity: {
     ambient: { min: 0.6, max: 0.9 },
     directional: { min: 0.4, max: 1.0 },
+  },
+  fog: {
+    enabled: true,
+    density: { min: 0.002, max: 0.008 }, // Subtle atmospheric fog by default
   },
   sunPosition: {
     radius: 100,
@@ -77,10 +85,19 @@ export const createDayNightManager = (
   const dayColorDirectional = new THREE.Color(
     fullConfig.colors.directional.day,
   );
+  
+  // Fog color objects
+  const nightColorFog = fullConfig.colors.fog 
+    ? new THREE.Color(fullConfig.colors.fog.night)
+    : new THREE.Color(0x2a3a5c);
+  const dayColorFog = fullConfig.colors.fog
+    ? new THREE.Color(fullConfig.colors.fog.day)
+    : new THREE.Color(0xe6f3ff);
 
   // Working color objects
   const tempAmbientColor = new THREE.Color();
   const tempDirectionalColor = new THREE.Color();
+  const tempFogColor = new THREE.Color();
 
   // Shadow optimization: dynamic shadow bounds
   const updateShadowBounds = (target?: THREE.Object3D) => {
@@ -120,12 +137,12 @@ export const createDayNightManager = (
     }
 
     const easingFunc = fullConfig.easing as EasingFunction;
-    
+
     // Use existing easing functions from easing-utils
     if (easingFunc in EasingFunctions) {
       return EasingFunctions[easingFunc as EasingType](t);
     }
-    
+
     // Use day/night specific easing functions
     switch (easingFunc) {
       case 'smoothstep':
@@ -184,6 +201,25 @@ export const createDayNightManager = (
 
     ambientLight.color.copy(tempAmbientColor);
     directionalLight.color.copy(tempDirectionalColor);
+
+    // Initialize or update fog if enabled
+    if (fullConfig.fog.enabled) {
+      // Initialize fog if not already present
+      if (!scene.fog) {
+        scene.fog = new THREE.FogExp2(0xccddee, fullConfig.fog.density.min);
+      }
+      
+      // Update fog color
+      tempFogColor.copy(nightColorFog).lerp(dayColorFog, easedValue);
+      scene.fog.color.copy(tempFogColor);
+      
+      // Update fog density (thicker at night, thinner during day)
+      if (scene.fog instanceof THREE.FogExp2) {
+        const fogDensity = fullConfig.fog.density.max - 
+          easedValue * (fullConfig.fog.density.max - fullConfig.fog.density.min);
+        scene.fog.density = fogDensity;
+      }
+    }
 
     // Update shadow bounds for optimization
     updateShadowBounds(fullConfig.sunPosition.followTarget);
@@ -255,6 +291,10 @@ export const createDayNightManager = (
           nightColorDirectional.set(fullConfig.colors.directional.night);
           dayColorDirectional.set(fullConfig.colors.directional.day);
         }
+        if (newConfig.colors.fog) {
+          nightColorFog.set(fullConfig.colors.fog.night);
+          dayColorFog.set(fullConfig.colors.fog.day);
+        }
       }
 
       // Immediately update lighting with new config
@@ -265,6 +305,7 @@ export const createDayNightManager = (
       // Cleanup if needed
       tempAmbientColor.set(0);
       tempDirectionalColor.set(0);
+      tempFogColor.set(0);
     },
   };
 

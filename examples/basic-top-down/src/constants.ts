@@ -40,9 +40,6 @@ export const STAMINA_RECOVERY = 1;
 export const STAMINA_DRAIN = 2;
 export const MAX_HEALTH = 100.0;
 
-// Time constants
-export const DAY_LENGTH = 1200;
-
 // Combat constants
 export const LIGHT_ATTACK_KNOCKBACK = 20;
 export const LIGHT_ATTACK_ACTION_DELAY = 500;

@@ -21,16 +21,6 @@ const worldConfig: WorldConfig = {
   render: {
     useComposer: true,
   },
-  light: {
-    ambient: {
-      color: 0xffffff,
-      intensity: 0.9,
-    },
-    directional: {
-      color: 0xffffff,
-      intensity: 0.5,
-    },
-  },
   heightmap: {
     assetId: 'heightmap',
     resolution: HEIGHT_MAP_RESOLUTION,
@@ -61,8 +51,8 @@ const worldConfig: WorldConfig = {
   },
   dayNight: {
     enabled: true,
-    dayLengthSeconds: 1200, // Same as the original DAY_LENGTH constant
-    startTimeOfDay: 0.25, // 6:00 AM
+    dayLengthSeconds: 30, // 30 seconds for quick demo
+    startTimeOfDay: 0.25, // Start at dawn (6 AM)
     colors: {
       ambient: {
         day: 0xfef9e6,
@@ -72,10 +62,18 @@ const worldConfig: WorldConfig = {
         day: 0xffffff,
         night: 0xffd18b,
       },
+      fog: {
+        day: 0xe6f3ff, // Light blue-white morning mist
+        night: 0x2a3a5c, // Dark blue-grey evening fog
+      },
     },
     intensity: {
       ambient: { min: 0.6, max: 0.9 },
       directional: { min: 0.4, max: 1.0 },
+    },
+    fog: {
+      enabled: true,
+      density: { min: 0.003, max: 0.012 }, // Visible but not overwhelming
     },
     sunPosition: {
       radius: 100,

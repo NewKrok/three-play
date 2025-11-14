@@ -60,14 +60,15 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   const useComposer = config.render?.useComposer ?? true;
   const customPasses = config.render?.customPasses;
 
-  // Get light configuration with defaults
+  // Default light configuration (day/night manager will override if enabled)
+  const hasDayNight = config.dayNight?.enabled ?? false;
   const ambientLightConfig = {
-    color: config.light?.ambient?.color ?? 0xffffff,
-    intensity: config.light?.ambient?.intensity ?? 0.9,
+    color: 0xffffff,
+    intensity: 0.9,
   };
   const directionalLightConfig = {
-    color: config.light?.directional?.color ?? 0xffffff,
-    intensity: config.light?.directional?.intensity ?? 0.5,
+    color: 0xffffff,
+    intensity: 0.5,
   };
 
   // Get update configuration with defaults
@@ -106,9 +107,8 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.2;
 
-  // Create scene with fog
+  // Create scene (day/night manager will handle fog if configured)
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0xccddee, 0.005);
 
   // Create camera
   const camera = new THREE.PerspectiveCamera(
