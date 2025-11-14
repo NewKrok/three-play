@@ -12,7 +12,9 @@ import {
   createHeightmapManager,
 } from '../heightmap/index.js';
 import { createInputManager } from '../input/index.js';
+import { createDayNightManager } from '../day-night/index.js';
 import type { InputManager } from '../../types/input.js';
+import type { DayNightManager } from '../../types/day-night.js';
 import {
   createTerrainInstance,
   prepareTerrainConfig,
@@ -92,6 +94,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   const inputConfig = config.input ?? {};
   const inputManager = createInputManager(inputConfig);
 
+  // Get day/night configuration
+  const dayNightConfig = config.dayNight;
+  let dayNightManager: DayNightManager | null = null;
+
   // Create renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.shadowMap.enabled = true;
@@ -156,6 +162,17 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   directionalLight.shadow.mapSize.width = 4096;
   directionalLight.shadow.mapSize.height = 4096;
   scene.add(directionalLight);
+
+  // Initialize day/night manager if configured
+  if (dayNightConfig?.enabled) {
+    dayNightManager = createDayNightManager(
+      dayNightConfig,
+      scene,
+      ambientLight,
+      directionalLight,
+    );
+    logger.debug('Day/night manager initialized');
+  }
 
   // Update loop system
   const clock = new THREE.Clock();
@@ -302,6 +319,11 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       waterInstance.update(deltaTime);
     }
 
+    // Update day/night cycle if available
+    if (dayNightManager) {
+      dayNightManager.update(deltaTime);
+    }
+
     // Call all update callbacks
     updateCallbacks.forEach((callback) => {
       try {
@@ -443,6 +465,14 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     getLogger(): Logger {
       return logger;
+    },
+
+    /**
+     * Get day/night manager instance
+     * @returns Day/night manager if enabled, null otherwise
+     */
+    getDayNightManager(): DayNightManager | null {
+      return dayNightManager;
     },
 
     /**
@@ -650,6 +680,11 @@ const createWorld = (config: WorldConfig): WorldInstance => {
 
       // Cleanup input manager
       inputManager.destroy();
+
+      // Cleanup day/night manager
+      if (dayNightManager) {
+        dayNightManager.dispose();
+      }
 
       // Cleanup asset loader
       assetLoader.destroy();

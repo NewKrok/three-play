@@ -59,7 +59,6 @@ const {
   STAMINA_RECOVERY,
   STAMINA_DRAIN,
   MAX_HEALTH,
-  DAY_LENGTH,
   WATER_LEVEL,
   LIGHT_ATTACK_KNOCKBACK,
   LIGHT_ATTACK_ACTION_DELAY,
@@ -75,7 +74,6 @@ const {
   HEAVY_ATTACK_STUN_DURATION,
 } = Constants;
 
-let timeOfDay = 0;
 const startingPosition = new THREE.Vector3(
   Constants.startingPosition.x,
   Constants.startingPosition.y,
@@ -445,6 +443,20 @@ worldInstance.onReady((assets) => {
   );
   character.model.add(dustEffectInstance);
   units.push(character);
+
+  // Configure day/night system to follow the main character for optimized shadows
+  const dayNightManager = worldInstance.getDayNightManager();
+  if (dayNightManager) {
+    dayNightManager.updateConfig({
+      sunPosition: {
+        radius: 100,
+        heightOffset: 20,
+        zOffset: -40,
+        followTarget: character.model,
+      },
+    });
+    logger.info('Day/night system configured to follow character');
+  }
 
   const createEnemies = async (count) => {
     for (let i = 0; i < count; i++) {
@@ -846,47 +858,14 @@ worldInstance.onReady((assets) => {
     applyCharacterHeavyAttack();
   };
 
-  const updateLight = () => {
-    timeOfDay += cycleData.delta / DAY_LENGTH;
-    if (timeOfDay > 1) timeOfDay -= 1;
-
-    const angle = timeOfDay * Math.PI * 2;
-    const radius = 100;
-
-    directionalLight.position.set(
-      character.model.position.x + Math.cos(angle) * radius,
-      character.model.position.y + Math.sin(angle) * radius + 20,
-      character.model.position.z - 40,
-    );
-    directionalLight.target.position.copy(character.model.position);
-    directionalLight.target.updateMatrixWorld();
-
-    const t = Math.max(0, Math.sin(angle));
-    const eased = Math.pow(t, 0.7);
-
-    ambientLight.intensity = 0.6 + eased * 0.3;
-    directionalLight.intensity = 0.4 + eased * 0.6;
-
-    const nightColor = new THREE.Color(0x99bbff);
-    const dayColor = new THREE.Color(0xfef9e6);
-    ambientLight.color.copy(nightColor).lerp(dayColor, eased);
-
-    const sunColor = new THREE.Color(0xffd18b);
-    const noonColor = new THREE.Color(0xffffff);
-    directionalLight.color.copy(sunColor).lerp(noonColor, eased);
-
-    const startHour = 6;
-    let totalHours = startHour + timeOfDay * 24;
-    if (totalHours >= 24) totalHours -= 24;
-
-    const hours = Math.floor(totalHours);
-    const minutes = Math.floor((totalHours - hours) * 60);
-
-    const hStr = String(hours).padStart(2, '0');
-    const mStr = String(minutes).padStart(2, '0');
-
-    const clockEl = document.getElementById('clock-text');
-    if (clockEl) clockEl.textContent = `${hStr}:${mStr}`;
+  // Day/Night cycle time display helper
+  const updateTimeDisplay = () => {
+    const dayNightManager = worldInstance.getDayNightManager();
+    if (dayNightManager) {
+      const timeInfo = dayNightManager.getTimeInfo();
+      const clockEl = document.getElementById('clock-text');
+      if (clockEl) clockEl.textContent = timeInfo.formattedTime;
+    }
   };
   const updateUnits = () => {
     units.forEach((_unit, index) => {
@@ -1337,7 +1316,7 @@ worldInstance.onReady((assets) => {
     updateRollRoutine();
 
     updateApples();
-    updateLight();
+    updateTimeDisplay();
 
     cinamaticCameraController.update(cycleData.delta);
 

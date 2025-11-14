@@ -59,6 +59,33 @@ const worldConfig: WorldConfig = {
     prefix: '[THREE-Play-Demo]',
     timestamp: true,
   },
+  dayNight: {
+    enabled: true,
+    dayLengthSeconds: 1200, // Same as the original DAY_LENGTH constant
+    startTimeOfDay: 0.25, // 6:00 AM
+    colors: {
+      ambient: {
+        day: 0xfef9e6,
+        night: 0x99bbff,
+      },
+      directional: {
+        day: 0xffffff,
+        night: 0xffd18b,
+      },
+    },
+    intensity: {
+      ambient: { min: 0.6, max: 0.9 },
+      directional: { min: 0.4, max: 1.0 },
+    },
+    sunPosition: {
+      radius: 100,
+      heightOffset: 20,
+      zOffset: -40,
+      // We'll set the followTarget dynamically in main.ts
+    },
+    easing: 'power',
+    easingPower: 0.7,
+  },
 };
 
 export default worldConfig;

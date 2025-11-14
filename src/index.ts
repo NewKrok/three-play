@@ -46,6 +46,9 @@ export { createOutlineManager } from './core/effects/index.js';
 // Logger utilities
 export { createLogger, LoggerUtils } from './core/utils/logger.js';
 
+// Day/Night utilities
+export { createDayNightManager } from './core/day-night/index.js';
+
 // Types
 export type {
   WorldConfig,
@@ -111,3 +114,13 @@ export type {
 } from './types/input.js';
 export type { EasingType } from './types/common.js';
 export type { Logger, LoggerConfig, LogLevel } from './core/utils/logger.js';
+export type {
+  DayNightConfig,
+  DayNightManager,
+  TimeInfo,
+  EasingFunction,
+  CustomEasingFunction,
+  DayNightColors,
+  LightIntensityConfig,
+  SunPositionConfig,
+} from './types/day-night.js';
