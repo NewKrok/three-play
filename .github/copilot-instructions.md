@@ -24,6 +24,15 @@ This file contains coding conventions and guidelines for the THREE Play project 
 - Use namespace-based exports for utility modules (e.g., `CallbackUtils`, `GeomUtils`)
 - Maintain performance considerations for animation loops and real-time rendering
 
+## Utility Function Guidelines
+
+- **ALWAYS use existing utility functions** before creating new ones
+- **For easing functions**: Use `EasingFunctions` from `src/core/utils/easing-utils.ts` - never duplicate easing logic
+- **For time-based animations**: Use `applyEasing()` and `isEasingComplete()` from easing utils
+- Before implementing any utility function, check if similar functionality exists in `src/core/utils/`
+- If extending existing utilities, prefer composition over duplication
+- Document any utility-specific extensions clearly (e.g., day/night specific easing functions)
+
 ## Testing Requirements
 
 - Write unit tests for all new functionality using Jest

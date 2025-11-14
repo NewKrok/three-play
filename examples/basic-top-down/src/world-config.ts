@@ -83,7 +83,7 @@ const worldConfig: WorldConfig = {
       zOffset: -40,
       // We'll set the followTarget dynamically in main.ts
     },
-    easing: 'power',
+    easing: 'ease-in-out', // Use standard easing for smooth day/night transitions
     easingPower: 0.7,
   },
 };

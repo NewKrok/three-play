@@ -1,9 +1,12 @@
 import type * as THREE from 'three';
 
+import type { EasingType } from './common.js';
+
 /**
  * Easing function types for day/night transitions
+ * Extends the general EasingType with day/night specific options
  */
-export type EasingFunction = 'linear' | 'smoothstep' | 'power' | 'custom';
+export type EasingFunction = EasingType | 'smoothstep' | 'power' | 'custom';
 
 /**
  * Custom easing function type

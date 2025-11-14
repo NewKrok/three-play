@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { EasingFunctions } from '../utils/easing-utils.js';
 import type {
   DayNightConfig,
   DayNightManager,
@@ -6,6 +7,7 @@ import type {
   EasingFunction,
   CustomEasingFunction,
 } from '../../types/day-night.js';
+import type { EasingType } from '../../types/common.js';
 
 /**
  * Default day/night configuration
@@ -34,15 +36,14 @@ const DEFAULT_CONFIG: DayNightConfig = {
     zOffset: -40,
     staticCenter: new THREE.Vector3(0, 0, 0),
   },
-  easing: 'power',
+  easing: 'ease-in-out', // Use existing easing function as default
   easingPower: 0.7,
 };
 
 /**
- * Built-in easing functions
+ * Additional easing functions specific to day/night cycles
  */
-const EASING_FUNCTIONS = {
-  linear: (t: number) => t,
+const DAY_NIGHT_EASING_FUNCTIONS = {
   smoothstep: (t: number) => t * t * (3.0 - 2.0 * t),
   power: (t: number, power: number = 2) => Math.pow(t, power),
 };
@@ -119,15 +120,20 @@ export const createDayNightManager = (
     }
 
     const easingFunc = fullConfig.easing as EasingFunction;
+    
+    // Use existing easing functions from easing-utils
+    if (easingFunc in EasingFunctions) {
+      return EasingFunctions[easingFunc as EasingType](t);
+    }
+    
+    // Use day/night specific easing functions
     switch (easingFunc) {
-      case 'linear':
-        return EASING_FUNCTIONS.linear(t);
       case 'smoothstep':
-        return EASING_FUNCTIONS.smoothstep(t);
+        return DAY_NIGHT_EASING_FUNCTIONS.smoothstep(t);
       case 'power':
-        return EASING_FUNCTIONS.power(t, fullConfig.easingPower || 2);
+        return DAY_NIGHT_EASING_FUNCTIONS.power(t, fullConfig.easingPower || 2);
       default:
-        return EASING_FUNCTIONS.linear(t);
+        return EasingFunctions.linear(t);
     }
   };
 
