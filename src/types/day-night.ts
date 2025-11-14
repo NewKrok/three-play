@@ -25,6 +25,10 @@ export type DayNightColors = {
     day: THREE.ColorRepresentation;
     night: THREE.ColorRepresentation;
   };
+  moon: {
+    /** Moon light color (used during night) */
+    color: THREE.ColorRepresentation;
+  };
   fog: {
     day: THREE.ColorRepresentation;
     night: THREE.ColorRepresentation;
@@ -40,6 +44,10 @@ export type LightIntensityConfig = {
     max: number;
   };
   directional: {
+    min: number;
+    max: number;
+  };
+  moon: {
     min: number;
     max: number;
   };
@@ -75,6 +83,22 @@ export type SunPositionConfig = {
 };
 
 /**
+ * Moon position and lighting configuration
+ */
+export type MoonConfig = {
+  /** Enable moon light during night */
+  enabled: boolean;
+  /** Radius of the moon's circular path (opposite to sun) */
+  radius: number;
+  /** Height offset above the target position */
+  heightOffset: number;
+  /** Additional Z-axis offset for moon position */
+  zOffset: number;
+  /** Phase offset in radians (0 = full moon always, PI = new moon always) */
+  phaseOffset: number;
+};
+
+/**
  * Day/Night cycle configuration
  */
 export type DayNightConfig = {
@@ -92,6 +116,8 @@ export type DayNightConfig = {
   fog: FogConfig;
   /** Sun position and movement configuration */
   sunPosition: SunPositionConfig;
+  /** Moon configuration for night lighting */
+  moon: MoonConfig;
   /** Easing function for smooth transitions */
   easing: EasingFunction | CustomEasingFunction;
   /** Power value for 'power' easing function (ignored for other easing types) */

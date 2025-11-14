@@ -25,6 +25,9 @@ const DEFAULT_CONFIG: DayNightConfig = {
       day: 0xffffff,
       night: 0xffd18b,
     },
+    moon: {
+      color: 0xb3d9ff, // Cool moonlight blue
+    },
     fog: {
       day: 0xe6f3ff, // Light blue-white for day
       night: 0x2a3a5c, // Dark blue-grey for night
@@ -33,6 +36,7 @@ const DEFAULT_CONFIG: DayNightConfig = {
   intensity: {
     ambient: { min: 0.6, max: 0.9 },
     directional: { min: 0.4, max: 1.0 },
+    moon: { min: 0.0, max: 0.8 }, // Moon provides subtle but visible shadows
   },
   fog: {
     enabled: true,
@@ -43,6 +47,13 @@ const DEFAULT_CONFIG: DayNightConfig = {
     heightOffset: 20,
     zOffset: -40,
     staticCenter: new THREE.Vector3(0, 0, 0),
+  },
+  moon: {
+    enabled: true,
+    radius: 80, // Slightly closer than sun for more dramatic shadows
+    heightOffset: 30,
+    zOffset: 40, // On opposite side of sun
+    phaseOffset: 0, // Full moon by default
   },
   easing: 'ease-in-out', // Use existing easing function as default
   easingPower: 0.7,
@@ -68,10 +79,47 @@ export const createDayNightManager = (
   const fullConfig: DayNightConfig = {
     ...DEFAULT_CONFIG,
     ...config,
-    colors: { ...DEFAULT_CONFIG.colors, ...config.colors },
-    intensity: { ...DEFAULT_CONFIG.intensity, ...config.intensity },
+    colors: { 
+      ...DEFAULT_CONFIG.colors, 
+      ...config.colors,
+      moon: { ...DEFAULT_CONFIG.colors.moon, ...config.colors?.moon }
+    },
+    intensity: { 
+      ...DEFAULT_CONFIG.intensity, 
+      ...config.intensity,
+      moon: { ...DEFAULT_CONFIG.intensity.moon, ...config.intensity?.moon }
+    },
+    fog: { ...DEFAULT_CONFIG.fog, ...config.fog },
     sunPosition: { ...DEFAULT_CONFIG.sunPosition, ...config.sunPosition },
+    moon: { ...DEFAULT_CONFIG.moon, ...config.moon },
   };
+
+  // Create moon light if enabled
+  let moonLight: THREE.DirectionalLight | null = null;
+  if (fullConfig.moon.enabled) {
+    moonLight = new THREE.DirectionalLight(
+      fullConfig.colors.moon.color,
+      fullConfig.intensity.moon.max,
+    );
+    
+    // Configure moon shadows
+    moonLight.castShadow = true;
+    moonLight.shadow.mapSize.width = 1024;
+    moonLight.shadow.mapSize.height = 1024;
+    moonLight.shadow.camera.near = 0.1;
+    moonLight.shadow.camera.far = 300;
+    
+    // Optimize shadow bounds for moon
+    const shadowCamera = moonLight.shadow.camera as THREE.OrthographicCamera;
+    const shadowSize = 30;
+    shadowCamera.left = -shadowSize;
+    shadowCamera.right = shadowSize;
+    shadowCamera.top = shadowSize;
+    shadowCamera.bottom = -shadowSize;
+    
+    scene.add(moonLight);
+    scene.add(moonLight.target);
+  }
 
   let currentTimeOfDay = fullConfig.startTimeOfDay;
   let isPausedState = false;
@@ -85,9 +133,10 @@ export const createDayNightManager = (
   const dayColorDirectional = new THREE.Color(
     fullConfig.colors.directional.day,
   );
-  
+  const moonColor = new THREE.Color(fullConfig.colors.moon.color);
+
   // Fog color objects
-  const nightColorFog = fullConfig.colors.fog 
+  const nightColorFog = fullConfig.colors.fog
     ? new THREE.Color(fullConfig.colors.fog.night)
     : new THREE.Color(0x2a3a5c);
   const dayColorFog = fullConfig.colors.fog
@@ -101,6 +150,9 @@ export const createDayNightManager = (
 
   // Shadow optimization: dynamic shadow bounds
   const updateShadowBounds = (target?: THREE.Object3D) => {
+    const centerPosition = target?.position || fullConfig.sunPosition.staticCenter || new THREE.Vector3(0, 0, 0);
+    
+    // Update sun shadow bounds
     if (target && fullConfig.sunPosition.followTarget) {
       // Update shadow camera to follow target with optimized bounds
       const shadowCamera = directionalLight.shadow
@@ -114,17 +166,24 @@ export const createDayNightManager = (
       shadowCamera.bottom = -shadowSize;
 
       // Update shadow camera position
-      directionalLight.target.position.copy(target.position);
+      directionalLight.target.position.copy(centerPosition);
       directionalLight.target.updateMatrixWorld();
 
       // Mark shadow camera for update
       shadowCamera.updateProjectionMatrix();
     } else if (fullConfig.sunPosition.staticCenter) {
       // Use static center position
-      directionalLight.target.position.copy(
-        fullConfig.sunPosition.staticCenter,
-      );
+      directionalLight.target.position.copy(centerPosition);
       directionalLight.target.updateMatrixWorld();
+    }
+
+    // Update moon shadow bounds if moon light exists
+    if (moonLight) {
+      moonLight.target.position.copy(centerPosition);
+      moonLight.target.updateMatrixWorld();
+      
+      const moonShadowCamera = moonLight.shadow.camera as THREE.OrthographicCamera;
+      moonShadowCamera.updateProjectionMatrix();
     }
   };
 
@@ -202,21 +261,59 @@ export const createDayNightManager = (
     ambientLight.color.copy(tempAmbientColor);
     directionalLight.color.copy(tempDirectionalColor);
 
+    // Update moon light if enabled
+    if (moonLight && fullConfig.moon.enabled) {
+      // Moon is positioned opposite to the sun with phase offset
+      const moonAngle = angle + Math.PI + fullConfig.moon.phaseOffset;
+      
+      // Update moon position
+      moonLight.position.set(
+        centerPosition.x + Math.cos(moonAngle) * fullConfig.moon.radius,
+        centerPosition.y +
+          Math.sin(moonAngle) * fullConfig.moon.radius +
+          fullConfig.moon.heightOffset,
+        centerPosition.z + fullConfig.moon.zOffset,
+      );
+
+      // Moon intensity is inverse of sun (strongest at night)
+      const moonHeight = Math.max(0, -Math.cos(moonAngle));
+      const moonEasedValue = applyEasing(moonHeight);
+      
+      // Moon is only visible/active during night (when sun is down)
+      const nightFactor = Math.max(0, 1 - easedValue);
+      
+      // Calculate moon intensity (high when moon is high AND it's night)
+      const finalMoonIntensity = 
+        fullConfig.intensity.moon.min +
+        (moonEasedValue * nightFactor) *
+          (fullConfig.intensity.moon.max - fullConfig.intensity.moon.min);
+      
+      moonLight.intensity = finalMoonIntensity;
+
+      // Update moon color
+      moonLight.color.copy(moonColor);
+      
+      // Enable/disable moon shadows based on intensity
+      moonLight.castShadow = finalMoonIntensity > 0.1;
+    }
+
     // Initialize or update fog if enabled
     if (fullConfig.fog.enabled) {
       // Initialize fog if not already present
       if (!scene.fog) {
         scene.fog = new THREE.FogExp2(0xccddee, fullConfig.fog.density.min);
       }
-      
+
       // Update fog color
       tempFogColor.copy(nightColorFog).lerp(dayColorFog, easedValue);
       scene.fog.color.copy(tempFogColor);
-      
+
       // Update fog density (thicker at night, thinner during day)
       if (scene.fog instanceof THREE.FogExp2) {
-        const fogDensity = fullConfig.fog.density.max - 
-          easedValue * (fullConfig.fog.density.max - fullConfig.fog.density.min);
+        const fogDensity =
+          fullConfig.fog.density.max -
+          easedValue *
+            (fullConfig.fog.density.max - fullConfig.fog.density.min);
         scene.fog.density = fogDensity;
       }
     }
@@ -279,7 +376,40 @@ export const createDayNightManager = (
     },
 
     updateConfig(newConfig: Partial<DayNightConfig>): void {
-      Object.assign(fullConfig, newConfig);
+      // Deep merge the configuration
+      if (newConfig.colors) {
+        fullConfig.colors = {
+          ...fullConfig.colors,
+          ...newConfig.colors,
+          moon: { ...fullConfig.colors.moon, ...newConfig.colors.moon }
+        };
+      }
+      if (newConfig.intensity) {
+        fullConfig.intensity = {
+          ...fullConfig.intensity,
+          ...newConfig.intensity,
+          moon: { ...fullConfig.intensity.moon, ...newConfig.intensity.moon }
+        };
+      }
+      if (newConfig.fog) {
+        fullConfig.fog = { ...fullConfig.fog, ...newConfig.fog };
+      }
+      if (newConfig.sunPosition) {
+        fullConfig.sunPosition = { ...fullConfig.sunPosition, ...newConfig.sunPosition };
+      }
+      if (newConfig.moon) {
+        fullConfig.moon = { ...fullConfig.moon, ...newConfig.moon };
+      }
+      
+      // Apply remaining simple properties
+      Object.assign(fullConfig, {
+        ...newConfig,
+        colors: fullConfig.colors,
+        intensity: fullConfig.intensity,
+        fog: fullConfig.fog,
+        sunPosition: fullConfig.sunPosition,
+        moon: fullConfig.moon,
+      });
 
       // Update color objects if colors changed
       if (newConfig.colors) {
@@ -291,9 +421,45 @@ export const createDayNightManager = (
           nightColorDirectional.set(fullConfig.colors.directional.night);
           dayColorDirectional.set(fullConfig.colors.directional.day);
         }
+        if (newConfig.colors.moon) {
+          moonColor.set(fullConfig.colors.moon.color);
+        }
         if (newConfig.colors.fog) {
           nightColorFog.set(fullConfig.colors.fog.night);
           dayColorFog.set(fullConfig.colors.fog.day);
+        }
+      }
+
+      // Handle moon light enable/disable
+      if (newConfig.moon && typeof newConfig.moon.enabled === 'boolean') {
+        if (newConfig.moon.enabled && !moonLight) {
+          // Create moon light if it was disabled before
+          moonLight = new THREE.DirectionalLight(
+            fullConfig.colors.moon.color,
+            fullConfig.intensity.moon.max,
+          );
+          
+          moonLight.castShadow = true;
+          moonLight.shadow.mapSize.width = 1024;
+          moonLight.shadow.mapSize.height = 1024;
+          moonLight.shadow.camera.near = 0.1;
+          moonLight.shadow.camera.far = 300;
+          
+          const shadowCamera = moonLight.shadow.camera as THREE.OrthographicCamera;
+          const shadowSize = 30;
+          shadowCamera.left = -shadowSize;
+          shadowCamera.right = shadowSize;
+          shadowCamera.top = shadowSize;
+          shadowCamera.bottom = -shadowSize;
+          
+          scene.add(moonLight);
+          scene.add(moonLight.target);
+        } else if (!newConfig.moon.enabled && moonLight) {
+          // Remove moon light if it was enabled before
+          scene.remove(moonLight);
+          scene.remove(moonLight.target);
+          moonLight.dispose();
+          moonLight = null;
         }
       }
 
@@ -302,7 +468,15 @@ export const createDayNightManager = (
     },
 
     dispose(): void {
-      // Cleanup if needed
+      // Cleanup moon light if it exists
+      if (moonLight) {
+        scene.remove(moonLight);
+        scene.remove(moonLight.target);
+        moonLight.dispose();
+        moonLight = null;
+      }
+      
+      // Cleanup color objects
       tempAmbientColor.set(0);
       tempDirectionalColor.set(0);
       tempFogColor.set(0);

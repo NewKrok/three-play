@@ -1,8 +1,4 @@
-import {
-  createWorld,
-  WorldConfig,
-  createInputManager,
-} from '@newkrok/three-play';
+import { createWorld } from '@newkrok/three-play';
 import {
   updateParticleSystems,
   createParticleSystem,
@@ -287,8 +283,6 @@ worldInstance.onReady((assets) => {
   const renderer = worldInstance.getRenderer();
   const scene = worldInstance.getScene();
   const camera = worldInstance.getCamera();
-  let ambientLight = worldInstance.getAmbientLight();
-  let directionalLight = worldInstance.getDirectionalLight();
 
   const heightmapUtils = worldInstance.getHeightmapUtils();
   const loadedAssets = worldInstance.getLoadedAssets();
@@ -1267,28 +1261,6 @@ worldInstance.onReady((assets) => {
       ),
       duration: 0.5,
     },
-    /* {
-      to: new THREE.Vector3(
-        startingPosition.x - 0,
-        12,
-        startingPosition.z + 20,
-      ),
-      lookAt: new THREE.Vector3(
-        character.model.position.x,
-        12,
-        character.model.position.z,
-      ),
-      duration: 5.0,
-    },
-    {
-      to: new THREE.Vector3(
-        character.model.position.x,
-        character.model.position.y + DISTANCE_FROM_CAMERA,
-        character.model.position.z + 8,
-      ),
-      lookAt: character.model.position,
-      duration: 5.0,
-    }, */
   ]);
 
   camera.lookAt(150, 20, 200);
