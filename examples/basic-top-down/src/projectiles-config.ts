@@ -19,7 +19,7 @@ export const createAppleProjectileDefinition = (
     velocity: new THREE.Vector3(0, 0, 0), // Will be set when launching
     gravity: new THREE.Vector3(0, -9.81, 0),
     airResistance: 0.98,
-    bounciness: 0.3,
+    bounciness: 0,
     stickOnHit: false,
     lifetime: 5,
   },

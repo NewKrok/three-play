@@ -94,6 +94,7 @@ const crateEffects = [
 let direction = 0;
 let units = [];
 let trees = [];
+let character = null;
 
 let crates = [];
 let nearbyCreateOutlines = new Map(); // Track crate outlines by crate index
@@ -257,6 +258,46 @@ const createCinematicCameraController = (
     isPlaying,
   };
 };
+
+// Create collision detection function for projectiles
+const checkObjectCollision = (projectile, radius) => {
+  const projectilePosition = projectile.position;
+
+  // Check collision against all units (except the character)
+  for (let { model: unit } of units) {
+    if (character && unit === character.model) continue; // Don't hit the player
+
+    // Create unit center position (foot position + height offset for body center)
+    const unitCenterPosition = unit.position.clone();
+    unitCenterPosition.y += 1.0; // Add 1 meter for approximate body center height
+
+    const distance = unitCenterPosition.distanceTo(projectilePosition);
+    const unitCollisionRadius = 0.5; // Unit collision radius
+
+    if (distance < radius + unitCollisionRadius) {
+      // Calculate hit point and normal
+      const direction = projectilePosition
+        .clone()
+        .sub(unitCenterPosition)
+        .normalize();
+      const hitPoint = unitCenterPosition
+        .clone()
+        .add(direction.clone().multiplyScalar(unitCollisionRadius));
+      const normal = direction.clone();
+
+      return {
+        object: unit,
+        point: hitPoint,
+        normal: normal,
+      };
+    }
+  }
+
+  return null; // No collision
+};
+
+// Set collision function in world config
+(worldConfig.projectiles as any).checkObjectCollision = checkObjectCollision;
 
 // Create THREE Play world instance with assets
 const worldInstance = createWorld(worldConfig);
@@ -433,7 +474,7 @@ worldInstance.onReady((assets) => {
 
     return character;
   };
-  const character = createCharacter({
+  character = createCharacter({
     position: startingPosition,
   });
   const { instance: dustEffectInstance } = createParticleSystem(

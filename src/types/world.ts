@@ -31,6 +31,15 @@ export type WorldProjectilesConfig = {
   maxProjectiles?: number;
   /** Projectile definitions to register */
   definitions?: ProjectileDefinition[];
+  /** Function to check collision with objects */
+  checkObjectCollision?: (
+    projectile: any,
+    radius: number,
+  ) => {
+    object: THREE.Object3D;
+    point: THREE.Vector3;
+    normal: THREE.Vector3;
+  } | null;
 };
 
 /**

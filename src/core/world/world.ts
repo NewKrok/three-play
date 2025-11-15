@@ -296,6 +296,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
         logger,
         maxProjectiles: projectilesConfig.maxProjectiles ?? 100,
         getHeightFromPosition: heightmapManager?.utils?.getHeightFromPosition,
+        checkObjectCollision: projectilesConfig.checkObjectCollision,
       });
 
       // Register projectile definitions if provided

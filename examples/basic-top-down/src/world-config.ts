@@ -108,6 +108,7 @@ const worldConfig: WorldConfig = {
   projectiles: {
     enabled: true,
     maxProjectiles: 100,
+    // checkObjectCollision will be set dynamically in main.ts
   },
 };
 
