@@ -26,7 +26,7 @@ describe('Skybox Manager', () => {
   beforeEach(() => {
     scene = new THREE.Scene();
     logger = createLogger({ level: 'debug' });
-    
+
     // Mock loaded assets with skybox textures
     mockAssets = {
       textures: {
@@ -75,7 +75,12 @@ describe('Skybox Manager', () => {
         },
       };
 
-      const skyboxManager = createSkyboxManager(config, scene, mockAssets, logger);
+      const skyboxManager = createSkyboxManager(
+        config,
+        scene,
+        mockAssets,
+        logger,
+      );
 
       expect(skyboxManager).toBeDefined();
       expect(typeof skyboxManager.apply).toBe('function');
@@ -96,7 +101,12 @@ describe('Skybox Manager', () => {
         },
       };
 
-      const skyboxManager = createSkyboxManager(config, scene, mockAssets, logger);
+      const skyboxManager = createSkyboxManager(
+        config,
+        scene,
+        mockAssets,
+        logger,
+      );
       skyboxManager.apply();
 
       expect(scene.background).toBeDefined();
@@ -116,7 +126,12 @@ describe('Skybox Manager', () => {
         },
       };
 
-      const skyboxManager = createSkyboxManager(config, scene, mockAssets, logger);
+      const skyboxManager = createSkyboxManager(
+        config,
+        scene,
+        mockAssets,
+        logger,
+      );
       skyboxManager.apply();
 
       expect(scene.background).toBeNull();
@@ -135,7 +150,12 @@ describe('Skybox Manager', () => {
         },
       };
 
-      const skyboxManager = createSkyboxManager(config, scene, mockAssets, logger);
+      const skyboxManager = createSkyboxManager(
+        config,
+        scene,
+        mockAssets,
+        logger,
+      );
       skyboxManager.apply();
 
       expect(scene.background).toBeNull();
@@ -154,7 +174,12 @@ describe('Skybox Manager', () => {
         },
       };
 
-      const skyboxManager = createSkyboxManager(config, scene, mockAssets, logger);
+      const skyboxManager = createSkyboxManager(
+        config,
+        scene,
+        mockAssets,
+        logger,
+      );
       skyboxManager.apply();
 
       const originalBackground = scene.background;
@@ -178,7 +203,12 @@ describe('Skybox Manager', () => {
         },
       };
 
-      const skyboxManager = createSkyboxManager(config, scene, mockAssets, logger);
+      const skyboxManager = createSkyboxManager(
+        config,
+        scene,
+        mockAssets,
+        logger,
+      );
       skyboxManager.apply();
 
       expect(scene.background).toBeNull();
@@ -208,7 +238,12 @@ describe('Skybox Manager', () => {
         models: {},
       };
 
-      const skyboxManager = createSkyboxManager(config, scene, emptyAssets, logger);
+      const skyboxManager = createSkyboxManager(
+        config,
+        scene,
+        emptyAssets,
+        logger,
+      );
       skyboxManager.apply();
 
       expect(scene.background).toBeNull();
@@ -227,7 +262,12 @@ describe('Skybox Manager', () => {
         },
       };
 
-      const skyboxManager = createSkyboxManager(config, scene, mockAssets, logger);
+      const skyboxManager = createSkyboxManager(
+        config,
+        scene,
+        mockAssets,
+        logger,
+      );
       skyboxManager.apply();
 
       const background = scene.background as THREE.CubeTexture;

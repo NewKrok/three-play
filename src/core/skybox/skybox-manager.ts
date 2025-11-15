@@ -29,26 +29,28 @@ export const createSkyboxManager = (
     }
 
     const { assets: assetConfig } = currentConfig;
-    
+
     const skyboxTextures = [
-      assets.textures[assetConfig.rightAssetId],   // positive X
-      assets.textures[assetConfig.leftAssetId],    // negative X
-      assets.textures[assetConfig.bottomAssetId],  // positive Y (swap top/bottom for correct orientation)
-      assets.textures[assetConfig.topAssetId],     // negative Y (swap top/bottom for correct orientation)
-      assets.textures[assetConfig.frontAssetId],   // positive Z
-      assets.textures[assetConfig.backAssetId],    // negative Z
+      assets.textures[assetConfig.rightAssetId], // positive X
+      assets.textures[assetConfig.leftAssetId], // negative X
+      assets.textures[assetConfig.bottomAssetId], // positive Y (swap top/bottom for correct orientation)
+      assets.textures[assetConfig.topAssetId], // negative Y (swap top/bottom for correct orientation)
+      assets.textures[assetConfig.frontAssetId], // positive Z
+      assets.textures[assetConfig.backAssetId], // negative Z
     ];
 
     // Check if all required textures are loaded
-    const missingTextures = skyboxTextures.filter(texture => !texture);
+    const missingTextures = skyboxTextures.filter((texture) => !texture);
     if (missingTextures.length > 0) {
-      logger.warn('Some skybox textures are missing, skybox will not be applied');
+      logger.warn(
+        'Some skybox textures are missing, skybox will not be applied',
+      );
       return null;
     }
 
     // Create cube texture from the loaded textures
     const cubeTexture = new THREE.CubeTexture();
-    cubeTexture.image = skyboxTextures.map(texture => texture.image);
+    cubeTexture.image = skyboxTextures.map((texture) => texture.image);
     cubeTexture.needsUpdate = true;
     cubeTexture.colorSpace = THREE.SRGBColorSpace;
 
@@ -65,7 +67,7 @@ export const createSkyboxManager = (
     }
 
     skyboxCubeTexture = createSkyboxTexture();
-    
+
     if (skyboxCubeTexture) {
       scene.background = skyboxCubeTexture;
       logger.info('Skybox applied to scene with corrected orientation');
@@ -82,10 +84,10 @@ export const createSkyboxManager = (
       skyboxCubeTexture.dispose();
       skyboxCubeTexture = null;
     }
-    
+
     // Remove skybox from scene
     scene.background = null;
-    
+
     logger.debug('Skybox resources disposed');
   };
 
@@ -94,11 +96,11 @@ export const createSkyboxManager = (
    */
   const updateConfig = (newConfig: Partial<SkyboxConfig>): void => {
     currentConfig = { ...currentConfig, ...newConfig };
-    
+
     // Re-apply skybox with new configuration
     dispose();
     apply();
-    
+
     logger.debug('Skybox configuration updated');
   };
 

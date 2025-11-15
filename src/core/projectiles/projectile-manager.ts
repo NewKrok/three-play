@@ -21,8 +21,13 @@ import type {
 export const createProjectileManager = (
   config: ProjectileManagerConfig,
 ): ProjectileManager => {
-  const { scene, logger, maxProjectiles, getHeightFromPosition, checkObjectCollision } =
-    config;
+  const {
+    scene,
+    logger,
+    maxProjectiles,
+    getHeightFromPosition,
+    checkObjectCollision,
+  } = config;
 
   // Storage for projectile definitions and their pools
   const definitions = new Map<string, ProjectileDefinition>();

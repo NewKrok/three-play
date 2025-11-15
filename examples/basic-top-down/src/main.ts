@@ -1274,7 +1274,7 @@ worldInstance.onReady((assets) => {
         12,
         character.model.position.z,
       ),
-      duration: 5.5,
+      duration: 0.5,
     },
   ]);
 
