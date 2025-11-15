@@ -1,8 +1,5 @@
 import { createWorld } from '@newkrok/three-play';
-import type {
-  ProjectileManager,
-  ProjectileDefinition,
-} from '@newkrok/three-play';
+import type { ProjectileManager } from '@newkrok/three-play';
 import {
   updateParticleSystems,
   createParticleSystem,
@@ -523,7 +520,7 @@ worldInstance.onReady((assets) => {
   );
 
   projectileManager = worldInstance.getProjectileManager();
-  
+
   if (projectileManager) {
     projectileManager.registerDefinition(appleProjectileDefinition);
   } else {
@@ -1271,9 +1268,6 @@ worldInstance.onReady((assets) => {
     updateUnits();
     updateCharactersYPosition();
     updateAppleThrowRoutine();
-
-    // Update input manager
-    inputManager.update(cycleData.delta);
 
     updateRollRoutine();
 
