@@ -12,6 +12,7 @@ import type { TerrainConfig, TerrainInstance } from './terrain.js';
 import type { WaterConfig, WaterInstance } from './water.js';
 import type { Logger, LoggerConfig } from '../core/utils/logger.js';
 import type { DayNightConfig, DayNightManager } from './day-night.js';
+import type { SkyboxConfig } from './skybox.js';
 import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
 
 /**
@@ -45,6 +46,7 @@ export type WorldConfig = {
   assets?: AssetsConfig;
   logging?: LoggerConfig;
   dayNight?: DayNightConfig;
+  skybox?: SkyboxConfig;
 };
 
 /**
@@ -65,6 +67,7 @@ export type WorldInstance = {
   getInputManager(): InputManager; // Input manager instance
   getLogger(): Logger; // Logger instance for this world
   getDayNightManager(): DayNightManager | null; // Day/night manager if enabled
+  getSkyboxManager(): any | null; // Skybox manager if enabled
 
   // Simple outline system methods
   addOutline(

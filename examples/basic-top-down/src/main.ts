@@ -288,6 +288,8 @@ worldInstance.onReady((assets) => {
   const loadedAssets = worldInstance.getLoadedAssets();
   const getHeightFromPosition = heightmapUtils.getHeightFromPosition;
 
+
+
   // Append renderer to DOM
   document.querySelector('#demo').appendChild(renderer.domElement);
 
@@ -1259,7 +1261,7 @@ worldInstance.onReady((assets) => {
         12,
         character.model.position.z,
       ),
-      duration: 0.5,
+      duration: 5.5,
     },
   ]);
 

@@ -13,6 +13,7 @@ import {
 } from '../heightmap/index.js';
 import { createInputManager } from '../input/index.js';
 import { createDayNightManager } from '../day-night/index.js';
+import { createSkyboxManager } from '../skybox/index.js';
 import type { InputManager } from '../../types/input.js';
 import type { DayNightManager } from '../../types/day-night.js';
 import {
@@ -98,6 +99,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   // Get day/night configuration
   const dayNightConfig = config.dayNight;
   let dayNightManager: DayNightManager | null = null;
+
+  // Get skybox configuration
+  const skyboxConfig = config.skybox;
+  let skyboxManager: any | null = null;
 
   // Create renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -269,6 +274,13 @@ const createWorld = (config: WorldConfig): WorldInstance => {
         );
         scene.add(terrainInstance.mesh);
       }
+    }
+
+    // Initialize skybox manager if configured
+    if (skyboxConfig?.enabled && assets) {
+      skyboxManager = createSkyboxManager(skyboxConfig, scene, assets, logger);
+      skyboxManager.apply();
+      logger.debug('Skybox manager initialized');
     }
 
     readyCallbacks.forEach((callback) => {
@@ -473,6 +485,14 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     getDayNightManager(): DayNightManager | null {
       return dayNightManager;
+    },
+
+    /**
+     * Get skybox manager instance if enabled
+     * @returns Skybox manager or null if not enabled
+     */
+    getSkyboxManager(): any | null {
+      return skyboxManager;
     },
 
     /**
@@ -684,6 +704,11 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       // Cleanup day/night manager
       if (dayNightManager) {
         dayNightManager.dispose();
+      }
+
+      // Cleanup skybox manager
+      if (skyboxManager) {
+        skyboxManager.dispose();
       }
 
       // Cleanup asset loader

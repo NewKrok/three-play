@@ -51,6 +51,24 @@ const assetConfig: AssetsConfig = {
       url: 'assets/textures/splash-256.webp',
       flipY: false,
     },
+    'skybox-right': {
+      url: 'assets/textures/skybox/simple/right.webp',
+    },
+    'skybox-left': {
+      url: 'assets/textures/skybox/simple/left.webp',
+    },
+    'skybox-top': {
+      url: 'assets/textures/skybox/simple/top.webp',
+    },
+    'skybox-bottom': {
+      url: 'assets/textures/skybox/simple/bottom.webp',
+    },
+    'skybox-front': {
+      url: 'assets/textures/skybox/simple/front.webp',
+    },
+    'skybox-back': {
+      url: 'assets/textures/skybox/simple/back.webp',
+    },
   },
   models: {
     'human-idle': {

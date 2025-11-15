@@ -43,6 +43,9 @@ export type {
 // Effects utilities
 export { createOutlineManager } from './core/effects/index.js';
 
+// Skybox utilities
+export { createSkyboxManager } from './core/skybox/index.js';
+
 // Logger utilities
 export { createLogger, LoggerUtils } from './core/utils/logger.js';
 
@@ -125,3 +128,8 @@ export type {
   SunPositionConfig,
   FogConfig,
 } from './types/day-night.js';
+export type {
+  SkyboxConfig,
+  SkyboxAssetConfig,
+  SkyboxManager,
+} from './types/skybox.js';

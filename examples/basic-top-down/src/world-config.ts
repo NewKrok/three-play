@@ -94,6 +94,17 @@ const worldConfig: WorldConfig = {
     easing: 'ease-in-out',
     easingPower: 0.7,
   },
+  skybox: {
+    enabled: true,
+    assets: {
+      rightAssetId: 'skybox-right',
+      leftAssetId: 'skybox-left',
+      topAssetId: 'skybox-top',
+      bottomAssetId: 'skybox-bottom',
+      frontAssetId: 'skybox-front',
+      backAssetId: 'skybox-back',
+    },
+  },
 };
 
 export default worldConfig;
