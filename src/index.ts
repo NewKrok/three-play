@@ -52,6 +52,15 @@ export { createLogger, LoggerUtils } from './core/utils/logger.js';
 // Day/Night utilities
 export { createDayNightManager } from './core/day-night/index.js';
 
+// Projectile utilities
+export {
+  ProjectileUtils,
+  createProjectileManager,
+} from './core/projectiles/index.js';
+
+// Object Pool utilities
+export { ObjectPoolUtils, createObjectPool } from './core/utils/index.js';
+
 // Types
 export type {
   WorldConfig,
@@ -133,3 +142,22 @@ export type {
   SkyboxAssetConfig,
   SkyboxManager,
 } from './types/skybox.js';
+export type {
+  ProjectileDefinition,
+  ProjectileInstance,
+  ProjectileManager,
+  ProjectileManagerConfig,
+  ProjectileManagerStats,
+  ProjectileLaunchParams,
+  ProjectileHitEvent,
+  ProjectileDestroyEvent,
+  ProjectilePhysicsConfig,
+  ProjectileVisualConfig,
+  ProjectileCollisionConfig,
+  ProjectileSpreadConfig,
+} from './types/projectiles.js';
+export type {
+  ObjectPool,
+  ObjectPoolConfig,
+  ObjectPoolStats,
+} from './types/common.js';
