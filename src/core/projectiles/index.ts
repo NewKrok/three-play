@@ -2,4 +2,7 @@
  * Projectile system exports
  */
 
-export * from './projectile-manager.js';
+export {
+  createProjectileManager,
+  ProjectileUtils,
+} from './projectile-manager.js';

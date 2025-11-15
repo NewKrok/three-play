@@ -2,5 +2,9 @@
  * Common utility functions
  */
 
-export * from './easing-utils.js';
-export * from './object-pool.js';
+export {
+  EasingFunctions,
+  applyEasing,
+  isEasingComplete,
+} from './easing-utils.js';
+export { createObjectPool, ObjectPoolUtils } from './object-pool.js';

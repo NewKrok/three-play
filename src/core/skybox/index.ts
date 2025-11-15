@@ -1,1 +1,1 @@
-export * from './skybox-manager.js';
+export { createSkyboxManager } from './skybox-manager.js';

@@ -1,1 +1,1 @@
-export * from './water-utils.js';
+export { WaterUtils, createWaterInstance } from './water-utils.js';

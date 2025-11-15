@@ -41,7 +41,11 @@ export type {
 } from './core/input/index.js';
 
 // Effects utilities
-export { createOutlineManager } from './core/effects/index.js';
+export {
+  createOutlineManager,
+  createDefaultPasses,
+  createPostProcessingManager,
+} from './core/effects/index.js';
 
 // Skybox utilities
 export { createSkyboxManager } from './core/skybox/index.js';

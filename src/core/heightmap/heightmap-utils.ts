@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import type {
   HeightmapData,
   HeightmapConfig,
-  HeightmapUtils,
+  HeightmapUtils as HeightmapUtilsType,
   HeightmapPosition,
   ResolutionRatio,
 } from '../../types/heightmap.js';
@@ -45,7 +45,7 @@ export const loadFromTexture = (texture: THREE.Texture): HeightmapData => {
 export const createHeightmapUtils = (
   heightmapData: HeightmapData,
   config: HeightmapConfig,
-): HeightmapUtils => {
+): HeightmapUtilsType => {
   const { heightmap } = heightmapData;
   const { worldWidth, worldHeight, resolution, elevationRatio } = config;
 
@@ -185,7 +185,7 @@ export const createHeightmapUtils = (
 /**
  * Heightmap utility namespace
  */
-export const HeightmapUtilsNamespace = {
+export const HeightmapUtils = {
   loadFromTexture,
   createHeightmapUtils,
 };

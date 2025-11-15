@@ -1,1 +1,1 @@
-export * from './world.js';
+export { default as createWorld } from './world.js';

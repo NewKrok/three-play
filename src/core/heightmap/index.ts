@@ -2,7 +2,7 @@
 export {
   loadFromTexture,
   createHeightmapUtils,
-  HeightmapUtilsNamespace as HeightmapUtils,
+  HeightmapUtils,
 } from './heightmap-utils.js';
 
 // Heightmap integration for world creation
