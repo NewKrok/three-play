@@ -1,4 +1,8 @@
-import { createWorld } from '@newkrok/three-play';
+import { createWorld, createProjectileManager } from '@newkrok/three-play';
+import type {
+  ProjectileManager,
+  ProjectileDefinition,
+} from '@newkrok/three-play';
 import {
   updateParticleSystems,
   createParticleSystem,
@@ -92,12 +96,15 @@ const crateEffects = [
 let direction = 0;
 let units = [];
 let trees = [];
-let apples = [];
+
 let crates = [];
 let nearbyCreateOutlines = new Map(); // Track crate outlines by crate index
 let crateProxyMeshes = new Map(); // Individual meshes for outlined crates
 let lastThrowTime = 0;
 let lastRollTime = 0;
+
+// Projectile system
+let projectileManager: ProjectileManager;
 let lastLightAttackTime = 0;
 let lastHeavyAttackTime = 0;
 let isRolling = false;
@@ -287,8 +294,6 @@ worldInstance.onReady((assets) => {
   const heightmapUtils = worldInstance.getHeightmapUtils();
   const loadedAssets = worldInstance.getLoadedAssets();
   const getHeightFromPosition = heightmapUtils.getHeightFromPosition;
-
-
 
   // Append renderer to DOM
   document.querySelector('#demo').appendChild(renderer.domElement);
@@ -508,6 +513,87 @@ worldInstance.onReady((assets) => {
   scene.add(appleMesh);
   let appleIndex = 0;
   const applesPerTree = [];
+
+  // Initialize projectile manager
+  const appleProjectileDefinition: ProjectileDefinition = {
+    id: 'apple',
+    name: 'Apple',
+    physics: {
+      velocity: new THREE.Vector3(0, 0, 0), // Will be set when launching
+      gravity: new THREE.Vector3(0, -9.81, 0),
+      airResistance: 0.98,
+      bounciness: 0.3,
+      stickOnHit: false,
+      lifetime: 5,
+    },
+    visual: {
+      geometry: appleGeometry,
+      material: appleMaterial,
+      castShadow: true,
+      receiveShadow: true,
+    },
+    collision: {
+      radius: 0.2,
+      layers: ['default'],
+      checkTerrain: true,
+      checkObjects: true,
+    },
+    spread: {
+      horizontal: throwSpread,
+      vertical: 0.2,
+      velocityVariance: 0.1,
+    },
+    poolSize: 50,
+  };
+
+  projectileManager = createProjectileManager({
+    scene,
+    logger,
+    maxProjectiles: 100,
+    getHeightFromPosition,
+  });
+
+  projectileManager.registerDefinition(appleProjectileDefinition);
+
+  // Set up projectile event handlers
+  projectileManager.onHit((event) => {
+    const { projectile, target, position } = event;
+
+    if (projectile.definition.id === 'apple') {
+      // Create splash effect
+      const { instance: splashEffectInstance, dispose } = createParticleSystem(
+        splashEffect,
+        cycleData.now,
+      );
+      splashEffectInstance.position.copy(position);
+      scene.add(splashEffectInstance);
+      setTimeout(dispose, 1000);
+
+      // Check if hit a unit (enemy)
+      for (let { model: unit } of units) {
+        if (unit === character.model) continue;
+        const dist = position.distanceTo(unit.position);
+        if (dist < APPLE_HIT_RADIUS) {
+          // Apply knockback
+          const away = unit.position.clone().sub(position).normalize();
+          const knockback = away.multiplyScalar(APPLE_PUSH_FORCE);
+          if (!unit.knockbackVelocity)
+            unit.knockbackVelocity = new THREE.Vector3();
+          unit.knockbackVelocity.add(knockback);
+
+          // Show floating text
+          showFloatingLabel({
+            text: getSplashText(),
+            position: unit.position,
+          });
+
+          // Update score
+          gameState.score++;
+          break;
+        }
+      }
+    }
+  });
 
   for (let i = 0; i < TREE_COUNT; i++) {
     const scale = 1 + Math.random();
@@ -1090,41 +1176,31 @@ worldInstance.onReady((assets) => {
     );
   };
 
-  const getThrowVelocity = () => {
+  const throwApple = () => {
+    const origin = character.model.position.clone();
+    origin.y += 0.5; // Throw from slightly above character
+
+    // Get character's forward direction
     const direction = character.model.getWorldDirection(new THREE.Vector3());
     direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
 
-    direction.x += (Math.random() - 0.5) * throwSpread;
-    direction.y += Math.random() * 0.2;
-    direction.z += (Math.random() - 0.5) * throwSpread;
-
+    // Add some upward trajectory
+    direction.y += 0.2;
     direction.normalize();
-    direction.multiplyScalar(throwStrength);
-    return direction;
-  };
 
-  const updateAppleInstance = (index, position) => {
-    dummy.position.copy(position);
-    dummy.updateMatrix();
-    appleMesh.setMatrixAt(index, dummy.matrix);
-    appleMesh.instanceMatrix.needsUpdate = true;
-  };
+    // Launch projectile with spread and strength
+    const projectile = projectileManager.launch({
+      definitionId: 'apple',
+      origin,
+      direction,
+      strength: throwStrength,
+      userData: { thrownBy: 'player' },
+    });
 
-  const throwApple = () => {
-    for (let i = 0; i < appleMesh.count; i++) {
-      if (!apples[i] || apples[i].inactive) {
-        const apple = {
-          position: character.model.position.clone(),
-          velocity: getThrowVelocity(),
-          life: 5,
-          instanceId: i,
-          inactive: false,
-        };
-        apple.position.y += 0.5;
-        apples[i] = apple;
-        updateAppleInstance(i, apple.position);
-        break;
-      }
+    if (projectile) {
+      logger.info('Apple thrown successfully!');
+    } else {
+      logger.warn('Failed to throw apple - no projectiles available');
     }
   };
 
@@ -1140,69 +1216,6 @@ worldInstance.onReady((assets) => {
       'Kaboom!',
     ];
     return texts[Math.floor(Math.random() * texts.length)];
-  };
-
-  const updateApples = () => {
-    for (let apple of apples) {
-      if (apple && !apple.inactive) {
-        apple.velocity.add(gravity.clone().multiplyScalar(cycleData.delta));
-        apple.position.add(
-          apple.velocity.clone().multiplyScalar(cycleData.delta),
-        );
-        updateAppleInstance(apple.instanceId, apple.position);
-
-        const terrainHeight = getHeightFromPosition(apple.position);
-        apple.life -= cycleData.delta;
-
-        const addAppleExplosion = (position) => {
-          const { instance: splashEffectInstance, dispose } =
-            createParticleSystem(splashEffect, cycleData.now);
-          splashEffectInstance.position.copy(position);
-          scene.add(splashEffectInstance);
-          setTimeout(dispose, 1000);
-        };
-
-        if (apple.position.y <= terrainHeight)
-          addAppleExplosion(apple.position);
-
-        for (let { model: unit } of units) {
-          if (unit === character.model) continue;
-          const dist = apple.position.distanceTo(unit.position);
-          if (dist < APPLE_HIT_RADIUS) {
-            const away = unit.position.clone().sub(apple.position).normalize();
-            const knockback = away.multiplyScalar(APPLE_PUSH_FORCE);
-            if (!unit.knockbackVelocity)
-              unit.knockbackVelocity = new THREE.Vector3();
-            unit.knockbackVelocity.add(knockback);
-
-            apple.inactive = true;
-            apple.velocity.set(0, 0, 0);
-            addAppleExplosion(unit.position);
-            showFloatingLabel({
-              text: getSplashText(),
-              position: unit.position,
-            });
-            gameState.score++;
-
-            updateAppleInstance(
-              apple.instanceId,
-              new THREE.Vector3(0, -100, 0),
-            );
-            break;
-          }
-        }
-
-        if (
-          apple.life <= 0 ||
-          apple.position.y < 0 ||
-          apple.position.y <= terrainHeight
-        ) {
-          apple.inactive = true;
-          apple.velocity.set(0, 0, 0);
-          updateAppleInstance(apple.instanceId, new THREE.Vector3(0, -100, 0));
-        }
-      }
-    }
   };
 
   const updateAppleThrowRoutine = () => {
@@ -1289,7 +1302,8 @@ worldInstance.onReady((assets) => {
 
     updateRollRoutine();
 
-    updateApples();
+    // Update projectile manager
+    projectileManager.update(cycleData.delta);
     updateTimeDisplay();
 
     cinamaticCameraController.update(cycleData.delta);
