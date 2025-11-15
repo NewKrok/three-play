@@ -14,8 +14,10 @@ import {
 import { createInputManager } from '../input/index.js';
 import { createDayNightManager } from '../day-night/index.js';
 import { createSkyboxManager } from '../skybox/index.js';
+import { createProjectileManager } from '../projectiles/index.js';
 import type { InputManager } from '../../types/input.js';
 import type { DayNightManager } from '../../types/day-night.js';
+import type { ProjectileManager } from '../../types/projectiles.js';
 import {
   createTerrainInstance,
   prepareTerrainConfig,
@@ -103,6 +105,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   // Get skybox configuration
   const skyboxConfig = config.skybox;
   let skyboxManager: any | null = null;
+
+  // Get projectiles configuration
+  const projectilesConfig = config.projectiles;
+  let projectileManager: ProjectileManager | null = null;
 
   // Create renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -283,6 +289,25 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       logger.debug('Skybox manager initialized');
     }
 
+    // Initialize projectile manager if configured
+    if (projectilesConfig?.enabled) {
+      projectileManager = createProjectileManager({
+        scene,
+        logger,
+        maxProjectiles: projectilesConfig.maxProjectiles ?? 100,
+        getHeightFromPosition: heightmapManager?.utils?.getHeightFromPosition,
+      });
+
+      // Register projectile definitions if provided
+      if (projectilesConfig.definitions) {
+        projectilesConfig.definitions.forEach((definition) => {
+          projectileManager!.registerDefinition(definition);
+        });
+      }
+
+      logger.debug('Projectile manager initialized');
+    }
+
     readyCallbacks.forEach((callback) => {
       try {
         callback(assets);
@@ -334,6 +359,11 @@ const createWorld = (config: WorldConfig): WorldInstance => {
     // Update day/night cycle if available
     if (dayNightManager) {
       dayNightManager.update(deltaTime);
+    }
+
+    // Update projectile manager if available
+    if (projectileManager) {
+      projectileManager.update(deltaTime);
     }
 
     // Call all update callbacks
@@ -493,6 +523,14 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     getSkyboxManager(): any | null {
       return skyboxManager;
+    },
+
+    /**
+     * Get projectile manager instance if enabled
+     * @returns Projectile manager or null if not enabled
+     */
+    getProjectileManager(): ProjectileManager | null {
+      return projectileManager;
     },
 
     /**
@@ -731,6 +769,12 @@ const createWorld = (config: WorldConfig): WorldInstance => {
         terrainInstance.destroy();
         scene.remove(terrainInstance.mesh);
         terrainInstance = null;
+      }
+
+      // Cleanup projectile manager
+      if (projectileManager) {
+        projectileManager.dispose();
+        projectileManager = null;
       }
 
       // Cleanup post-processing

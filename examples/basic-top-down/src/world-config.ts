@@ -105,6 +105,10 @@ const worldConfig: WorldConfig = {
       backAssetId: 'skybox-back',
     },
   },
+  projectiles: {
+    enabled: true,
+    maxProjectiles: 100,
+  },
 };
 
 export default worldConfig;

@@ -13,12 +13,25 @@ import type { WaterConfig, WaterInstance } from './water.js';
 import type { Logger, LoggerConfig } from '../core/utils/logger.js';
 import type { DayNightConfig, DayNightManager } from './day-night.js';
 import type { SkyboxConfig } from './skybox.js';
+import type { ProjectileDefinition, ProjectileManager } from './projectiles.js';
 import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
 
 /**
  * Update callback function type
  */
 export type UpdateCallback = (deltaTime: number, elapsedTime: number) => void;
+
+/**
+ * Projectiles configuration for world
+ */
+export type WorldProjectilesConfig = {
+  /** Whether projectile system is enabled */
+  enabled: boolean;
+  /** Maximum total projectiles across all types */
+  maxProjectiles?: number;
+  /** Projectile definitions to register */
+  definitions?: ProjectileDefinition[];
+};
 
 /**
  * Configuration type for world creation
@@ -47,6 +60,7 @@ export type WorldConfig = {
   logging?: LoggerConfig;
   dayNight?: DayNightConfig;
   skybox?: SkyboxConfig;
+  projectiles?: WorldProjectilesConfig;
 };
 
 /**
@@ -68,6 +82,7 @@ export type WorldInstance = {
   getLogger(): Logger; // Logger instance for this world
   getDayNightManager(): DayNightManager | null; // Day/night manager if enabled
   getSkyboxManager(): any | null; // Skybox manager if enabled
+  getProjectileManager(): ProjectileManager | null; // Projectile manager if enabled
 
   // Simple outline system methods
   addOutline(

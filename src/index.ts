@@ -69,6 +69,7 @@ export { ObjectPoolUtils, createObjectPool } from './core/utils/index.js';
 export type {
   WorldConfig,
   WorldInstance,
+  WorldProjectilesConfig,
   UpdateCallback,
 } from './types/world.js';
 export type {

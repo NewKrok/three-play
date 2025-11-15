@@ -1,4 +1,4 @@
-import { createWorld, createProjectileManager } from '@newkrok/three-play';
+import { createWorld } from '@newkrok/three-play';
 import type {
   ProjectileManager,
   ProjectileDefinition,
@@ -522,14 +522,13 @@ worldInstance.onReady((assets) => {
     throwSpread,
   );
 
-  projectileManager = createProjectileManager({
-    scene,
-    logger,
-    maxProjectiles: 100,
-    getHeightFromPosition,
-  });
-
-  projectileManager.registerDefinition(appleProjectileDefinition);
+  projectileManager = worldInstance.getProjectileManager();
+  
+  if (projectileManager) {
+    projectileManager.registerDefinition(appleProjectileDefinition);
+  } else {
+    logger.warn('Projectile manager not available - check world config');
+  }
 
   // Set up projectile event handlers
   projectileManager.onHit((event) => {
@@ -1278,8 +1277,7 @@ worldInstance.onReady((assets) => {
 
     updateRollRoutine();
 
-    // Update projectile manager
-    projectileManager.update(cycleData.delta);
+    // Projectile manager is automatically updated by the world instance
     updateTimeDisplay();
 
     cinamaticCameraController.update(cycleData.delta);
