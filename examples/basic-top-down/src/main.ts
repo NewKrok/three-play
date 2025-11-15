@@ -7,6 +7,7 @@ import {
   updateParticleSystems,
   createParticleSystem,
 } from 'https://esm.sh/@newkrok/three-particles';
+import { createAppleProjectileDefinition } from './projectiles-config.js';
 
 import * as THREE from 'three';
 import {
@@ -515,36 +516,11 @@ worldInstance.onReady((assets) => {
   const applesPerTree = [];
 
   // Initialize projectile manager
-  const appleProjectileDefinition: ProjectileDefinition = {
-    id: 'apple',
-    name: 'Apple',
-    physics: {
-      velocity: new THREE.Vector3(0, 0, 0), // Will be set when launching
-      gravity: new THREE.Vector3(0, -9.81, 0),
-      airResistance: 0.98,
-      bounciness: 0.3,
-      stickOnHit: false,
-      lifetime: 5,
-    },
-    visual: {
-      geometry: appleGeometry,
-      material: appleMaterial,
-      castShadow: true,
-      receiveShadow: true,
-    },
-    collision: {
-      radius: 0.2,
-      layers: ['default'],
-      checkTerrain: true,
-      checkObjects: true,
-    },
-    spread: {
-      horizontal: throwSpread,
-      vertical: 0.2,
-      velocityVariance: 0.1,
-    },
-    poolSize: 50,
-  };
+  const appleProjectileDefinition = createAppleProjectileDefinition(
+    appleGeometry,
+    appleMaterial,
+    throwSpread,
+  );
 
   projectileManager = createProjectileManager({
     scene,
