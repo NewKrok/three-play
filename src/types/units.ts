@@ -348,7 +348,11 @@ export type UnitManager = {
   /** Perform heavy attack */
   performHeavyAttack: (attacker: Unit, currentTime: number) => any;
   /** Check if unit can attack */
-  canAttack: (unit: Unit, attackType: AttackType, currentTime: number) => boolean;
+  canAttack: (
+    unit: Unit,
+    attackType: AttackType,
+    currentTime: number,
+  ) => boolean;
   /** Initialize combat data for a unit */
   initializeCombat: (unit: Unit, stamina?: number) => void;
   /** Set stamina for a unit */
@@ -364,18 +368,24 @@ export type UnitManager = {
   hasEffect: (unit: Unit, effectName: string) => boolean;
   /** Get effect from unit */
   getEffect: (unit: Unit, effectName: string) => any;
-  // Projectile integration methods  
+  // Projectile integration methods
   /** Check projectile collision against units */
   checkProjectileCollision: (
-    projectile: any, 
-    radius: number, 
-    excludeUnit?: Unit
+    projectile: any,
+    radius: number,
+    excludeUnit?: Unit,
   ) => { unit: Unit; point: THREE.Vector3; normal: THREE.Vector3 } | null;
   /** Create projectile collision function for world config */
-  createProjectileCollisionFunction: (excludeUnit?: Unit) => (projectile: any, radius: number) => any;
+  createProjectileCollisionFunction: (
+    excludeUnit?: Unit,
+  ) => (projectile: any, radius: number) => any;
   // Outline management methods
   /** Add outline to a unit */
-  addUnitOutline: (unit: Unit, worldInstance: any, config?: any) => string | null;
+  addUnitOutline: (
+    unit: Unit,
+    worldInstance: any,
+    config?: any,
+  ) => string | null;
   /** Remove outline from a unit */
   removeUnitOutline: (unit: Unit, worldInstance: any) => boolean;
   /** Check if unit has outline */

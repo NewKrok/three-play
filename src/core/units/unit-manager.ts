@@ -166,22 +166,28 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
   /**
    * Add effect to a unit
    */
-  const addEffect = (unit: Unit, effectName: string, effectInstance: any): void => {
+  const addEffect = (
+    unit: Unit,
+    effectName: string,
+    effectInstance: any,
+  ): void => {
     if (!unit.effects) {
       unit.effects = {};
     }
-    
+
     // Remove old effect if exists
     if (unit.effects[effectName]) {
-      unit.model.remove(unit.effects[effectName].instance || unit.effects[effectName]);
+      unit.model.remove(
+        unit.effects[effectName].instance || unit.effects[effectName],
+      );
       // Dispose if possible
       if (unit.effects[effectName].dispose) {
         unit.effects[effectName].dispose();
       }
     }
-    
+
     unit.effects[effectName] = effectInstance;
-    
+
     // Add to unit model if has instance property
     if (effectInstance.instance) {
       unit.model.add(effectInstance.instance);
@@ -198,21 +204,21 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
     if (!unit.effects || !unit.effects[effectName]) {
       return false;
     }
-    
+
     const effect = unit.effects[effectName];
-    
+
     // Remove from scene
     if (effect.instance) {
       unit.model.remove(effect.instance);
     } else {
       unit.model.remove(effect);
     }
-    
+
     // Dispose if possible
     if (effect.dispose) {
       effect.dispose();
     }
-    
+
     delete unit.effects[effectName];
     return true;
   };
@@ -222,7 +228,7 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
    */
   const removeAllEffects = (unit: Unit): void => {
     if (!unit.effects) return;
-    
+
     const effectNames = Object.keys(unit.effects);
     for (const effectName of effectNames) {
       removeEffect(unit, effectName);
@@ -248,20 +254,20 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
    * This function is designed to be used with THREE Play's projectile system
    */
   const checkProjectileCollision = (
-    projectile: any, 
+    projectile: any,
     radius: number,
-    excludeUnit?: Unit
-  ): { 
-    unit: Unit; 
-    point: THREE.Vector3; 
-    normal: THREE.Vector3 
+    excludeUnit?: Unit,
+  ): {
+    unit: Unit;
+    point: THREE.Vector3;
+    normal: THREE.Vector3;
   } | null => {
     const projectilePosition = projectile.position;
-    
+
     for (const unit of units.values()) {
       // Skip excluded unit (typically the shooter)
       if (excludeUnit && unit.id === excludeUnit.id) continue;
-      
+
       // Create unit center position (foot position + height offset for body center)
       const unitCenterPosition = unit.model.position.clone();
       unitCenterPosition.y += 1.0; // Add 1 meter for approximate body center height
@@ -297,7 +303,11 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
    */
   const createProjectileCollisionFunction = (excludeUnit?: Unit) => {
     return (projectile: any, radius: number) => {
-      const collision = checkProjectileCollision(projectile, radius, excludeUnit);
+      const collision = checkProjectileCollision(
+        projectile,
+        radius,
+        excludeUnit,
+      );
       if (collision) {
         return {
           object: collision.unit.model, // Return the model for compatibility
@@ -318,9 +328,9 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
    * Requires world instance to be passed in
    */
   const addUnitOutline = (
-    unit: Unit, 
-    worldInstance: any, 
-    config?: any
+    unit: Unit,
+    worldInstance: any,
+    config?: any,
   ): string | null => {
     if (!worldInstance || !worldInstance.addOutline) {
       console.warn('World instance with addOutline method is required');
@@ -341,11 +351,11 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
 
     const outlineConfig = { ...defaultConfig, ...config };
     const outlineId = worldInstance.addOutline(unit.model, outlineConfig);
-    
+
     if (outlineId) {
       unitOutlines.set(unit.id, outlineId);
     }
-    
+
     return outlineId;
   };
 
@@ -364,7 +374,7 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
       unitOutlines.delete(unit.id);
       return true;
     }
-    
+
     return false;
   };
 
@@ -740,7 +750,8 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
 
   // Add projectile methods to unit manager
   unitManager.checkProjectileCollision = checkProjectileCollision;
-  unitManager.createProjectileCollisionFunction = createProjectileCollisionFunction;
+  unitManager.createProjectileCollisionFunction =
+    createProjectileCollisionFunction;
 
   // Add outline methods to unit manager
   unitManager.addUnitOutline = addUnitOutline;
