@@ -65,6 +65,9 @@ export {
 // Object Pool utilities
 export { ObjectPoolUtils, createObjectPool } from './core/utils/index.js';
 
+// Unit management utilities
+export { CharacterAssetUtils, UnitManager } from './core/units/index.js';
+
 // Types
 export type {
   WorldConfig,
@@ -166,3 +169,15 @@ export type {
   ObjectPoolConfig,
   ObjectPoolStats,
 } from './types/common.js';
+export type {
+  UnitType,
+  AnimationState,
+  UnitDefinition,
+  AIBehaviorConfig,
+  Unit,
+  UnitManagerConfig,
+  CreateUnitParams,
+  AnimationController,
+  UnitManager as UnitManagerType,
+  CharacterAssetUtils as CharacterAssetUtilsType,
+} from './types/units.js';

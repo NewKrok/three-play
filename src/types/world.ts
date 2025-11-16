@@ -14,6 +14,7 @@ import type { Logger, LoggerConfig } from '../core/utils/logger.js';
 import type { DayNightConfig, DayNightManager } from './day-night.js';
 import type { SkyboxConfig } from './skybox.js';
 import type { ProjectileDefinition, ProjectileManager } from './projectiles.js';
+import type { UnitManagerConfig, UnitManager } from './units.js';
 import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
 
 /**
@@ -70,6 +71,7 @@ export type WorldConfig = {
   dayNight?: DayNightConfig;
   skybox?: SkyboxConfig;
   projectiles?: WorldProjectilesConfig;
+  units?: UnitManagerConfig;
 };
 
 /**
@@ -92,6 +94,7 @@ export type WorldInstance = {
   getDayNightManager(): DayNightManager | null; // Day/night manager if enabled
   getSkyboxManager(): any | null; // Skybox manager if enabled
   getProjectileManager(): ProjectileManager | null; // Projectile manager if enabled
+  getUnitManager(): UnitManager | null; // Unit manager if enabled
 
   // Simple outline system methods
   addOutline(

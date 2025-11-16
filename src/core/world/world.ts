@@ -15,9 +15,11 @@ import { createInputManager } from '../input/index.js';
 import { createDayNightManager } from '../day-night/index.js';
 import { createSkyboxManager } from '../skybox/index.js';
 import { createProjectileManager } from '../projectiles/index.js';
+import { UnitManager } from '../units/index.js';
 import type { InputManager } from '../../types/input.js';
 import type { DayNightManager } from '../../types/day-night.js';
 import type { ProjectileManager } from '../../types/projectiles.js';
+import type { UnitManager as IUnitManager } from '../../types/units.js';
 import {
   createTerrainInstance,
   prepareTerrainConfig,
@@ -109,6 +111,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   // Get projectiles configuration
   const projectilesConfig = config.projectiles;
   let projectileManager: ProjectileManager | null = null;
+
+  // Get units configuration
+  const unitsConfig = config.units;
+  let unitManager: IUnitManager | null = null;
 
   // Create renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -302,11 +308,31 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       // Register projectile definitions if provided
       if (projectilesConfig.definitions) {
         projectilesConfig.definitions.forEach((definition) => {
-          projectileManager!.registerDefinition(definition);
+          projectileManager?.registerDefinition(definition);
         });
       }
 
       logger.debug('Projectile manager initialized');
+    }
+
+    // Initialize unit manager if configured
+    if (unitsConfig?.enabled) {
+      unitManager = new UnitManager(
+        {
+          getLoadedAssets: () => assets!,
+          getScene: () => scene,
+        } as any, // Temporary cast - will be properly typed later
+        unitsConfig
+      );
+
+      // Register unit definitions if provided
+      if (unitsConfig.definitions) {
+        unitsConfig.definitions.forEach((definition) => {
+          unitManager?.registerDefinition(definition);
+        });
+      }
+
+      logger.debug('Unit manager initialized');
     }
 
     readyCallbacks.forEach((callback) => {
@@ -365,6 +391,11 @@ const createWorld = (config: WorldConfig): WorldInstance => {
     // Update projectile manager if available
     if (projectileManager) {
       projectileManager.update(deltaTime);
+    }
+
+    // Update unit manager if available
+    if (unitManager) {
+      unitManager.update(deltaTime);
     }
 
     // Call all update callbacks
@@ -532,6 +563,14 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     getProjectileManager(): ProjectileManager | null {
       return projectileManager;
+    },
+
+    /**
+     * Get unit manager instance if enabled
+     * @returns Unit manager or null if not enabled
+     */
+    getUnitManager(): IUnitManager | null {
+      return unitManager;
     },
 
     /**
@@ -776,6 +815,12 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       if (projectileManager) {
         projectileManager.dispose();
         projectileManager = null;
+      }
+
+      // Cleanup unit manager
+      if (unitManager) {
+        unitManager.dispose();
+        unitManager = null;
       }
 
       // Cleanup post-processing
