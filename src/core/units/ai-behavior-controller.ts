@@ -52,24 +52,28 @@ export type AIBehaviorController = {
   initializeBehavior: (unit: Unit, homePosition?: THREE.Vector3) => void;
   /** Update AI behavior for all units */
   updateBehaviors: (
-    units: Unit[], 
-    playerUnit: Unit | null, 
-    deltaTime: number, 
-    elapsedTime: number
+    units: Unit[],
+    playerUnit: Unit | null,
+    deltaTime: number,
+    elapsedTime: number,
   ) => void;
   /** Set behavior state for a specific unit */
   setBehaviorState: (unit: Unit, state: AIBehaviorState) => void;
   /** Get behavior data for a unit */
   getBehaviorData: (unit: Unit) => AIBehaviorData | null;
   /** Force target selection for a unit */
-  updateTarget: (unit: Unit, playerUnit: Unit | null, elapsedTime: number) => void;
+  updateTarget: (
+    unit: Unit,
+    playerUnit: Unit | null,
+    elapsedTime: number,
+  ) => void;
 };
 
 /**
  * Creates an AI behavior controller
  */
 export const createAIBehaviorController = (
-  config: AIBehaviorConfig = {}
+  config: AIBehaviorConfig = {},
 ): AIBehaviorController => {
   const {
     detectionRange = 10.0,
@@ -84,16 +88,26 @@ export const createAIBehaviorController = (
   const tempDirection = new THREE.Vector3();
   const tempTargetPosition = new THREE.Vector3();
   const rotationTargetQuaternion = new THREE.Quaternion();
-  const adjustQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+  const adjustQuat = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0, 1, 0),
+    -Math.PI / 2,
+  );
 
-  const initializeBehavior = (unit: Unit, homePosition?: THREE.Vector3): void => {
+  const initializeBehavior = (
+    unit: Unit,
+    homePosition?: THREE.Vector3,
+  ): void => {
     const behaviorData: AIBehaviorData = {
       state: 'idle',
-      targetPosition: homePosition ? homePosition.clone() : unit.model.position.clone(),
+      targetPosition: homePosition
+        ? homePosition.clone()
+        : unit.model.position.clone(),
       targetUnit: null,
       resumeTime: 0,
       nextTargetUpdateTime: 0,
-      homePosition: homePosition ? homePosition.clone() : unit.model.position.clone(),
+      homePosition: homePosition
+        ? homePosition.clone()
+        : unit.model.position.clone(),
       isAttacking: false,
     };
 
@@ -115,13 +129,20 @@ export const createAIBehaviorController = (
     }
   };
 
-  const updateTarget = (unit: Unit, playerUnit: Unit | null, elapsedTime: number): void => {
+  const updateTarget = (
+    unit: Unit,
+    playerUnit: Unit | null,
+    elapsedTime: number,
+  ): void => {
     const behaviorData = getBehaviorData(unit);
     if (!behaviorData || !playerUnit) return;
 
-    behaviorData.nextTargetUpdateTime = elapsedTime + Math.random() * targetUpdateInterval;
+    behaviorData.nextTargetUpdateTime =
+      elapsedTime + Math.random() * targetUpdateInterval;
 
-    const distanceToPlayer = unit.model.position.distanceTo(playerUnit.model.position);
+    const distanceToPlayer = unit.model.position.distanceTo(
+      playerUnit.model.position,
+    );
 
     if (distanceToPlayer <= detectionRange) {
       // Player detected - switch to chase
@@ -147,9 +168,9 @@ export const createAIBehaviorController = (
   };
 
   const updateUnitMovement = (
-    unit: Unit, 
-    targetPosition: THREE.Vector3, 
-    deltaTime: number
+    unit: Unit,
+    targetPosition: THREE.Vector3,
+    deltaTime: number,
   ): void => {
     // Calculate direction (flattened to horizontal plane)
     tempDirection.subVectors(targetPosition, unit.model.position);
@@ -160,17 +181,20 @@ export const createAIBehaviorController = (
     rotationTargetQuaternion
       .setFromUnitVectors(new THREE.Vector3(0, 0, 1), tempDirection)
       .multiply(adjustQuat);
-    unit.model.quaternion.slerp(rotationTargetQuaternion, deltaTime * rotationSpeed);
+    unit.model.quaternion.slerp(
+      rotationTargetQuaternion,
+      deltaTime * rotationSpeed,
+    );
 
     // Move unit
     unit.model.position.addScaledVector(tempDirection, speed * deltaTime);
   };
 
   const updateBehaviors = (
-    units: Unit[], 
-    playerUnit: Unit | null, 
-    deltaTime: number, 
-    elapsedTime: number
+    units: Unit[],
+    playerUnit: Unit | null,
+    deltaTime: number,
+    elapsedTime: number,
   ): void => {
     for (const unit of units) {
       const behaviorData = getBehaviorData(unit);
@@ -194,11 +218,14 @@ export const createAIBehaviorController = (
 
         case 'patrol': {
           updateUnitMovement(unit, behaviorData.targetPosition, deltaTime);
-          
+
           // Check if reached patrol target
-          if (unit.model.position.distanceTo(behaviorData.targetPosition) < 1.5) {
+          if (
+            unit.model.position.distanceTo(behaviorData.targetPosition) < 1.5
+          ) {
             behaviorData.state = 'idle';
-            behaviorData.resumeTime = elapsedTime + Math.random() * pauseDurationMax;
+            behaviorData.resumeTime =
+              elapsedTime + Math.random() * pauseDurationMax;
           }
           break;
         }
@@ -209,7 +236,9 @@ export const createAIBehaviorController = (
             updateUnitMovement(unit, tempTargetPosition, deltaTime);
 
             // Check if close enough to attack
-            const distanceToTarget = unit.model.position.distanceTo(behaviorData.targetUnit.model.position);
+            const distanceToTarget = unit.model.position.distanceTo(
+              behaviorData.targetUnit.model.position,
+            );
             if (distanceToTarget <= attackRange) {
               behaviorData.state = 'attack';
               behaviorData.isAttacking = true;
@@ -224,7 +253,9 @@ export const createAIBehaviorController = (
 
         case 'attack': {
           if (behaviorData.targetUnit) {
-            const distanceToTarget = unit.model.position.distanceTo(behaviorData.targetUnit.model.position);
+            const distanceToTarget = unit.model.position.distanceTo(
+              behaviorData.targetUnit.model.position,
+            );
             if (distanceToTarget > attackRange * 1.5) {
               // Target moved away, resume chase
               behaviorData.state = 'chase';
@@ -240,11 +271,12 @@ export const createAIBehaviorController = (
 
         case 'return': {
           updateUnitMovement(unit, behaviorData.homePosition, deltaTime);
-          
+
           // Check if returned home
           if (unit.model.position.distanceTo(behaviorData.homePosition) < 2.0) {
             behaviorData.state = 'idle';
-            behaviorData.resumeTime = elapsedTime + Math.random() * pauseDurationMax;
+            behaviorData.resumeTime =
+              elapsedTime + Math.random() * pauseDurationMax;
           }
           break;
         }
@@ -273,38 +305,46 @@ export const AIBehaviorUtils = {
   /**
    * Create aggressive AI behavior (faster, longer detection range)
    */
-  createAggressive: () => createAIBehaviorController({
-    detectionRange: 15.0,
-    attackRange: 2.0,
-    speed: 6.0,
-    rotationSpeed: 15.0,
-    pauseDurationMax: 2.0,
-    targetUpdateInterval: 2.0,
-  }),
+  createAggressive: () =>
+    createAIBehaviorController({
+      detectionRange: 15.0,
+      attackRange: 2.0,
+      speed: 6.0,
+      rotationSpeed: 15.0,
+      pauseDurationMax: 2.0,
+      targetUpdateInterval: 2.0,
+    }),
 
   /**
    * Create passive AI behavior (slower, shorter detection range)
    */
-  createPassive: () => createAIBehaviorController({
-    detectionRange: 5.0,
-    attackRange: 1.0,
-    speed: 2.0,
-    rotationSpeed: 5.0,
-    pauseDurationMax: 8.0,
-    targetUpdateInterval: 5.0,
-  }),
+  createPassive: () =>
+    createAIBehaviorController({
+      detectionRange: 5.0,
+      attackRange: 1.0,
+      speed: 2.0,
+      rotationSpeed: 5.0,
+      pauseDurationMax: 8.0,
+      targetUpdateInterval: 5.0,
+    }),
 
   /**
    * Get animation name for AI state
    */
   getAnimationForState: (state: AIBehaviorState): AnimationState => {
     switch (state) {
-      case 'idle': return 'idle';
-      case 'patrol': return 'walk';
-      case 'chase': return 'run';
-      case 'attack': return 'attack';
-      case 'return': return 'walk';
-      default: return 'idle';
+      case 'idle':
+        return 'idle';
+      case 'patrol':
+        return 'walk';
+      case 'chase':
+        return 'run';
+      case 'attack':
+        return 'attack';
+      case 'return':
+        return 'walk';
+      default:
+        return 'idle';
     }
   },
 } as const;

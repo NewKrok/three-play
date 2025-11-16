@@ -16,7 +16,11 @@ export type AnimationControllerConfig = {
  */
 export type AnimationControllerImpl = {
   /** Play an animation with optional fade transition */
-  playAnimation: (unit: Unit, animationName: AnimationState, fadeDuration?: number) => void;
+  playAnimation: (
+    unit: Unit,
+    animationName: AnimationState,
+    fadeDuration?: number,
+  ) => void;
   /** Update all animation mixers */
   updateAnimations: (units: Unit[], delta: number) => void;
   /** Stop all animations for a unit */
@@ -24,7 +28,11 @@ export type AnimationControllerImpl = {
   /** Check if an animation is currently playing */
   isAnimationPlaying: (unit: Unit, animationName: AnimationState) => boolean;
   /** Set animation speed */
-  setAnimationSpeed: (unit: Unit, animationName: AnimationState, speed: number) => void;
+  setAnimationSpeed: (
+    unit: Unit,
+    animationName: AnimationState,
+    speed: number,
+  ) => void;
   /** Get current animation name */
   getCurrentAnimation: (unit: Unit) => AnimationState | null;
 };
@@ -33,17 +41,14 @@ export type AnimationControllerImpl = {
  * Creates an animation controller for managing unit animations
  */
 export const createAnimationController = (
-  config: AnimationControllerConfig = {}
+  config: AnimationControllerConfig = {},
 ): AnimationControllerImpl => {
-  const {
-    defaultFadeDuration = 0.2,
-    autoLoop = true,
-  } = config;
+  const { defaultFadeDuration = 0.2, autoLoop = true } = config;
 
   const playAnimation = (
     unit: Unit,
     animationName: AnimationState,
-    fadeDuration: number = defaultFadeDuration
+    fadeDuration: number = defaultFadeDuration,
   ): void => {
     if (!unit.actions || !unit.actions[animationName]) {
       console.warn(`Animation "${animationName}" not found for unit`);
@@ -62,7 +67,7 @@ export const createAnimationController = (
     }
 
     const currentAction = unit.actions[animationName];
-    
+
     // Configure animation properties
     if (autoLoop) {
       currentAction.setLoop(THREE.LoopRepeat as any, Infinity);
@@ -72,11 +77,7 @@ export const createAnimationController = (
     if (previousAnimation && unit.actions[previousAnimation]) {
       currentAction
         .reset()
-        .crossFadeFrom(
-          unit.actions[previousAnimation],
-          fadeDuration,
-          true
-        );
+        .crossFadeFrom(unit.actions[previousAnimation], fadeDuration, true);
     } else {
       currentAction.reset();
     }
@@ -95,7 +96,7 @@ export const createAnimationController = (
   const stopAnimations = (unit: Unit): void => {
     if (!unit.actions) return;
 
-    Object.values(unit.actions).forEach(action => {
+    Object.values(unit.actions).forEach((action) => {
       if (action) {
         action.stop();
       }
@@ -107,7 +108,10 @@ export const createAnimationController = (
     }
   };
 
-  const isAnimationPlaying = (unit: Unit, animationName: AnimationState): boolean => {
+  const isAnimationPlaying = (
+    unit: Unit,
+    animationName: AnimationState,
+  ): boolean => {
     const action = unit.actions?.[animationName];
     return action ? action.isRunning() : false;
   };
@@ -115,7 +119,7 @@ export const createAnimationController = (
   const setAnimationSpeed = (
     unit: Unit,
     animationName: AnimationState,
-    speed: number
+    speed: number,
   ): void => {
     const action = unit.actions?.[animationName];
     if (action) {
@@ -149,12 +153,11 @@ export const AnimationControllerUtils = {
   /**
    * Create animation controller with custom fade duration
    */
-  createWithFadeDuration: (fadeDuration: number) => 
+  createWithFadeDuration: (fadeDuration: number) =>
     createAnimationController({ defaultFadeDuration: fadeDuration }),
 
   /**
    * Create animation controller without auto-loop
    */
-  createWithoutLoop: () => 
-    createAnimationController({ autoLoop: false }),
+  createWithoutLoop: () => createAnimationController({ autoLoop: false }),
 } as const;

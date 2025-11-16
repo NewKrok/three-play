@@ -1,6 +1,9 @@
 import type * as THREE from 'three';
 import type { LoadedAssets } from './assets.js';
-import type { AIBehaviorState, AIBehaviorData } from '../core/units/ai-behavior-controller.js';
+import type {
+  AIBehaviorState,
+  AIBehaviorData,
+} from '../core/units/ai-behavior-controller.js';
 
 /**
  * Unit type definitions
@@ -11,6 +14,39 @@ export type UnitType = 'player' | 'enemy' | 'npc';
  * Generic animation state type - can be any string for flexibility
  */
 export type AnimationState = string;
+
+/**
+ * Combat attack types
+ */
+export type AttackType = 'light' | 'heavy' | 'special';
+
+/**
+ * Combat system configuration
+ */
+export type CombatConfig = {
+  /** Light attack configuration */
+  lightAttack?: {
+    damage?: number;
+    knockback?: number;
+    range?: number;
+    cooldown?: number;
+    staminaCost?: number;
+    stunDuration?: number;
+    actionDelay?: number;
+  };
+  /** Heavy attack configuration */
+  heavyAttack?: {
+    damage?: number;
+    knockback?: number;
+    range?: number;
+    cooldown?: number;
+    staminaCost?: number;
+    stunDuration?: number;
+    actionDelay?: number;
+  };
+  /** Whether to apply damage to targets */
+  enableDamage?: boolean;
+};
 
 /**
  * Unit definition for creating different types of units
@@ -144,13 +180,32 @@ export type Unit = {
     /** Is currently stunned */
     isStunned?: boolean;
   };
+  /** Combat state */
+  combat?: {
+    /** Last light attack time */
+    lastLightAttackTime?: number;
+    /** Last heavy attack time */
+    lastHeavyAttackTime?: number;
+    /** Whether unit is currently in attack animation */
+    isAttacking?: boolean;
+    /** Remaining stamina */
+    stamina?: number;
+    /** Maximum stamina */
+    maxStamina?: number;
+  };
   /** Particle effects attached to this unit */
   effects?: {
     /** Running effect particle system */
-    running?: any; // Will be typed properly when particle system is integrated
+    running?: any; // ParticleSystem from @newkrok/three-particles
     /** Running in water effect */
     runningInWater?: any;
-    /** Other effects */
+    /** Attack effect */
+    attack?: any;
+    /** Hit effect */
+    hit?: any;
+    /** Death effect */
+    death?: any;
+    /** Other custom effects */
     [key: string]: any;
   };
   /** Custom user data */
@@ -245,13 +300,21 @@ export type UnitManager = {
   dispose: () => void;
   // Animation control methods
   /** Play animation with optional crossfade */
-  playAnimation: (unit: Unit, animationName: AnimationState, fadeDuration?: number) => void;
+  playAnimation: (
+    unit: Unit,
+    animationName: AnimationState,
+    fadeDuration?: number,
+  ) => void;
   /** Stop all animations */
   stopAnimations: (unit: Unit) => void;
   /** Check if animation is playing */
   isAnimationPlaying: (unit: Unit, animationName: AnimationState) => boolean;
   /** Set animation speed */
-  setAnimationSpeed: (unit: Unit, animationName: AnimationState, speed: number) => void;
+  setAnimationSpeed: (
+    unit: Unit,
+    animationName: AnimationState,
+    speed: number,
+  ) => void;
   /** Get current animation name */
   getCurrentAnimation: (unit: Unit) => AnimationState | null;
   // AI Behavior methods
@@ -274,7 +337,53 @@ export type UnitManager = {
   /** Check collision between two units */
   checkUnitCollision: (unit1: Unit, unit2: Unit) => boolean;
   /** Get units within range of a position */
-  getUnitsInRange: (position: THREE.Vector3, range: number, excludeUnit?: Unit) => Unit[];
+  getUnitsInRange: (
+    position: THREE.Vector3,
+    range: number,
+    excludeUnit?: Unit,
+  ) => Unit[];
+  // Combat methods
+  /** Perform light attack */
+  performLightAttack: (attacker: Unit, currentTime: number) => any;
+  /** Perform heavy attack */
+  performHeavyAttack: (attacker: Unit, currentTime: number) => any;
+  /** Check if unit can attack */
+  canAttack: (unit: Unit, attackType: AttackType, currentTime: number) => boolean;
+  /** Initialize combat data for a unit */
+  initializeCombat: (unit: Unit, stamina?: number) => void;
+  /** Set stamina for a unit */
+  setStamina: (unit: Unit, stamina: number) => void;
+  // Effects methods
+  /** Add effect to a unit */
+  addEffect: (unit: Unit, effectName: string, effectInstance: any) => void;
+  /** Remove effect from a unit */
+  removeEffect: (unit: Unit, effectName: string) => boolean;
+  /** Remove all effects from a unit */
+  removeAllEffects: (unit: Unit) => void;
+  /** Check if unit has effect */
+  hasEffect: (unit: Unit, effectName: string) => boolean;
+  /** Get effect from unit */
+  getEffect: (unit: Unit, effectName: string) => any;
+  // Projectile integration methods  
+  /** Check projectile collision against units */
+  checkProjectileCollision: (
+    projectile: any, 
+    radius: number, 
+    excludeUnit?: Unit
+  ) => { unit: Unit; point: THREE.Vector3; normal: THREE.Vector3 } | null;
+  /** Create projectile collision function for world config */
+  createProjectileCollisionFunction: (excludeUnit?: Unit) => (projectile: any, radius: number) => any;
+  // Outline management methods
+  /** Add outline to a unit */
+  addUnitOutline: (unit: Unit, worldInstance: any, config?: any) => string | null;
+  /** Remove outline from a unit */
+  removeUnitOutline: (unit: Unit, worldInstance: any) => boolean;
+  /** Check if unit has outline */
+  hasUnitOutline: (unit: Unit) => boolean;
+  /** Get all units with outlines */
+  getOutlinedUnits: () => Unit[];
+  /** Remove all unit outlines */
+  removeAllUnitOutlines: (worldInstance: any) => void;
 };
 
 /**
