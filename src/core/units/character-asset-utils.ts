@@ -15,14 +15,18 @@ export const CharacterAssetUtils = {
    */
   createInstance: (definition: UnitDefinition, loadedAssets: LoadedAssets) => {
     // Get base model from definition
-    const baseModel = loadedAssets.models[definition.modelAssets.baseModel] as THREE.Group;
-    
+    const baseModel = loadedAssets.models[
+      definition.modelAssets.baseModel
+    ] as THREE.Group;
+
     if (!baseModel) {
-      throw new Error(`Base model '${definition.modelAssets.baseModel}' not found in loaded assets`);
+      throw new Error(
+        `Base model '${definition.modelAssets.baseModel}' not found in loaded assets`,
+      );
     }
 
     const instance = SkeletonUtils.clone(baseModel);
-    
+
     // Create wrapper group
     const wrapper = new THREE.Group();
     wrapper.add(instance);
@@ -31,7 +35,7 @@ export const CharacterAssetUtils = {
     if (definition.appearance?.scale) {
       wrapper.scale.setScalar(definition.appearance.scale);
     }
-    
+
     if (definition.appearance?.rotation !== undefined) {
       wrapper.rotation.y = definition.appearance.rotation;
     }
@@ -41,9 +45,15 @@ export const CharacterAssetUtils = {
 
     // Build animations from definition
     const animations: Record<string, THREE.AnimationClip> = {};
-    for (const [animationName, assetKey] of Object.entries(definition.modelAssets.animations)) {
+    for (const [animationName, assetKey] of Object.entries(
+      definition.modelAssets.animations,
+    )) {
       const animationAsset = loadedAssets.models[assetKey] as THREE.Group;
-      if (animationAsset && animationAsset.animations && animationAsset.animations[0]) {
+      if (
+        animationAsset &&
+        animationAsset.animations &&
+        animationAsset.animations[0]
+      ) {
         animations[animationName] = animationAsset.animations[0];
       }
     }
@@ -63,7 +73,7 @@ export const CharacterAssetUtils = {
       model: wrapper,
       mixer,
       actions,
-      userData: {}
+      userData: {},
     };
   },
 
@@ -72,7 +82,10 @@ export const CharacterAssetUtils = {
    * @param mixer Animation mixer
    * @param animations Map of animation clips
    */
-  setupAnimations: (mixer: THREE.AnimationMixer, animations: Record<string, THREE.AnimationClip>) => {
+  setupAnimations: (
+    mixer: THREE.AnimationMixer,
+    animations: Record<string, THREE.AnimationClip>,
+  ) => {
     const actions: Record<string, THREE.AnimationAction> = {};
 
     // Create actions for available animations
@@ -102,12 +115,12 @@ export const CharacterAssetUtils = {
         mesh.receiveShadow = receiveShadow;
         if (mesh.material) {
           if (Array.isArray(mesh.material)) {
-            mesh.material.forEach(mat => mat.needsUpdate = true);
+            mesh.material.forEach((mat) => (mat.needsUpdate = true));
           } else {
             mesh.material.needsUpdate = true;
           }
         }
       }
     });
-  }
+  },
 };

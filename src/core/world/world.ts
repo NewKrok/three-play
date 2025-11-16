@@ -15,11 +15,11 @@ import { createInputManager } from '../input/index.js';
 import { createDayNightManager } from '../day-night/index.js';
 import { createSkyboxManager } from '../skybox/index.js';
 import { createProjectileManager } from '../projectiles/index.js';
-import { UnitManager } from '../units/index.js';
+import { createUnitManager } from '../units/index.js';
 import type { InputManager } from '../../types/input.js';
 import type { DayNightManager } from '../../types/day-night.js';
 import type { ProjectileManager } from '../../types/projectiles.js';
-import type { UnitManager as IUnitManager } from '../../types/units.js';
+import type { UnitManager } from '../../types/units.js';
 import {
   createTerrainInstance,
   prepareTerrainConfig,
@@ -114,7 +114,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
 
   // Get units configuration
   const unitsConfig = config.units;
-  let unitManager: IUnitManager | null = null;
+  let unitManager: UnitManager | null = null;
 
   // Create renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -317,13 +317,11 @@ const createWorld = (config: WorldConfig): WorldInstance => {
 
     // Initialize unit manager if configured
     if (unitsConfig?.enabled) {
-      unitManager = new UnitManager(
-        {
-          getLoadedAssets: () => assets!,
-          getScene: () => scene,
-        } as any, // Temporary cast - will be properly typed later
-        unitsConfig
-      );
+      unitManager = createUnitManager({
+        ...unitsConfig,
+        scene,
+        loadedAssets: assets!,
+      });
 
       // Register unit definitions if provided
       if (unitsConfig.definitions) {
@@ -569,7 +567,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      * Get unit manager instance if enabled
      * @returns Unit manager or null if not enabled
      */
-    getUnitManager(): IUnitManager | null {
+    getUnitManager(): UnitManager | null {
       return unitManager;
     },
 

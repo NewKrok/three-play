@@ -150,6 +150,10 @@ export type Unit = {
  * Unit manager configuration
  */
 export type UnitManagerConfig = {
+  /** THREE.js scene instance */
+  scene: THREE.Scene;
+  /** Loaded assets from world */
+  loadedAssets: LoadedAssets;
   /** Enable unit management system */
   enabled?: boolean;
   /** Maximum number of units */
@@ -195,7 +199,11 @@ export type CreateUnitParams = {
  */
 export type AnimationController = {
   /** Play animation with optional crossfade */
-  playAnimation: (unit: Unit, animationName: AnimationState, fadeDuration?: number) => void;
+  playAnimation: (
+    unit: Unit,
+    animationName: AnimationState,
+    fadeDuration?: number,
+  ) => void;
   /** Stop all animations */
   stopAllAnimations: (unit: Unit) => void;
   /** Update animation mixer */
@@ -231,7 +239,10 @@ export type UnitManager = {
  */
 export type CharacterAssetUtils = {
   /** Create character instance from definition */
-  createInstance: (definition: UnitDefinition, loadedAssets: LoadedAssets) => {
+  createInstance: (
+    definition: UnitDefinition,
+    loadedAssets: LoadedAssets,
+  ) => {
     model: THREE.Group;
     mixer: THREE.AnimationMixer;
     actions: Record<string, THREE.AnimationAction>;
@@ -239,8 +250,8 @@ export type CharacterAssetUtils = {
   };
   /** Setup animations for a character instance */
   setupAnimations: (
-    mixer: THREE.AnimationMixer, 
-    animations: Record<string, THREE.AnimationClip>
+    mixer: THREE.AnimationMixer,
+    animations: Record<string, THREE.AnimationClip>,
   ) => Record<string, THREE.AnimationAction>;
   /** Setup shadows for character */
   setupShadows: (instance: THREE.Object3D, definition: UnitDefinition) => void;
