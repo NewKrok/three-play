@@ -66,7 +66,7 @@ export {
 export { ObjectPoolUtils, createObjectPool } from './core/utils/index.js';
 
 // Unit management utilities
-export { CharacterAssetUtils, createUnitManager } from './core/units/index.js';
+export { CharacterAssetUtils, createUnitManager, createAnimationController, AnimationControllerUtils, createAIBehaviorController, AIBehaviorUtils } from './core/units/index.js';
 
 // Types
 export type {

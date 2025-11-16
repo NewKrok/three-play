@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
 import type { LoadedAssets } from './assets.js';
+import type { AIBehaviorState, AIBehaviorData } from '../core/units/ai-behavior-controller.js';
 
 /**
  * Unit type definitions
@@ -119,6 +120,16 @@ export type Unit = {
     knockbackVelocity?: THREE.Vector3;
     /** Previous position (for collision resolution) */
     oldPosition?: THREE.Vector3;
+    /** Friction coefficient for knockback (0-1, default 0.9) */
+    friction?: number;
+    /** Velocity decay rate per second (0-1, default 0) */
+    velocityDecay?: number;
+    /** Whether gravity affects this unit */
+    enableGravity?: boolean;
+    /** Gravity force strength (default 9.8) */
+    gravityForce?: number;
+    /** Unit mass (affects physics calculations) */
+    mass?: number;
   };
   /** AI state (for non-player units) */
   ai?: {
@@ -229,9 +240,41 @@ export type UnitManager = {
   /** Get units by type */
   getUnitsByType: (type: UnitType) => Unit[];
   /** Update all units */
-  update: (deltaTime: number) => void;
+  update: (deltaTime: number, elapsedTime?: number) => void;
   /** Dispose resources */
   dispose: () => void;
+  // Animation control methods
+  /** Play animation with optional crossfade */
+  playAnimation: (unit: Unit, animationName: AnimationState, fadeDuration?: number) => void;
+  /** Stop all animations */
+  stopAnimations: (unit: Unit) => void;
+  /** Check if animation is playing */
+  isAnimationPlaying: (unit: Unit, animationName: AnimationState) => boolean;
+  /** Set animation speed */
+  setAnimationSpeed: (unit: Unit, animationName: AnimationState, speed: number) => void;
+  /** Get current animation name */
+  getCurrentAnimation: (unit: Unit) => AnimationState | null;
+  // AI Behavior methods
+  /** Initialize AI behavior for a unit */
+  initializeAIBehavior: (unit: Unit, homePosition?: THREE.Vector3) => void;
+  /** Set AI behavior state */
+  setAIBehaviorState: (unit: Unit, state: AIBehaviorState) => void;
+  /** Get AI behavior data */
+  getAIBehaviorData: (unit: Unit) => AIBehaviorData | null;
+  // Physics and movement methods
+  /** Apply knockback force to a unit */
+  applyKnockback: (unit: Unit, direction: THREE.Vector3, force: number) => void;
+  /** Set unit velocity */
+  setUnitVelocity: (unit: Unit, velocity: THREE.Vector3) => void;
+  /** Add velocity to unit (accumulative) */
+  addUnitVelocity: (unit: Unit, velocity: THREE.Vector3) => void;
+  /** Stop all movement for a unit */
+  stopUnitMovement: (unit: Unit) => void;
+  // Collision detection methods
+  /** Check collision between two units */
+  checkUnitCollision: (unit1: Unit, unit2: Unit) => boolean;
+  /** Get units within range of a position */
+  getUnitsInRange: (position: THREE.Vector3, range: number, excludeUnit?: Unit) => Unit[];
 };
 
 /**

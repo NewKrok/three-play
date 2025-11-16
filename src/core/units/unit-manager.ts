@@ -8,6 +8,10 @@ import type {
   UnitType,
 } from '../../types/units.js';
 import { CharacterAssetUtils } from './character-asset-utils.js';
+import { createAnimationController } from './animation-controller.js';
+import type { AnimationControllerImpl } from './animation-controller.js';
+import { createAIBehaviorController, AIBehaviorUtils } from './ai-behavior-controller.js';
+import type { AIBehaviorController } from './ai-behavior-controller.js';
 
 /**
  * Create a unit manager instance
@@ -30,6 +34,12 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
   // Ensure collision defaults are properly typed
   const minDistance = collision.minDistance || 1.0;
   const pushStrength = collision.pushStrength || 0.5;
+
+  // Create animation controller
+  const animationController: AnimationControllerImpl = createAnimationController();
+  
+  // Create AI behavior controller
+  const aiBehaviorController: AIBehaviorController = createAIBehaviorController();
 
   // Internal state
   const units = new Map<string, Unit>();
@@ -120,7 +130,30 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
   };
 
   /**
-   * Remove a unit by ID
+   * Check collision between two units
+   */
+  const checkUnitCollision = (unit1: Unit, unit2: Unit): boolean => {
+    const distance = unit1.model.position.distanceTo(unit2.model.position);
+    const combinedRadius = unit1.stats.collisionRadius + unit2.stats.collisionRadius;
+    return distance < combinedRadius;
+  };
+
+  /**
+   * Get units within range of a position
+   */
+  const getUnitsInRange = (
+    position: THREE.Vector3, 
+    range: number, 
+    excludeUnit?: Unit
+  ): Unit[] => {
+    return Array.from(units.values()).filter(unit => {
+      if (excludeUnit && unit.id === excludeUnit.id) return false;
+      return unit.model.position.distanceTo(position) <= range;
+    });
+  };
+
+  /**
+   * Remove unit by ID
    */
   const removeUnit = (unitId: string): boolean => {
     const unit = units.get(unitId);
@@ -160,26 +193,46 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
   };
 
   /**
-   * Update all units (basic implementation - will be expanded in later phases)
+   * Update all units with AI behaviors, animations, and physics
    */
-  const update = (deltaTime: number): void => {
+  const update = (deltaTime: number, elapsedTime: number = 0): void => {
     if (!enabled) return;
 
-    for (const unit of units.values()) {
-      // Update animation mixer
-      unit.mixer.update(deltaTime);
+    const allUnits = Array.from(units.values());
+    
+    // Find player unit for AI targeting
+    const playerUnit = allUnits.find(unit => unit.definition.type === 'player') || null;
+    
+    // Update AI behaviors for non-player units
+    const aiUnits = allUnits.filter(unit => 
+      unit.definition.type !== 'player' && 
+      unit.ai && 
+      !unit.ai.isStunned
+    );
+    
+    if (aiUnits.length > 0) {
+      aiBehaviorController.updateBehaviors(aiUnits, playerUnit, deltaTime, elapsedTime);
+      
+      // Update animations based on AI state
+      for (const unit of aiUnits) {
+        const behaviorData = aiBehaviorController.getBehaviorData(unit);
+        if (behaviorData) {
+          const animationName = AIBehaviorUtils.getAnimationForState(behaviorData.state);
+          animationController.playAnimation(unit, animationName);
+        }
+      }
+    }
+    
+    // Update animations using the animation controller
+    animationController.updateAnimations(allUnits, deltaTime);
 
+    for (const unit of allUnits) {
       // Basic physics update
       updateUnitPhysics(unit, deltaTime);
 
       // Store old position for collision resolution
       if (unit.physics) {
         unit.physics.oldPosition = unit.model.position.clone();
-      }
-
-      // Basic AI update placeholder (will be implemented in Phase 2)
-      if (unit.ai && !unit.ai.isStunned && unit.definition.type !== 'player') {
-        // TODO: Implement AI behaviors in Phase 2
       }
     }
 
@@ -195,15 +248,18 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
   const updateUnitPhysics = (unit: Unit, deltaTime: number): void => {
     if (!unit.physics) return;
 
-    // Apply knockback velocity
-    if (unit.physics.knockbackVelocity) {
+    // Apply knockback velocity with improved physics
+    if (unit.physics.knockbackVelocity && unit.physics.knockbackVelocity.lengthSq() > 0) {
       unit.model.position.addScaledVector(
         unit.physics.knockbackVelocity,
         deltaTime,
       );
-      unit.physics.knockbackVelocity.multiplyScalar(0.9); // Apply friction
+      
+      // Apply friction based on unit's mass (if defined)
+      const friction = unit.physics.friction || 0.9;
+      unit.physics.knockbackVelocity.multiplyScalar(friction);
 
-      // Stop very small velocities
+      // Stop very small velocities to prevent infinite tiny movements
       if (unit.physics.knockbackVelocity.lengthSq() < 0.0001) {
         unit.physics.knockbackVelocity.set(0, 0, 0);
       }
@@ -212,6 +268,92 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
     // Apply general velocity if any
     if (unit.physics.velocity && unit.physics.velocity.lengthSq() > 0) {
       unit.model.position.addScaledVector(unit.physics.velocity, deltaTime);
+      
+      // Apply velocity decay if defined
+      if (unit.physics.velocityDecay && unit.physics.velocityDecay > 0) {
+        unit.physics.velocity.multiplyScalar(1 - unit.physics.velocityDecay * deltaTime);
+        
+        // Stop very small velocities
+        if (unit.physics.velocity.lengthSq() < 0.0001) {
+          unit.physics.velocity.set(0, 0, 0);
+        }
+      }
+    }
+
+    // Apply gravity if unit is above ground and gravity is enabled
+    if (unit.physics.enableGravity && unit.physics.gravityForce) {
+      unit.physics.velocity = unit.physics.velocity || new THREE.Vector3();
+      unit.physics.velocity.y -= unit.physics.gravityForce * deltaTime;
+    }
+  };
+
+  /**
+   * Apply knockback to a unit
+   */
+  const applyKnockback = (
+    unit: Unit, 
+    direction: THREE.Vector3, 
+    force: number
+  ): void => {
+    if (!unit.physics) {
+      unit.physics = {};
+    }
+    
+    if (!unit.physics.knockbackVelocity) {
+      unit.physics.knockbackVelocity = new THREE.Vector3();
+    }
+    
+    const knockback = direction.clone().normalize().multiplyScalar(force);
+    unit.physics.knockbackVelocity.add(knockback);
+  };
+
+  /**
+   * Set unit velocity
+   */
+  const setUnitVelocity = (
+    unit: Unit, 
+    velocity: THREE.Vector3
+  ): void => {
+    if (!unit.physics) {
+      unit.physics = {};
+    }
+    
+    if (!unit.physics.velocity) {
+      unit.physics.velocity = new THREE.Vector3();
+    }
+    
+    unit.physics.velocity.copy(velocity);
+  };
+
+  /**
+   * Add velocity to unit (accumulative)
+   */
+  const addUnitVelocity = (
+    unit: Unit, 
+    velocity: THREE.Vector3
+  ): void => {
+    if (!unit.physics) {
+      unit.physics = {};
+    }
+    
+    if (!unit.physics.velocity) {
+      unit.physics.velocity = new THREE.Vector3();
+    }
+    
+    unit.physics.velocity.add(velocity);
+  };
+
+  /**
+   * Stop all movement for a unit
+   */
+  const stopUnitMovement = (unit: Unit): void => {
+    if (unit.physics) {
+      if (unit.physics.velocity) {
+        unit.physics.velocity.set(0, 0, 0);
+      }
+      if (unit.physics.knockbackVelocity) {
+        unit.physics.knockbackVelocity.set(0, 0, 0);
+      }
     }
   };
 
@@ -227,22 +369,26 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
         const unit2 = unitsArray[j];
 
         const distance = unit1.model.position.distanceTo(unit2.model.position);
+        const combinedRadius = unit1.stats.collisionRadius + unit2.stats.collisionRadius;
+        const actualMinDistance = Math.max(combinedRadius, minDistance);
 
-        if (distance < minDistance) {
+        if (distance < actualMinDistance && distance > 0) {
           const pushDirection = unit1.model.position
             .clone()
             .sub(unit2.model.position)
             .normalize();
-          const overlap = minDistance - distance;
+          const overlap = actualMinDistance - distance;
 
-          unit1.model.position.addScaledVector(
-            pushDirection,
-            overlap * pushStrength,
-          );
-          unit2.model.position.addScaledVector(
-            pushDirection,
-            -overlap * pushStrength,
-          );
+          // Consider unit mass for physics-based collision
+          const mass1 = unit1.physics?.mass || 1.0;
+          const mass2 = unit2.physics?.mass || 1.0;
+          const totalMass = mass1 + mass2;
+          
+          const force1 = (mass2 / totalMass) * overlap * pushStrength;
+          const force2 = (mass1 / totalMass) * overlap * pushStrength;
+
+          unit1.model.position.addScaledVector(pushDirection, force1);
+          unit2.model.position.addScaledVector(pushDirection, -force2);
         }
       }
     }
@@ -270,5 +416,23 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
     getUnitsByType,
     update,
     dispose,
+    // Animation control methods
+    playAnimation: animationController.playAnimation,
+    stopAnimations: animationController.stopAnimations,
+    isAnimationPlaying: animationController.isAnimationPlaying,
+    setAnimationSpeed: animationController.setAnimationSpeed,
+    getCurrentAnimation: animationController.getCurrentAnimation,
+    // AI Behavior methods
+    initializeAIBehavior: aiBehaviorController.initializeBehavior,
+    setAIBehaviorState: aiBehaviorController.setBehaviorState,
+    getAIBehaviorData: aiBehaviorController.getBehaviorData,
+    // Physics and movement methods
+    applyKnockback,
+    setUnitVelocity,
+    addUnitVelocity,
+    stopUnitMovement,
+    // Collision detection methods
+    checkUnitCollision,
+    getUnitsInRange,
   };
 };
