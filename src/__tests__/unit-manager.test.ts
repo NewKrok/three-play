@@ -1,6 +1,12 @@
 import * as THREE from 'three';
 import { createUnitManager } from '../core/units/unit-manager.js';
-import type { UnitManagerConfig, Unit, UnitDefinition, UnitType, CreateUnitParams } from '../types/units.js';
+import type {
+  UnitManagerConfig,
+  Unit,
+  UnitDefinition,
+  UnitType,
+  CreateUnitParams,
+} from '../types/units.js';
 import type { LoadedAssets } from '../types/assets.js';
 
 // Mock THREE.js
@@ -112,15 +118,15 @@ jest.mock('../core/units/ai-behavior-controller.js', () => ({
 // Mock combat controller
 jest.mock('../core/units/combat-controller.js', () => ({
   createCombatController: jest.fn(() => ({
-    performLightAttack: jest.fn(() => ({ 
-      success: true, 
-      hitUnits: [], 
-      damages: [{ unit: {}, damage: 25 }] 
+    performLightAttack: jest.fn(() => ({
+      success: true,
+      hitUnits: [],
+      damages: [{ unit: {}, damage: 25 }],
     })),
-    performHeavyAttack: jest.fn(() => ({ 
-      success: true, 
-      hitUnits: [], 
-      damages: [{ unit: {}, damage: 50 }] 
+    performHeavyAttack: jest.fn(() => ({
+      success: true,
+      hitUnits: [],
+      damages: [{ unit: {}, damage: 50 }],
     })),
     applyDamage: jest.fn(() => true),
     canAttack: jest.fn(() => true),
@@ -139,7 +145,7 @@ jest.mock('../core/units/character-asset-utils.js', () => ({
       const group = new THREE.Group();
       const mixer = new THREE.AnimationMixer(group);
       return {
-        model: group,  // Changed from 'group' to 'model'
+        model: group, // Changed from 'group' to 'model'
         mixer,
         actions: {
           idle: { play: jest.fn(), stop: jest.fn() },

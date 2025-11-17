@@ -125,7 +125,7 @@ describe('AnimationController', () => {
       expect(() => {
         animationController.playAnimation(mockUnit, 'walk');
       }).not.toThrow();
-      
+
       expect(mockAction.play).toHaveBeenCalled();
     });
 
@@ -133,7 +133,7 @@ describe('AnimationController', () => {
       expect(() => {
         animationController.playAnimation(mockUnit, 'walk', 0.5);
       }).not.toThrow();
-      
+
       expect(mockAction.play).toHaveBeenCalled();
     });
 
@@ -152,7 +152,7 @@ describe('AnimationController', () => {
       expect(() => {
         animationController.stopAnimations(mockUnit);
       }).not.toThrow();
-      
+
       // Check that individual actions are stopped (actual implementation stops actions, not mixer)
       expect(mockUnit.actions.idle.stop).toHaveBeenCalled();
       expect(mockUnit.actions.walk.stop).toHaveBeenCalled();
@@ -165,7 +165,7 @@ describe('AnimationController', () => {
       expect(() => {
         animationController.setAnimationSpeed(mockUnit, 'walk', 2.0);
       }).not.toThrow();
-      
+
       expect(mockAction.setEffectiveTimeScale).toHaveBeenCalledWith(2.0);
     });
 
@@ -176,7 +176,11 @@ describe('AnimationController', () => {
       };
 
       expect(() => {
-        animationController.setAnimationSpeed(unitWithoutActions, 'non-existent', 2.0);
+        animationController.setAnimationSpeed(
+          unitWithoutActions,
+          'non-existent',
+          2.0,
+        );
       }).not.toThrow();
     });
   });
@@ -184,8 +188,11 @@ describe('AnimationController', () => {
   describe('Animation State Queries', () => {
     it('should check if animation is playing', () => {
       mockAction.isRunning.mockReturnValue(true);
-      
-      const isPlaying = animationController.isAnimationPlaying(mockUnit, 'walk');
+
+      const isPlaying = animationController.isAnimationPlaying(
+        mockUnit,
+        'walk',
+      );
       expect(isPlaying).toBe(true);
     });
 
@@ -195,7 +202,10 @@ describe('AnimationController', () => {
         actions: {},
       };
 
-      const isPlaying = animationController.isAnimationPlaying(unitWithoutActions, 'non-existent');
+      const isPlaying = animationController.isAnimationPlaying(
+        unitWithoutActions,
+        'non-existent',
+      );
       expect(isPlaying).toBe(false);
     });
 
@@ -214,7 +224,8 @@ describe('AnimationController', () => {
         },
       };
 
-      const currentAnim = animationController.getCurrentAnimation(unitWithoutCurrent);
+      const currentAnim =
+        animationController.getCurrentAnimation(unitWithoutCurrent);
       expect(currentAnim).toBeNull();
     });
   });
@@ -223,17 +234,17 @@ describe('AnimationController', () => {
     it('should update all animations', () => {
       const units = [mockUnit];
       const deltaTime = 0.016;
-      
+
       expect(() => {
         animationController.updateAnimations(units, deltaTime);
       }).not.toThrow();
-      
+
       expect(mockMixer.update).toHaveBeenCalledWith(deltaTime);
     });
 
     it('should handle empty unit array', () => {
       const deltaTime = 0.016;
-      
+
       expect(() => {
         animationController.updateAnimations([], deltaTime);
       }).not.toThrow();
@@ -246,7 +257,7 @@ describe('AnimationController', () => {
       };
       const units = [unitWithoutMixer];
       const deltaTime = 0.016;
-      
+
       expect(() => {
         animationController.updateAnimations(units, deltaTime);
       }).not.toThrow();
@@ -268,7 +279,7 @@ describe('AnimationController', () => {
         autoLoop: false,
       });
       expect(controller).toBeDefined();
-      
+
       // Test that custom fade duration is used
       expect(() => {
         controller.playAnimation(mockUnit, 'walk');

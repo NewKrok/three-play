@@ -85,19 +85,27 @@ describe('CombatController', () => {
         if (id === targetUnit.id) return targetUnit;
         return null;
       }),
-      getUnitsInRange: jest.fn((position: THREE.Vector3, range: number, excludeUnit?: Unit) => {
-        // Simple mock: return all units except excludeUnit within range
-        // Also exclude same-type units (enemies don't attack enemies)
-        const allUnits = [mockUnit, targetUnit];
-        return allUnits.filter(unit => 
-          unit !== excludeUnit &&
-          unit.model.position.distanceTo(position) <= range &&
-          (excludeUnit ? unit.definition.type !== excludeUnit.definition.type : true)
-        );
-      }),
+      getUnitsInRange: jest.fn(
+        (position: THREE.Vector3, range: number, excludeUnit?: Unit) => {
+          // Simple mock: return all units except excludeUnit within range
+          // Also exclude same-type units (enemies don't attack enemies)
+          const allUnits = [mockUnit, targetUnit];
+          return allUnits.filter(
+            (unit) =>
+              unit !== excludeUnit &&
+              unit.model.position.distanceTo(position) <= range &&
+              (excludeUnit
+                ? unit.definition.type !== excludeUnit.definition.type
+                : true),
+          );
+        },
+      ),
     };
 
-    combatController = createCombatController({ enableDamage: true }, mockUnitManager);
+    combatController = createCombatController(
+      { enableDamage: true },
+      mockUnitManager,
+    );
   });
 
   afterEach(() => {
@@ -107,7 +115,7 @@ describe('CombatController', () => {
   describe('Combat Initialization', () => {
     it('should initialize combat data for unit', () => {
       combatController.initializeCombat(mockUnit, 100);
-      
+
       expect(mockUnit.combat).toBeDefined();
       expect(mockUnit.combat?.stamina).toBe(100);
       expect(mockUnit.combat?.maxStamina).toBe(100);
@@ -116,7 +124,7 @@ describe('CombatController', () => {
 
     it('should initialize combat with default stamina', () => {
       combatController.initializeCombat(mockUnit);
-      
+
       expect(mockUnit.combat).toBeDefined();
       expect(mockUnit.combat?.stamina).toBe(100);
     });
@@ -124,7 +132,7 @@ describe('CombatController', () => {
     it('should set stamina for unit', () => {
       combatController.initializeCombat(mockUnit);
       combatController.setStamina(mockUnit, 50);
-      
+
       expect(mockUnit.combat?.stamina).toBe(50);
     });
   });
@@ -138,7 +146,7 @@ describe('CombatController', () => {
     it('should perform light attack successfully', () => {
       const currentTime = Date.now();
       const result = combatController.performLightAttack(mockUnit, currentTime);
-      
+
       expect(result.success).toBe(true);
       expect(result.hitUnits).toBeDefined();
       expect(result.damages).toBeDefined();
@@ -147,18 +155,21 @@ describe('CombatController', () => {
     it('should consume stamina on light attack', () => {
       const currentTime = Date.now();
       const initialStamina = mockUnit.combat?.stamina || 100;
-      
+
       combatController.performLightAttack(mockUnit, currentTime);
-      
+
       expect(mockUnit.combat?.stamina).toBeLessThan(initialStamina);
     });
 
     it('should fail when unit has no combat data', () => {
       const unitWithoutCombat = { ...mockUnit, combat: undefined };
       const currentTime = Date.now();
-      
-      const result = combatController.performLightAttack(unitWithoutCombat, currentTime);
-      
+
+      const result = combatController.performLightAttack(
+        unitWithoutCombat,
+        currentTime,
+      );
+
       expect(result.success).toBe(false);
     });
   });
@@ -172,7 +183,7 @@ describe('CombatController', () => {
     it('should perform heavy attack successfully', () => {
       const currentTime = Date.now();
       const result = combatController.performHeavyAttack(mockUnit, currentTime);
-      
+
       expect(result.success).toBe(true);
       expect(result.hitUnits).toBeDefined();
       expect(result.damages).toBeDefined();
@@ -180,21 +191,23 @@ describe('CombatController', () => {
 
     it('should consume more stamina than light attack', () => {
       const currentTime = Date.now();
-      
+
       // Test light attack stamina consumption
       const testUnit1 = { ...mockUnit, id: 'test-unit-light' };
       combatController.initializeCombat(testUnit1);
       const initialStamina = testUnit1.combat?.stamina || 100;
       combatController.performLightAttack(testUnit1, currentTime);
-      const lightStaminaCost = initialStamina - (testUnit1.combat?.stamina || 0);
-      
+      const lightStaminaCost =
+        initialStamina - (testUnit1.combat?.stamina || 0);
+
       // Test heavy attack stamina consumption
       const testUnit2 = { ...mockUnit, id: 'test-unit-heavy' };
       combatController.initializeCombat(testUnit2);
       const initialStamina2 = testUnit2.combat?.stamina || 100;
       combatController.performHeavyAttack(testUnit2, currentTime);
-      const heavyStaminaCost = initialStamina2 - (testUnit2.combat?.stamina || 0);
-      
+      const heavyStaminaCost =
+        initialStamina2 - (testUnit2.combat?.stamina || 0);
+
       expect(heavyStaminaCost).toBeGreaterThan(lightStaminaCost);
     });
   });
@@ -206,9 +219,17 @@ describe('CombatController', () => {
 
     it('should allow attack when unit can attack', () => {
       const currentTime = Date.now();
-      const canAttackLight = combatController.canAttack(mockUnit, 'light', currentTime);
-      const canAttackHeavy = combatController.canAttack(mockUnit, 'heavy', currentTime);
-      
+      const canAttackLight = combatController.canAttack(
+        mockUnit,
+        'light',
+        currentTime,
+      );
+      const canAttackHeavy = combatController.canAttack(
+        mockUnit,
+        'heavy',
+        currentTime,
+      );
+
       expect(canAttackLight).toBe(true);
       expect(canAttackHeavy).toBe(true);
     });
@@ -216,9 +237,13 @@ describe('CombatController', () => {
     it('should prevent attack when unit has insufficient stamina', () => {
       combatController.setStamina(mockUnit, 5); // Very low stamina
       const currentTime = Date.now();
-      
-      const canAttackHeavy = combatController.canAttack(mockUnit, 'heavy', currentTime);
-      
+
+      const canAttackHeavy = combatController.canAttack(
+        mockUnit,
+        'heavy',
+        currentTime,
+      );
+
       // Should be false when stamina is too low for heavy attack
       expect(canAttackHeavy).toBe(false);
     });
@@ -228,9 +253,13 @@ describe('CombatController', () => {
         mockUnit.combat.isAttacking = true;
       }
       const currentTime = Date.now();
-      
-      const canAttack = combatController.canAttack(mockUnit, 'light', currentTime);
-      
+
+      const canAttack = combatController.canAttack(
+        mockUnit,
+        'light',
+        currentTime,
+      );
+
       expect(canAttack).toBe(false);
     });
   });
@@ -243,36 +272,36 @@ describe('CombatController', () => {
     it('should apply damage to target unit', () => {
       const initialHealth = targetUnit.stats.health;
       const damage = 30;
-      
+
       const result = combatController.applyDamage(targetUnit, damage);
-      
+
       expect(result).toBe(false); // Unit is still alive
       expect(targetUnit.stats.health).toBe(initialHealth - damage);
     });
 
     it('should handle unit death', () => {
       const damage = 150; // More than unit's health
-      
+
       const result = combatController.applyDamage(targetUnit, damage);
-      
+
       expect(result).toBe(true);
       expect(targetUnit.stats.health).toBe(0);
     });
 
     it('should handle zero damage', () => {
       const initialHealth = targetUnit.stats.health;
-      
+
       const result = combatController.applyDamage(targetUnit, 0);
-      
+
       expect(result).toBe(false); // Unit is still alive
       expect(targetUnit.stats.health).toBe(initialHealth);
     });
 
     it('should handle negative damage', () => {
       const initialHealth = targetUnit.stats.health;
-      
+
       const result = combatController.applyDamage(targetUnit, -10);
-      
+
       expect(result).toBe(false); // Unit is still alive
       expect(targetUnit.stats.health).toBe(initialHealth + 10); // Negative damage = healing
     });
@@ -285,21 +314,30 @@ describe('CombatController', () => {
     });
 
     it('should get units in light attack range', () => {
-      const unitsInRange = combatController.getUnitsInAttackRange(mockUnit, 'light');
-      
+      const unitsInRange = combatController.getUnitsInAttackRange(
+        mockUnit,
+        'light',
+      );
+
       expect(Array.isArray(unitsInRange)).toBe(true);
     });
 
     it('should get units in heavy attack range', () => {
-      const unitsInRange = combatController.getUnitsInAttackRange(mockUnit, 'heavy');
-      
+      const unitsInRange = combatController.getUnitsInAttackRange(
+        mockUnit,
+        'heavy',
+      );
+
       expect(Array.isArray(unitsInRange)).toBe(true);
     });
 
     it('should exclude same-type units from attack range', () => {
       // Both units are enemies, so should not attack each other
-      const unitsInRange = combatController.getUnitsInAttackRange(mockUnit, 'light');
-      
+      const unitsInRange = combatController.getUnitsInAttackRange(
+        mockUnit,
+        'light',
+      );
+
       expect(unitsInRange).not.toContain(targetUnit);
     });
   });
@@ -314,7 +352,7 @@ describe('CombatController', () => {
       const units = [mockUnit, targetUnit];
       const deltaTime = 0.016;
       const currentTime = Date.now();
-      
+
       expect(() => {
         combatController.updateCombat(units, deltaTime, currentTime);
       }).not.toThrow();
@@ -323,7 +361,7 @@ describe('CombatController', () => {
     it('should handle empty unit array', () => {
       const deltaTime = 0.016;
       const currentTime = Date.now();
-      
+
       expect(() => {
         combatController.updateCombat([], deltaTime, currentTime);
       }).not.toThrow();
@@ -333,14 +371,14 @@ describe('CombatController', () => {
       // Consume some stamina first
       combatController.setStamina(mockUnit, 50);
       const initialStamina = mockUnit.combat?.stamina || 0;
-      
+
       // Update combat for stamina regeneration
       const units = [mockUnit];
       const deltaTime = 1.0; // 1 second
       const currentTime = Date.now();
-      
+
       combatController.updateCombat(units, deltaTime, currentTime);
-      
+
       const finalStamina = mockUnit.combat?.stamina || 0;
       expect(finalStamina).toBeGreaterThanOrEqual(initialStamina);
     });
@@ -349,7 +387,7 @@ describe('CombatController', () => {
   describe('Combat Configuration', () => {
     it('should create combat controller with default config', () => {
       const controller = createCombatController({}, mockUnitManager);
-      
+
       expect(controller).toBeDefined();
       expect(typeof controller.performLightAttack).toBe('function');
       expect(typeof controller.performHeavyAttack).toBe('function');
@@ -383,9 +421,9 @@ describe('CombatController', () => {
         },
         enableDamage: true,
       };
-      
+
       const controller = createCombatController(customConfig, mockUnitManager);
-      
+
       expect(controller).toBeDefined();
     });
   });

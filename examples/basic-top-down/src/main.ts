@@ -1,10 +1,11 @@
 import { createWorld } from '@newkrok/three-play';
-import type { ProjectileManager } from '@newkrok/three-play';
+import type { ProjectileManager, UnitManagerType, Unit } from '@newkrok/three-play';
 import {
   updateParticleSystems,
   createParticleSystem,
 } from 'https://esm.sh/@newkrok/three-particles';
 import { createAppleProjectileDefinition } from './projectiles-config.js';
+import { humanUnitDefinition, zombieUnitDefinition } from './unit-definitions.js';
 
 import * as THREE from 'three';
 import {
@@ -18,7 +19,6 @@ import * as Constants from './constants.js';
 import {
   CSS2DRenderer,
   CSS2DObject,
-  SkeletonUtils,
 } from 'three/examples/jsm/Addons.js';
 
 /**
@@ -92,9 +92,8 @@ const crateEffects = [
 ];
 
 let direction = 0;
-let units = [];
 let trees = [];
-let character = null;
+let character: Unit | null = null;
 
 let crates = [];
 let nearbyCreateOutlines = new Map(); // Track crate outlines by crate index
@@ -102,7 +101,8 @@ let crateProxyMeshes = new Map(); // Individual meshes for outlined crates
 let lastThrowTime = 0;
 let lastRollTime = 0;
 
-// Projectile system
+// Unit and Projectile systems
+let unitManager: UnitManagerType;
 let projectileManager: ProjectileManager;
 let lastLightAttackTime = 0;
 let lastHeavyAttackTime = 0;
@@ -138,23 +138,6 @@ document.body.appendChild(labelRenderer.domElement);
  * @param {THREE.Vector3} params.position
  * @param {number} [params.duration=1000]
  */
-const playAnimation = (unit, animationName, fadeDuration = 0.2) => {
-  if (unit.userData.currentAnimationName === animationName) return;
-
-  unit.userData.lastAnimationName = unit.userData.currentAnimationName;
-  unit.userData.currentAnimationName = animationName;
-  if (unit.userData.lastAnimationName) {
-    unit.actions[animationName]
-      .reset()
-      .crossFadeFrom(
-        unit.actions[unit.userData.lastAnimationName],
-        fadeDuration,
-        true,
-      );
-  }
-
-  unit.actions[animationName].play();
-};
 
 const createCinematicCameraController = (
   camera,
@@ -263,16 +246,19 @@ const createCinematicCameraController = (
 const checkObjectCollision = (projectile, radius) => {
   const projectilePosition = projectile.position;
 
+  // Use unit manager to get all units
+  const allUnits = unitManager?.getAllUnits() || [];
+  
   // Check collision against all units (except the character)
-  for (let { model: unit } of units) {
-    if (character && unit === character.model) continue; // Don't hit the player
+  for (const unit of allUnits) {
+    if (character && unit === character) continue; // Don't hit the player
 
     // Create unit center position (foot position + height offset for body center)
-    const unitCenterPosition = unit.position.clone();
+    const unitCenterPosition = unit.model.position.clone();
     unitCenterPosition.y += 1.0; // Add 1 meter for approximate body center height
 
     const distance = unitCenterPosition.distanceTo(projectilePosition);
-    const unitCollisionRadius = 0.5; // Unit collision radius
+    const unitCollisionRadius = unit.stats.collisionRadius || 0.5;
 
     if (distance < radius + unitCollisionRadius) {
       // Calculate hit point and normal
@@ -286,7 +272,7 @@ const checkObjectCollision = (projectile, radius) => {
       const normal = direction.clone();
 
       return {
-        object: unit,
+        object: unit.model,
         point: hitPoint,
         normal: normal,
       };
@@ -298,6 +284,19 @@ const checkObjectCollision = (projectile, radius) => {
 
 // Set collision function in world config
 (worldConfig.projectiles as any).checkObjectCollision = checkObjectCollision;
+
+// Configure unit management in world config
+worldConfig.units = {
+  enabled: true,
+  maxUnits: 50,
+  enableCollision: true,
+  collision: {
+    minDistance: 1.0,
+    pushStrength: 0.5,
+  },
+  definitions: [humanUnitDefinition, zombieUnitDefinition],
+  // scene and loadedAssets will be filled by the world instance
+} as any;
 
 // Create THREE Play world instance with assets
 const worldInstance = createWorld(worldConfig);
@@ -334,6 +333,14 @@ worldInstance.onReady((assets) => {
   const loadedAssets = worldInstance.getLoadedAssets();
   const getHeightFromPosition = heightmapUtils.getHeightFromPosition;
 
+  // Get unit manager from world instance
+  unitManager = worldInstance.getUnitManager();
+  
+  if (!unitManager) {
+    logger.error('Unit manager not available - check world config');
+    return;
+  }
+
   // Append renderer to DOM
   document.querySelector('#demo').appendChild(renderer.domElement);
 
@@ -368,125 +375,49 @@ worldInstance.onReady((assets) => {
     }, duration);
   };
 
-  const createCharacterAssets = () => {
-    const createInstance = (isZombie = false) => {
-      const humanModel = loadedAssets.models['human-idle'] as THREE.Group;
-      const zombieModel = loadedAssets.models['zombie-idle'] as THREE.Group;
-
-      const instance = SkeletonUtils.clone(isZombie ? zombieModel : humanModel);
-      const wrapper = new THREE.Group();
-      instance.rotation.y = Math.PI / 2;
-      wrapper.add(instance);
-
-      const mixer = new THREE.AnimationMixer(instance);
-
-      // Get animations from loaded models
-      const animations = {
-        idle: isZombie
-          ? (loadedAssets.models['zombie-idle'] as THREE.Group).animations[0]
-          : (loadedAssets.models['human-idle'] as THREE.Group).animations[0],
-        walk: isZombie
-          ? (loadedAssets.models['zombie-walk'] as THREE.Group).animations[0]
-          : (loadedAssets.models.walk as THREE.Group).animations[0],
-        run: isZombie
-          ? (loadedAssets.models['zombie-run'] as THREE.Group).animations[0]
-          : (loadedAssets.models.run as THREE.Group).animations[0],
-        roll: (loadedAssets.models.roll as THREE.Group).animations[0],
-        attack: (loadedAssets.models['zombie-attack'] as THREE.Group)
-          .animations[0],
-        lightAttack: (loadedAssets.models['light-attack'] as THREE.Group)
-          .animations[0],
-        heavyAttack: (loadedAssets.models['heavy-attack'] as THREE.Group)
-          .animations[0],
-        hitToBody: (loadedAssets.models['hit-to-body'] as THREE.Group)
-          .animations[0],
-      };
-
-      const actions = {
-        idle: mixer.clipAction(animations.idle),
-        walk: mixer.clipAction(animations.walk),
-        run: mixer.clipAction(animations.run),
-        roll: mixer.clipAction(animations.roll),
-        attack: mixer.clipAction(animations.attack),
-        lightAttack: mixer.clipAction(animations.lightAttack),
-        heavyAttack: mixer.clipAction(animations.heavyAttack),
-        hitToBody: mixer.clipAction(animations.hitToBody),
-      };
-
-      // Enable shadows for the instance
-      instance.traverse((child) => {
-        if (child.isMesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-          if (child.material) {
-            child.material.needsUpdate = true;
-          }
-        }
-      });
-
-      // Color zombies green
-      if (isZombie) {
-        instance.traverse((child) => {
-          if (child.isMesh) {
-            child.material.color.setHex(0x4caf50);
-          }
-        });
-      }
-
-      return { model: wrapper, mixer, actions, userData: {} };
-    };
-
-    return {
-      createInstance,
-    };
-  };
-
-  const characterAssets = createCharacterAssets();
-
   const getPositionByHeight = (minHeight) => {
     // Use the engine's heightmap utility function
     return heightmapUtils.getPositionByHeight(minHeight);
   };
 
-  const createCharacter = ({ isZombie = false, position }) => {
-    const character = characterAssets.createInstance(isZombie);
-    playAnimation(character, 'idle');
-    character.model.position.copy(position);
-    scene.add(character.model);
+  // Create player character using unit manager
+  character = unitManager.createUnit({
+    definitionId: 'human-player',
+    position: startingPosition,
+  });
 
-    character.effects = {};
+  if (character) {
+    // Add particle effects to character
     const runningEffectParticleSystem = createParticleSystem(
       runningEffect,
       cycleData.now,
     );
     const runningEffectInstance = runningEffectParticleSystem.instance;
-    character.effects.running = runningEffectParticleSystem;
     character.model.add(runningEffectInstance);
 
     const runningInWaterEffectParticleSystem = createParticleSystem(
       runningInWaterEffect,
       cycleData.now,
     );
-    const runningInWaterEffectInstance =
-      runningInWaterEffectParticleSystem.instance;
-    character.effects.runningInWater = runningInWaterEffectParticleSystem;
+    const runningInWaterEffectInstance = runningInWaterEffectParticleSystem.instance;
     character.model.add(runningInWaterEffectInstance);
 
-    return character;
-  };
-  character = createCharacter({
-    position: startingPosition,
-  });
-  const { instance: dustEffectInstance } = createParticleSystem(
-    dustEffect,
-    cycleData.now,
-  );
-  character.model.add(dustEffectInstance);
-  units.push(character);
+    const { instance: dustEffectInstance } = createParticleSystem(
+      dustEffect,
+      cycleData.now,
+    );
+    character.model.add(dustEffectInstance);
+
+    // Store effects in character userData for later access
+    character.userData.effects = {
+      running: runningEffectParticleSystem,
+      runningInWater: runningInWaterEffectParticleSystem,
+    };
+  }
 
   // Configure day/night system to follow the main character for optimized shadows
   const dayNightManager = worldInstance.getDayNightManager();
-  if (dayNightManager) {
+  if (dayNightManager && character) {
     dayNightManager.updateConfig({
       sunPosition: {
         radius: 100,
@@ -498,21 +429,33 @@ worldInstance.onReady((assets) => {
     logger.info('Day/night system configured to follow character');
   }
 
-  const createEnemies = async (count) => {
+  // Create enemies using unit manager
+  const createEnemies = async (count: number) => {
     for (let i = 0; i < count; i++) {
       const position = startingPosition.clone();
       position.x += 10 + i * 1.5 - Math.floor(i / 5) * (5 * 1.5);
       position.z += -10 + Math.floor(i / 5) * 2;
       position.y = getHeightFromPosition(position);
-      const enemy = createCharacter({
+      
+      const enemy = unitManager.createUnit({
+        definitionId: 'zombie-enemy',
         position,
-        isZombie: true,
       });
-      units.push(enemy);
+
+      if (enemy) {
+        logger.info(`Created enemy ${i + 1}/${count}`);
+      }
     }
   };
+  
   createEnemies(ENEMY_COUNT);
 
+  // Initialize combat for player character
+  if (character) {
+    unitManager.initializeCombat(character, MAX_STAMINA);
+  }
+
+  // Create world objects (trees, rocks, crates) - same as original
   const trunkGeometry = new THREE.BoxGeometry(0.4, 2, 0.4);
   const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x895129 });
   const trunkMesh = new THREE.InstancedMesh(
@@ -523,6 +466,7 @@ worldInstance.onReady((assets) => {
   trunkMesh.castShadow = true;
   trunkMesh.receiveShadow = true;
   scene.add(trunkMesh);
+  
   const leafGeometry = new THREE.SphereGeometry(1, 16, 16);
   const leafTexture = loadedAssets.textures.grass.clone();
   leafTexture.repeat.x = 1;
@@ -551,7 +495,6 @@ worldInstance.onReady((assets) => {
   appleMesh.receiveShadow = true;
   scene.add(appleMesh);
   let appleIndex = 0;
-  const applesPerTree = [];
 
   // Initialize projectile manager
   const appleProjectileDefinition = createAppleProjectileDefinition(
@@ -582,22 +525,25 @@ worldInstance.onReady((assets) => {
       scene.add(splashEffectInstance);
       setTimeout(dispose, 1000);
 
-      // Check if hit a unit (enemy)
-      for (let { model: unit } of units) {
-        if (unit === character.model) continue;
-        const dist = position.distanceTo(unit.position);
+      // Check if hit a unit (enemy) using unit manager
+      const allUnits = unitManager.getAllUnits();
+      for (const unit of allUnits) {
+        if (unit === character) continue; // Don't hit the player
+        const dist = position.distanceTo(unit.model.position);
         if (dist < APPLE_HIT_RADIUS) {
-          // Apply knockback
-          const away = unit.position.clone().sub(position).normalize();
+          // Apply knockback using unit physics
+          const away = unit.model.position.clone().sub(position).normalize();
           const knockback = away.multiplyScalar(APPLE_PUSH_FORCE);
-          if (!unit.knockbackVelocity)
-            unit.knockbackVelocity = new THREE.Vector3();
-          unit.knockbackVelocity.add(knockback);
+          
+          // Add knockback to unit
+          if (!unit.userData.knockbackVelocity)
+            unit.userData.knockbackVelocity = new THREE.Vector3();
+          unit.userData.knockbackVelocity.add(knockback);
 
           // Show floating text
           showFloatingLabel({
             text: getSplashText(),
-            position: unit.position,
+            position: unit.model.position,
           });
 
           // Update score
@@ -608,6 +554,7 @@ worldInstance.onReady((assets) => {
     }
   });
 
+  // Create trees with apples
   for (let i = 0; i < TREE_COUNT; i++) {
     const scale = 1 + Math.random();
     const position = getPositionByHeight(9);
@@ -621,6 +568,7 @@ worldInstance.onReady((assets) => {
     dummy.scale.set(scale, scale, scale);
     dummy.updateMatrix();
     trunkMesh.setMatrixAt(i, dummy.matrix);
+    
     const tree = {
       isActive: true,
       position: dummy.position.clone(),
@@ -665,6 +613,7 @@ worldInstance.onReady((assets) => {
     appleMesh.instanceMatrix.needsUpdate = true;
   };
 
+  // Create rocks
   const rockGeometry = new THREE.IcosahedronGeometry(0.3, 0);
   const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
   const rockMesh = new THREE.InstancedMesh(
@@ -693,6 +642,7 @@ worldInstance.onReady((assets) => {
   }
   rockMesh.instanceMatrix.needsUpdate = true;
 
+  // Create crates
   const crateGeometry = new THREE.BoxGeometry(1, 1, 1);
   const crateMaterial = new THREE.MeshStandardMaterial({
     map: loadedAssets.textures.crate,
@@ -736,7 +686,23 @@ worldInstance.onReady((assets) => {
     crateMesh.instanceMatrix.needsUpdate = true;
   };
 
+  // Helper functions
+  const getSplashText = () => {
+    const texts = [
+      'Splash!',
+      'Pow!',
+      'Thud!',
+      'Smash!',
+      'Bam!',
+      'Whack!',
+      'Bonk!',
+      'Kaboom!',
+    ];
+    return texts[Math.floor(Math.random() * texts.length)];
+  };
+
   const updateCamera = () => {
+    if (!character) return;
     camera.position.lerp(
       new THREE.Vector3(
         character.model.position.x,
@@ -748,41 +714,18 @@ worldInstance.onReady((assets) => {
     camera.lookAt(character.model.position);
   };
 
-  const handleTerrainHeight = ({ model: unit }) => {
-    const terrainHeight = getHeightFromPosition(
-      new THREE.Vector3(unit.position.x, 0, unit.position.z),
-    );
-    if (terrainHeight < WATER_LEVEL - 0.5) {
-      const direction = new THREE.Vector3()
-        .subVectors(unit.userData.oldPos, unit.position)
-        .normalize();
+  // Player input handling
+  const handlePlayerInput = () => {
+    if (!character) return;
 
-      unit.position.x = unit.userData.oldPos.x;
-      if (
-        getHeightFromPosition(
-          new THREE.Vector3(unit.position.x, 0, unit.position.z),
-        ) <
-        WATER_LEVEL - 0.5
-      ) {
-        unit.position.z = unit.userData.oldPos.z;
-        if (
-          getHeightFromPosition(
-            new THREE.Vector3(unit.position.x, 0, unit.position.z),
-          ) <
-          WATER_LEVEL - 0.5
-        ) {
-          unit.position.copy(unit.userData.oldPos);
-        }
-      }
-    }
-  };
-
-  const applyCharacterRotation = () => {
+    // Movement input
     const moveLeft = inputManager.isActionActive('moveLeft');
     const moveRight = inputManager.isActionActive('moveRight');
     const moveUp = inputManager.isActionActive('moveUp');
     const moveDown = inputManager.isActionActive('moveDown');
+    const isRunningKey = inputManager.isActionActive('run');
 
+    // Calculate direction
     if (moveLeft) direction = Math.PI;
     if (moveRight) direction = 0;
     if (moveUp) direction = Math.PI / 2;
@@ -792,28 +735,23 @@ worldInstance.onReady((assets) => {
     if (moveRight && moveUp) direction = Math.PI / 4;
     if (moveRight && moveDown) direction = Math.PI + (Math.PI / 4) * 3;
 
-    rotationTargetQuaternion.setFromAxisAngle(
-      new THREE.Vector3(0, 1, 0),
-      direction,
-    );
-    character.model.quaternion.slerp(
-      rotationTargetQuaternion,
-      cycleData.delta * (isAttacking ? 0.5 : 10),
-    );
-  };
-  const applyCharacterMovement = () => {
-    if (isRolling || isAttacking) return;
+    // Apply rotation
+    if (!isRolling && !isAttacking) {
+      rotationTargetQuaternion.setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        direction,
+      );
+      character.model.quaternion.slerp(
+        rotationTargetQuaternion,
+        cycleData.delta * (isAttacking ? 0.5 : 10),
+      );
+    }
 
-    const isMoving =
-      inputManager.isActionActive('moveLeft') ||
-      inputManager.isActionActive('moveRight') ||
-      inputManager.isActionActive('moveUp') ||
-      inputManager.isActionActive('moveDown');
-
-    const isRunningKey = inputManager.isActionActive('run');
+    // Handle movement
+    const isMoving = moveLeft || moveRight || moveUp || moveDown;
     let isRunning = false;
 
-    if (isMoving && isRunningKey) {
+    if (isMoving && isRunningKey && !isRolling && !isAttacking) {
       if (gameState.stamina > 0) {
         isRunning = true;
         gameState.stamina -= STAMINA_DRAIN * cycleData.delta;
@@ -824,14 +762,14 @@ worldInstance.onReady((assets) => {
       gameState.stamina = Math.min(gameState.stamina, MAX_STAMINA);
     }
 
-    if (isMoving) {
+    if (isMoving && !isRolling && !isAttacking) {
       character.model.getWorldDirection(charactersWorldDirection);
       correctedDir.set(
         charactersWorldDirection.z,
         0,
         -charactersWorldDirection.x,
       );
-      character.model.userData.oldPos = character.model.position.clone();
+      character.userData.oldPos = character.model.position.clone();
       character.model.position.addScaledVector(
         correctedDir,
         (isRunning ? RUN_SPEED : WALK_SPEED) *
@@ -841,156 +779,180 @@ worldInstance.onReady((assets) => {
           cycleData.delta,
       );
 
+      // Use unit manager for animation
       if (isRunning) {
-        playAnimation(character, 'run');
+        unitManager.playAnimation(character, 'run');
       } else {
-        playAnimation(character, 'walk');
+        unitManager.playAnimation(character, 'walk');
       }
 
-      handleTerrainHeight(character);
+      // Handle terrain height
+      const terrainHeight = getHeightFromPosition(
+        new THREE.Vector3(character.model.position.x, 0, character.model.position.z),
+      );
+      if (terrainHeight < WATER_LEVEL - 0.5) {
+        character.model.position.copy(character.userData.oldPos);
+      }
+    } else if (!isRolling && !isAttacking) {
+      unitManager.playAnimation(character, 'idle');
+    }
+
+    // Handle combat
+    handleCombatInput();
+    handleRollInput();
+    handleThrowInput();
+  };
+
+  const handleCombatInput = () => {
+    if (!character) return;
+
+    const now = performance.now();
+
+    // Light attack
+    if (inputManager.isActionActive('lightAttack') && 
+        !isRolling && !isAttacking &&
+        lastLightAttackTime + LIGHT_ATTACK_COOLDOWN < now &&
+        gameState.stamina >= STAMINA_FOR_LIGHT_ATTACK) {
+      
+      isAttacking = true;
+      lastLightAttackTime = now;
+      gameState.stamina -= STAMINA_FOR_LIGHT_ATTACK;
+      gameState.stamina = Math.max(gameState.stamina, 0);
+      
+      // Use unit manager for combat
+      const result = unitManager.performLightAttack(character, now);
+      unitManager.playAnimation(character, 'lightAttack');
+      
+      setTimeout(() => {
+        isAttacking = false;
+        unitManager.playAnimation(character, 'idle');
+      }, 1000); // Approximate attack duration
+    }
+
+    // Heavy attack
+    if (inputManager.isActionActive('heavyAttack') && 
+        !isRolling && !isAttacking &&
+        lastHeavyAttackTime + HEAVY_ATTACK_COOLDOWN < now &&
+        gameState.stamina >= STAMINA_FOR_HEAVY_ATTACK) {
+      
+      isAttacking = true;
+      lastHeavyAttackTime = now;
+      gameState.stamina -= STAMINA_FOR_HEAVY_ATTACK;
+      gameState.stamina = Math.max(gameState.stamina, 0);
+      
+      // Use unit manager for heavy attack
+      const result = unitManager.performHeavyAttack(character, now);
+      unitManager.playAnimation(character, 'heavyAttack');
+      
+      setTimeout(() => {
+        isAttacking = false;
+        unitManager.playAnimation(character, 'idle');
+      }, 1500); // Approximate attack duration
+    }
+  };
+
+  const handleRollInput = () => {
+    if (!character) return;
+
+    const now = performance.now();
+    const rollActive = inputManager.isActionActive('roll');
+
+    if (rollActive && !isRolling) {
+      if (now - lastRollTime > rollCooldown) {
+        isRolling = true;
+        unitManager.playAnimation(character, 'roll');
+        lastRollTime = now;
+      }
+    } else if (isRolling) {
+      // Handle roll movement and end
+      if (lastRollTime + 1000 <= now) { // Approximate roll duration
+        isRolling = false;
+        unitManager.playAnimation(character, 'idle');
+      } else {
+        const forward = new THREE.Vector3(1, 0, 0);
+        forward.applyQuaternion(character.model.quaternion);
+        character.userData.oldPos = character.model.position.clone();
+        character.model.position.addScaledVector(
+          forward,
+          (inputManager.isActionActive('run') ? FAST_ROLL_SPEED : ROLL_SPEED) *
+            cycleData.delta,
+        );
+        
+        // Handle terrain height
+        const terrainHeight = getHeightFromPosition(character.model.position);
+        if (terrainHeight < WATER_LEVEL - 0.5) {
+          character.model.position.copy(character.userData.oldPos);
+        }
+      }
+    }
+  };
+
+  const handleThrowInput = () => {
+    if (!character) return;
+
+    if (inputManager.isActionActive('throwApple')) {
+      const now = performance.now();
+      if (
+        now - lastThrowTime > throwCooldown &&
+        gameState.collectedApples > 0
+      ) {
+        gameState.collectedApples--;
+        throwApple();
+        lastThrowTime = now;
+      }
+    }
+  };
+
+  const throwApple = () => {
+    if (!character) return;
+
+    const origin = character.model.position.clone();
+    origin.y += 0.5; // Throw from slightly above character
+
+    // Get character's forward direction
+    const direction = character.model.getWorldDirection(new THREE.Vector3());
+    direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+
+    // Add some upward trajectory
+    direction.y += 0.2;
+    direction.normalize();
+
+    // Launch projectile with spread and strength
+    const projectile = projectileManager.launch({
+      definitionId: 'apple',
+      origin,
+      direction,
+      strength: throwStrength,
+      userData: { thrownBy: 'player' },
+    });
+
+    if (projectile) {
+      logger.info('Apple thrown successfully!');
     } else {
-      playAnimation(character, 'idle');
+      logger.warn('Failed to throw apple - no projectiles available');
     }
   };
-  const applyCharacterLightAttack = () => {
-    const now = performance.now();
-    if (
-      isRolling ||
-      isAttacking ||
-      !inputManager.isActionActive('lightAttack') ||
-      lastLightAttackTime + LIGHT_ATTACK_COOLDOWN > now
-    )
-      return;
 
-    isAttacking = true;
-    lastLightAttackTime = now;
-    const lightAttackAction = character.actions.lightAttack;
-    setTimeout(() => {
-      isAttacking = false;
-      playAnimation(character, 'idle');
-    }, lightAttackAction.getClip().duration * 1000);
-    gameState.stamina -= STAMINA_FOR_LIGHT_ATTACK;
-    gameState.stamina = Math.max(gameState.stamina, 0);
-    playAnimation(character, 'lightAttack');
+  // Handle world object interactions
+  const handleWorldInteractions = () => {
+    if (!character) return;
 
-    setTimeout(() => {
-      units.forEach((_unit) => {
-        if (_unit === character) return;
-        const { model: unit } = _unit;
-        const away = unit.position
-          .clone()
-          .sub(character.model.position)
-          .normalize();
-        if (
-          unit.position.distanceTo(character.model.position) <
-          LIGHT_ATTACK_EFFECT_AREA
-        ) {
-          const knockback = away.multiplyScalar(LIGHT_ATTACK_KNOCKBACK);
-          if (!unit.knockbackVelocity)
-            unit.knockbackVelocity = new THREE.Vector3();
-          unit.knockbackVelocity.add(knockback);
-          unit.userData.isStunned = true;
-          playAnimation(_unit, 'hitToBody');
-          setTimeout(() => {
-            unit.userData.isStunned = false;
-            playAnimation(_unit, 'idle');
-          }, LIGHT_ATTACK_STUN_DURATION);
-        }
-      });
-    }, LIGHT_ATTACK_ACTION_DELAY);
-  };
-  const applyCharacterHeavyAttack = () => {
-    const now = performance.now();
-    if (
-      isRolling ||
-      isAttacking ||
-      !inputManager.isActionActive('heavyAttack') ||
-      lastHeavyAttackTime + HEAVY_ATTACK_COOLDOWN > now
-    )
-      return;
-
-    isAttacking = true;
-    lastHeavyAttackTime = now;
-    const heavyAttackAction = character.actions.heavyAttack;
-    setTimeout(() => {
-      isAttacking = false;
-      playAnimation(character, 'idle');
-    }, heavyAttackAction.getClip().duration * 1000);
-    gameState.stamina -= STAMINA_FOR_HEAVY_ATTACK;
-    gameState.stamina = Math.max(gameState.stamina, 0);
-    playAnimation(character, 'heavyAttack');
-
-    setTimeout(() => {
-      units.forEach((_unit) => {
-        if (_unit === character) return;
-        const { model: unit } = _unit;
-        const away = unit.position
-          .clone()
-          .sub(character.model.position)
-          .normalize();
-        if (
-          unit.position.distanceTo(character.model.position) <
-          HEAVY_ATTACK_EFFECT_AREA
-        ) {
-          const knockback = away.multiplyScalar(HEAVY_ATTACK_KNOCKBACK);
-          if (!unit.knockbackVelocity)
-            unit.knockbackVelocity = new THREE.Vector3();
-          unit.knockbackVelocity.add(knockback);
-          unit.userData.isStunned = true;
-          playAnimation(_unit, 'hitToBody');
-          setTimeout(() => {
-            unit.userData.isStunned = false;
-            playAnimation(_unit, 'idle');
-          }, HEAVY_ATTACK_STUN_DURATION);
-        }
-      });
-    }, HEAVY_ATTACK_ACTION_DELAY);
-  };
-  const updateCharacter = () => {
-    applyCharacterRotation();
-    applyCharacterMovement();
-    applyCharacterLightAttack();
-    applyCharacterHeavyAttack();
-  };
-
-  // Day/Night cycle time display helper
-  const updateTimeDisplay = () => {
-    const dayNightManager = worldInstance.getDayNightManager();
-    if (dayNightManager) {
-      const timeInfo = dayNightManager.getTimeInfo();
-      const clockEl = document.getElementById('clock-text');
-      if (clockEl) clockEl.textContent = timeInfo.formattedTime;
-    }
-  };
-  const updateUnits = () => {
-    units.forEach((_unit, index) => {
-      if (_unit.model.position.y < WATER_SPEED_LEVEL) {
-        _unit.effects.running.pauseEmitter();
-        _unit.effects.runningInWater.resumeEmitter();
-      } else {
-        _unit.effects.running.resumeEmitter();
-        _unit.effects.runningInWater.pauseEmitter();
-      }
-
-      const { model: unit, mixer, actions } = _unit;
-      mixer.update(cycleData.delta);
-      if (unit.knockbackVelocity) {
-        unit.position.addScaledVector(unit.knockbackVelocity, cycleData.delta);
-        unit.knockbackVelocity.multiplyScalar(0.9);
-        if (unit.knockbackVelocity.lengthSq() < 0.0001)
-          unit.knockbackVelocity.set(0, 0, 0);
-      }
+    const allUnits = unitManager.getAllUnits();
+    
+    for (const unit of allUnits) {
+      // Handle tree collisions and apple collection
       for (const tree of trees) {
         const { position, appleIndices, isActive } = tree;
-
-        const dist = unit.position.distanceTo(position);
+        const dist = unit.model.position.distanceTo(position);
+        
         if (dist < TREE_COLLISION_RADIUS) {
-          const away = unit.position.clone().sub(position).normalize();
-          unit.position.addScaledVector(
+          const away = unit.model.position.clone().sub(position).normalize();
+          unit.model.position.addScaledVector(
             away,
             (TREE_COLLISION_RADIUS - dist) * 0.2,
           );
-          if (unit === character.model && appleIndices && isActive) {
+          
+          if (unit === character && appleIndices && isActive) {
             tree.isActive = false;
             removeApplesFromTree(appleIndices);
             showFloatingLabel({
@@ -1019,23 +981,20 @@ worldInstance.onReady((assets) => {
         }
       }
 
+      // Handle crate interactions
       for (const crate of crates) {
         const { position, effect, index, isActive } = crate;
         if (!isActive) continue;
 
-        const dist = unit.position.distanceTo(position);
+        const dist = unit.model.position.distanceTo(position);
 
         // Check if player is nearby for outline effect
-        if (unit === character.model) {
+        if (unit === character) {
           const isNearby = dist < CRATE_INTERACTION_RADIUS;
           const hasOutline = nearbyCreateOutlines.has(index);
 
           if (isNearby && !hasOutline) {
             // Create individual mesh for this crate to apply outline
-            const crateGeometry = new THREE.BoxGeometry(1, 1, 1);
-            const crateMaterial = new THREE.MeshStandardMaterial({
-              map: loadedAssets.textures.crate,
-            });
             const proxyMesh = new THREE.Mesh(crateGeometry, crateMaterial);
             proxyMesh.position.copy(position);
             proxyMesh.castShadow = true;
@@ -1081,12 +1040,13 @@ worldInstance.onReady((assets) => {
         }
 
         if (dist < CRATE_COLLISION_RADIUS) {
-          const away = unit.position.clone().sub(position).normalize();
-          unit.position.addScaledVector(
+          const away = unit.model.position.clone().sub(position).normalize();
+          unit.model.position.addScaledVector(
             away,
             (CRATE_COLLISION_RADIUS - dist) * 0.2,
           );
-          if (unit === character.model && isActive) {
+          
+          if (unit === character && isActive) {
             // Remove outline and proxy mesh when crate is collected
             if (nearbyCreateOutlines.has(index)) {
               const outlineId = nearbyCreateOutlines.get(index);
@@ -1100,178 +1060,45 @@ worldInstance.onReady((assets) => {
 
             crate.isActive = false;
             showFloatingLabel({
-              text: effect,
+              text: JSON.stringify(effect),
               position: character.model.position,
             });
             removeCrate(index);
           }
         }
       }
-
-      const elapsedTime = cycleData.elapsed;
-
-      if (unit === character.model) return;
-      if (unit.userData.isStunned) return;
-
-      if (!unit.userData.target) unit.userData.target = new THREE.Vector3();
-      if (!unit.userData.nextTargetSelectionTime)
-        unit.userData.nextTargetSelectionTime = elapsedTime;
-      if (!unit.userData.resumeTime)
-        unit.userData.resumeTime = elapsedTime + Math.random() * 5;
-
-      if (elapsedTime >= unit.userData.nextTargetSelectionTime) {
-        unit.userData.isAttacking = false;
-        unit.userData.nextTargetSelectionTime = elapsedTime + Math.random() * 5;
-        unit.userData.target.copy(character.model.position);
-      }
-
-      const direction = new THREE.Vector3().subVectors(
-        unit.userData.isAttacking
-          ? character.model.position
-          : unit.userData.target,
-        unit.position,
-      );
-      // Flatten direction to horizontal plane (ignore Y component)
-      direction.y = 0;
-      direction.normalize();
-      const adjustQuat = new THREE.Quaternion();
-      adjustQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
-      rotationTargetQuaternion
-        .setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction)
-        .multiply(adjustQuat);
-      unit.quaternion.slerp(rotationTargetQuaternion, cycleData.delta * 10);
-
-      if (elapsedTime < unit.userData.resumeTime) return;
-
-      playAnimation(_unit, 'run');
-
-      unit.position.addScaledVector(direction, ENEMY_SPEED * cycleData.delta);
-      unit.userData.oldPos = unit.position.clone();
-
-      handleTerrainHeight(_unit);
-
-      unit.userData.target.y = unit.position.y;
-      if (unit.position.distanceTo(unit.userData.target) < 1.5) {
-        playAnimation(_unit, 'idle');
-        unit.userData.resumeTime = cycleData.elapsed + Math.random() * 3;
-      }
-      if (unit.position.distanceTo(character.model.position) < 1.5) {
-        playAnimation(_unit, 'attack');
-        unit.userData.resumeTime = cycleData.elapsed + Math.random() * 3;
-        unit.userData.isAttacking = true;
-      }
-    });
-
-    for (let i = 0; i < units.length; i++) {
-      const e1 = units[i].model;
-
-      for (let j = i + 1; j < units.length; j++) {
-        const e2 = units[j].model;
-
-        const dist = e1.position.distanceTo(e2.position);
-        const minDist = 1;
-
-        if (dist < minDist) {
-          const pushDir = e1.position.clone().sub(e2.position).normalize();
-          const overlap = minDist - dist;
-
-          e1.position.addScaledVector(pushDir, overlap * 0.5);
-          e2.position.addScaledVector(pushDir, -overlap * 0.5);
-        }
-      }
     }
   };
 
-  const updateCharactersYPosition = () => {
-    units.forEach(
-      ({ model: unit }) =>
-        (unit.position.y = getHeightFromPosition(unit.position)),
-    );
-  };
+  // Update particle effects based on character position
+  const updateParticleEffects = () => {
+    if (!character) return;
 
-  const throwApple = () => {
-    const origin = character.model.position.clone();
-    origin.y += 0.5; // Throw from slightly above character
-
-    // Get character's forward direction
-    const direction = character.model.getWorldDirection(new THREE.Vector3());
-    direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-
-    // Add some upward trajectory
-    direction.y += 0.2;
-    direction.normalize();
-
-    // Launch projectile with spread and strength
-    const projectile = projectileManager.launch({
-      definitionId: 'apple',
-      origin,
-      direction,
-      strength: throwStrength,
-      userData: { thrownBy: 'player' },
-    });
-
-    if (projectile) {
-      logger.info('Apple thrown successfully!');
+    if (character.model.position.y < WATER_SPEED_LEVEL) {
+      character.userData.effects.running.pauseEmitter();
+      character.userData.effects.runningInWater.resumeEmitter();
     } else {
-      logger.warn('Failed to throw apple - no projectiles available');
+      character.userData.effects.running.resumeEmitter();
+      character.userData.effects.runningInWater.pauseEmitter();
     }
   };
 
-  const getSplashText = () => {
-    const texts = [
-      'Splash!',
-      'Pow!',
-      'Thud!',
-      'Smash!',
-      'Bam!',
-      'Whack!',
-      'Bonk!',
-      'Kaboom!',
-    ];
-    return texts[Math.floor(Math.random() * texts.length)];
-  };
-
-  const updateAppleThrowRoutine = () => {
-    if (inputManager.isActionActive('throwApple')) {
-      const now = performance.now();
-      if (
-        now - lastThrowTime > throwCooldown &&
-        gameState.collectedApples > 0
-      ) {
-        gameState.collectedApples--;
-        throwApple();
-        lastThrowTime = now;
-      }
+  // Day/Night cycle time display helper
+  const updateTimeDisplay = () => {
+    const dayNightManager = worldInstance.getDayNightManager();
+    if (dayNightManager) {
+      const timeInfo = dayNightManager.getTimeInfo();
+      const clockEl = document.getElementById('clock-text');
+      if (clockEl) clockEl.textContent = timeInfo.formattedTime;
     }
   };
 
-  const updateRollRoutine = () => {
-    const now = performance.now();
-    const rollActive = inputManager.isActionActive('roll');
-
-    if (rollActive && !isRolling) {
-      if (now - lastRollTime > rollCooldown) {
-        isRolling = true;
-        playAnimation(character, 'roll');
-        lastRollTime = now;
-      }
-    } else if (isRolling) {
-      const rollAction = character.actions.roll;
-      if (lastRollTime + rollAction.getClip().duration * 1000 <= now) {
-        isRolling = false;
-        playAnimation(character, 'idle');
-      } else {
-        const forward = new THREE.Vector3(1, 0, 0);
-        forward.applyQuaternion(character.model.quaternion);
-        character.model.userData.oldPos = character.model.position.clone();
-        character.model.position.addScaledVector(
-          forward,
-          (inputManager.isActionActive('run') ? FAST_ROLL_SPEED : ROLL_SPEED) *
-            cycleData.delta,
-        );
-        handleTerrainHeight(character);
-      }
-    }
+  // Update characters Y position based on heightmap
+  const updateCharactersYPosition = () => {
+    const allUnits = unitManager.getAllUnits();
+    allUnits.forEach((unit) => {
+      unit.model.position.y = getHeightFromPosition(unit.model.position);
+    });
   };
 
   const cinamaticCameraController = createCinematicCameraController(camera, [
@@ -1283,9 +1110,9 @@ worldInstance.onReady((assets) => {
       ),
       to: new THREE.Vector3(startingPosition.x - 10, 12, startingPosition.z),
       lookAt: new THREE.Vector3(
-        character.model.position.x,
+        character?.model.position.x || 0,
         12,
-        character.model.position.z,
+        character?.model.position.z || 0,
       ),
       duration: 0.5,
     },
@@ -1302,19 +1129,25 @@ worldInstance.onReady((assets) => {
     cycleData.elapsed = elapsedTime;
 
     updateParticleSystems(cycleData);
+    
     if (!cinamaticCameraController.isPlaying()) {
       updateCamera();
-      updateCharacter();
+      handlePlayerInput();
     }
-    updateUnits();
+    
+    // Update world interactions
+    handleWorldInteractions();
+    
+    // Update particle effects
+    updateParticleEffects();
+    
+    // Update character positions
     updateCharactersYPosition();
-    updateAppleThrowRoutine();
-
-    updateRollRoutine();
-
-    // Projectile manager is automatically updated by the world instance
+    
+    // UnitManager handles all unit updates automatically (AI, animation, combat, physics)
+    // No need for manual updateUnits() as the UnitManager is called in worldInstance.onUpdate()
+    
     updateTimeDisplay();
-
     cinamaticCameraController.update(cycleData.delta);
 
     // Render CSS2D labels

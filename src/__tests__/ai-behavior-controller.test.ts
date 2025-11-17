@@ -95,7 +95,7 @@ describe('AIBehaviorController', () => {
   describe('Behavior Initialization', () => {
     it('should initialize behavior for unit', () => {
       const homePosition = new THREE.Vector3(0, 0, 0);
-      
+
       expect(() => {
         aiController.initializeBehavior(mockUnit, homePosition);
       }).not.toThrow();
@@ -109,7 +109,7 @@ describe('AIBehaviorController', () => {
 
     it('should get behavior data after initialization', () => {
       aiController.initializeBehavior(mockUnit);
-      
+
       const behaviorData = aiController.getBehaviorData(mockUnit);
       expect(behaviorData).toBeDefined();
       expect(behaviorData?.state).toBe('idle');
@@ -130,15 +130,21 @@ describe('AIBehaviorController', () => {
       expect(() => {
         aiController.setBehaviorState(mockUnit, 'patrol');
       }).not.toThrow();
-      
+
       const behaviorData = aiController.getBehaviorData(mockUnit);
       expect(behaviorData?.state).toBe('patrol');
     });
 
     it('should set different behavior states', () => {
-      const states: AIBehaviorState[] = ['idle', 'patrol', 'chase', 'attack', 'return'];
-      
-      states.forEach(state => {
+      const states: AIBehaviorState[] = [
+        'idle',
+        'patrol',
+        'chase',
+        'attack',
+        'return',
+      ];
+
+      states.forEach((state) => {
         aiController.setBehaviorState(mockUnit, state);
         const behaviorData = aiController.getBehaviorData(mockUnit);
         expect(behaviorData?.state).toBe(state);
@@ -222,15 +228,15 @@ describe('AIBehaviorController', () => {
     it('should maintain idle state when player is far', () => {
       // Position player far away
       playerUnit.model.position.set(20, 0, 20);
-      
+
       const units = [mockUnit];
       aiController.setBehaviorState(mockUnit, 'idle');
-      
+
       // Update multiple times
       for (let i = 0; i < 5; i++) {
         aiController.updateBehaviors(units, playerUnit, 0.016, i * 0.016);
       }
-      
+
       const behaviorData = aiController.getBehaviorData(mockUnit);
       expect(['idle', 'patrol']).toContain(behaviorData?.state);
     });
@@ -238,15 +244,15 @@ describe('AIBehaviorController', () => {
     it('should transition to chase when player is nearby', () => {
       // Position player nearby (within detection range)
       playerUnit.model.position.set(3, 0, 0);
-      
+
       const units = [mockUnit];
       aiController.setBehaviorState(mockUnit, 'patrol');
-      
+
       // Update multiple times to allow detection
       for (let i = 0; i < 10; i++) {
         aiController.updateBehaviors(units, playerUnit, 0.1, i * 0.1);
       }
-      
+
       const behaviorData = aiController.getBehaviorData(mockUnit);
       // Could be chase or attack depending on distance
       expect(['patrol', 'chase', 'attack']).toContain(behaviorData?.state);
@@ -273,7 +279,7 @@ describe('AIBehaviorController', () => {
         pauseDurationMax: 3.0,
         targetUpdateInterval: 2.0,
       });
-      
+
       expect(controller).toBeDefined();
     });
   });
