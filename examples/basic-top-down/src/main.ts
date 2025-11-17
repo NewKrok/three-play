@@ -1,11 +1,18 @@
 import { createWorld } from '@newkrok/three-play';
-import type { ProjectileManager, UnitManagerType, Unit } from '@newkrok/three-play';
+import type {
+  ProjectileManager,
+  UnitManagerType,
+  Unit,
+} from '@newkrok/three-play';
 import {
   updateParticleSystems,
   createParticleSystem,
 } from 'https://esm.sh/@newkrok/three-particles';
 import { createAppleProjectileDefinition } from './projectiles-config.js';
-import { humanUnitDefinition, zombieUnitDefinition } from './unit-definitions.js';
+import {
+  humanUnitDefinition,
+  zombieUnitDefinition,
+} from './unit-definitions.js';
 
 import * as THREE from 'three';
 import {
@@ -16,21 +23,8 @@ import {
 } from './effects-config.js';
 import worldConfig from './world-config.js';
 import * as Constants from './constants.js';
-import {
-  CSS2DRenderer,
-  CSS2DObject,
-} from 'three/examples/jsm/Addons.js';
-
-/**
- * @typedef {Object} GameState
- * @property {number} collectedApples
- * @property {number} score
- * @property {number} health
- * @property {number} stamina
- */
-
-// Initialize THREE Play engine
-// Note: Logger will be initialized with world instance
+import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/Addons.js';
+import { LIGHT_ATTACK_ACTION_DELAY } from './constants.js';
 
 // Destructure constants for easier access
 const {
@@ -40,7 +34,6 @@ const {
   FAST_ROLL_SPEED,
   WATER_SPEED_MULTIPLIER,
   WATER_SPEED_LEVEL,
-  ENEMY_SPEED,
   DISTANCE_FROM_CAMERA,
   ROCK_COUNT,
   TREE_COUNT,
@@ -58,18 +51,10 @@ const {
   STAMINA_DRAIN,
   MAX_HEALTH,
   WATER_LEVEL,
-  LIGHT_ATTACK_KNOCKBACK,
-  LIGHT_ATTACK_ACTION_DELAY,
   STAMINA_FOR_LIGHT_ATTACK,
   LIGHT_ATTACK_COOLDOWN,
-  LIGHT_ATTACK_EFFECT_AREA,
-  LIGHT_ATTACK_STUN_DURATION,
-  HEAVY_ATTACK_KNOCKBACK,
-  HEAVY_ATTACK_ACTION_DELAY,
   STAMINA_FOR_HEAVY_ATTACK,
   HEAVY_ATTACK_COOLDOWN,
-  HEAVY_ATTACK_EFFECT_AREA,
-  HEAVY_ATTACK_STUN_DURATION,
 } = Constants;
 
 const startingPosition = new THREE.Vector3(
@@ -96,7 +81,7 @@ let trees = [];
 let character: Unit | null = null;
 
 let crates = [];
-let nearbyCreateOutlines = new Map(); // Track crate outlines by crate index
+let nearbyCreateOutlines = new Map();
 let crateProxyMeshes = new Map(); // Individual meshes for outlined crates
 let lastThrowTime = 0;
 let lastRollTime = 0;
@@ -110,7 +95,6 @@ let isRolling = false;
 let isAttacking = false;
 const throwCooldown = 250;
 const rollCooldown = 500;
-const gravity = new THREE.Vector3(0, -9.8, 0);
 const throwStrength = 15;
 const throwSpread = 0.2;
 const charactersWorldDirection = new THREE.Vector3();
@@ -138,7 +122,6 @@ document.body.appendChild(labelRenderer.domElement);
  * @param {THREE.Vector3} params.position
  * @param {number} [params.duration=1000]
  */
-
 const createCinematicCameraController = (
   camera,
   sequence = [],
@@ -242,50 +225,6 @@ const createCinematicCameraController = (
   };
 };
 
-// Create collision detection function for projectiles
-const checkObjectCollision = (projectile, radius) => {
-  const projectilePosition = projectile.position;
-
-  // Use unit manager to get all units
-  const allUnits = unitManager?.getAllUnits() || [];
-  
-  // Check collision against all units (except the character)
-  for (const unit of allUnits) {
-    if (character && unit === character) continue; // Don't hit the player
-
-    // Create unit center position (foot position + height offset for body center)
-    const unitCenterPosition = unit.model.position.clone();
-    unitCenterPosition.y += 1.0; // Add 1 meter for approximate body center height
-
-    const distance = unitCenterPosition.distanceTo(projectilePosition);
-    const unitCollisionRadius = unit.stats.collisionRadius || 0.5;
-
-    if (distance < radius + unitCollisionRadius) {
-      // Calculate hit point and normal
-      const direction = projectilePosition
-        .clone()
-        .sub(unitCenterPosition)
-        .normalize();
-      const hitPoint = unitCenterPosition
-        .clone()
-        .add(direction.clone().multiplyScalar(unitCollisionRadius));
-      const normal = direction.clone();
-
-      return {
-        object: unit.model,
-        point: hitPoint,
-        normal: normal,
-      };
-    }
-  }
-
-  return null; // No collision
-};
-
-// Set collision function in world config
-(worldConfig.projectiles as any).checkObjectCollision = checkObjectCollision;
-
-// Configure unit management in world config
 worldConfig.units = {
   enabled: true,
   maxUnits: 50,
@@ -295,10 +234,8 @@ worldConfig.units = {
     pushStrength: 0.5,
   },
   definitions: [humanUnitDefinition, zombieUnitDefinition],
-  // scene and loadedAssets will be filled by the world instance
 } as any;
 
-// Create THREE Play world instance with assets
 const worldInstance = createWorld(worldConfig);
 
 // Add progress tracking for asset loading
@@ -331,11 +268,10 @@ worldInstance.onReady((assets) => {
 
   const heightmapUtils = worldInstance.getHeightmapUtils();
   const loadedAssets = worldInstance.getLoadedAssets();
-  const getHeightFromPosition = heightmapUtils.getHeightFromPosition;
 
   // Get unit manager from world instance
   unitManager = worldInstance.getUnitManager();
-  
+
   if (!unitManager) {
     logger.error('Unit manager not available - check world config');
     return;
@@ -375,11 +311,6 @@ worldInstance.onReady((assets) => {
     }, duration);
   };
 
-  const getPositionByHeight = (minHeight) => {
-    // Use the engine's heightmap utility function
-    return heightmapUtils.getPositionByHeight(minHeight);
-  };
-
   // Create player character using unit manager
   character = unitManager.createUnit({
     definitionId: 'human-player',
@@ -399,7 +330,8 @@ worldInstance.onReady((assets) => {
       runningInWaterEffect,
       cycleData.now,
     );
-    const runningInWaterEffectInstance = runningInWaterEffectParticleSystem.instance;
+    const runningInWaterEffectInstance =
+      runningInWaterEffectParticleSystem.instance;
     character.model.add(runningInWaterEffectInstance);
 
     const { instance: dustEffectInstance } = createParticleSystem(
@@ -435,8 +367,8 @@ worldInstance.onReady((assets) => {
       const position = startingPosition.clone();
       position.x += 10 + i * 1.5 - Math.floor(i / 5) * (5 * 1.5);
       position.z += -10 + Math.floor(i / 5) * 2;
-      position.y = getHeightFromPosition(position);
-      
+      position.y = heightmapUtils.getHeightFromPosition(position);
+
       const enemy = unitManager.createUnit({
         definitionId: 'zombie-enemy',
         position,
@@ -447,7 +379,7 @@ worldInstance.onReady((assets) => {
       }
     }
   };
-  
+
   createEnemies(ENEMY_COUNT);
 
   // Initialize combat for player character
@@ -466,7 +398,7 @@ worldInstance.onReady((assets) => {
   trunkMesh.castShadow = true;
   trunkMesh.receiveShadow = true;
   scene.add(trunkMesh);
-  
+
   const leafGeometry = new THREE.SphereGeometry(1, 16, 16);
   const leafTexture = loadedAssets.textures.grass.clone();
   leafTexture.repeat.x = 1;
@@ -534,7 +466,7 @@ worldInstance.onReady((assets) => {
           // Apply knockback using unit physics
           const away = unit.model.position.clone().sub(position).normalize();
           const knockback = away.multiplyScalar(APPLE_PUSH_FORCE);
-          
+
           // Add knockback to unit
           if (!unit.userData.knockbackVelocity)
             unit.userData.knockbackVelocity = new THREE.Vector3();
@@ -557,7 +489,7 @@ worldInstance.onReady((assets) => {
   // Create trees with apples
   for (let i = 0; i < TREE_COUNT; i++) {
     const scale = 1 + Math.random();
-    const position = getPositionByHeight(9);
+    const position = heightmapUtils.getPositionByHeight(9);
     if (!position) continue;
 
     const { x, z } = position;
@@ -568,7 +500,7 @@ worldInstance.onReady((assets) => {
     dummy.scale.set(scale, scale, scale);
     dummy.updateMatrix();
     trunkMesh.setMatrixAt(i, dummy.matrix);
-    
+
     const tree = {
       isActive: true,
       position: dummy.position.clone(),
@@ -625,7 +557,7 @@ worldInstance.onReady((assets) => {
   rockMesh.receiveShadow = true;
   scene.add(rockMesh);
   for (let i = 0; i < ROCK_COUNT; i++) {
-    const position = getPositionByHeight(7);
+    const position = heightmapUtils.getPositionByHeight(7);
     if (!position) continue;
     const { x, y, z } = position;
 
@@ -656,7 +588,7 @@ worldInstance.onReady((assets) => {
   crateMesh.receiveShadow = true;
   scene.add(crateMesh);
   for (let i = 0; i < CRATE_COUNT; i++) {
-    const position = getPositionByHeight(WATER_LEVEL);
+    const position = heightmapUtils.getPositionByHeight(WATER_LEVEL);
     if (!position) continue;
     const { x, y, z } = position;
 
@@ -787,8 +719,12 @@ worldInstance.onReady((assets) => {
       }
 
       // Handle terrain height
-      const terrainHeight = getHeightFromPosition(
-        new THREE.Vector3(character.model.position.x, 0, character.model.position.z),
+      const terrainHeight = heightmapUtils.getHeightFromPosition(
+        new THREE.Vector3(
+          character.model.position.x,
+          0,
+          character.model.position.z,
+        ),
       );
       if (terrainHeight < WATER_LEVEL - 0.5) {
         character.model.position.copy(character.userData.oldPos);
@@ -809,45 +745,49 @@ worldInstance.onReady((assets) => {
     const now = performance.now();
 
     // Light attack
-    if (inputManager.isActionActive('lightAttack') && 
-        !isRolling && !isAttacking &&
-        lastLightAttackTime + LIGHT_ATTACK_COOLDOWN < now &&
-        gameState.stamina >= STAMINA_FOR_LIGHT_ATTACK) {
-      
+    if (
+      inputManager.isActionActive('lightAttack') &&
+      !isRolling &&
+      !isAttacking &&
+      lastLightAttackTime + LIGHT_ATTACK_COOLDOWN < now &&
+      gameState.stamina >= STAMINA_FOR_LIGHT_ATTACK
+    ) {
       isAttacking = true;
       lastLightAttackTime = now;
       gameState.stamina -= STAMINA_FOR_LIGHT_ATTACK;
       gameState.stamina = Math.max(gameState.stamina, 0);
-      
+
       // Use unit manager for combat
       const result = unitManager.performLightAttack(character, now);
       unitManager.playAnimation(character, 'lightAttack');
-      
+
       setTimeout(() => {
         isAttacking = false;
         unitManager.playAnimation(character, 'idle');
-      }, 1000); // Approximate attack duration
+      }, LIGHT_ATTACK_ACTION_DELAY); // Approximate attack duration
     }
 
     // Heavy attack
-    if (inputManager.isActionActive('heavyAttack') && 
-        !isRolling && !isAttacking &&
-        lastHeavyAttackTime + HEAVY_ATTACK_COOLDOWN < now &&
-        gameState.stamina >= STAMINA_FOR_HEAVY_ATTACK) {
-      
+    if (
+      inputManager.isActionActive('heavyAttack') &&
+      !isRolling &&
+      !isAttacking &&
+      lastHeavyAttackTime + HEAVY_ATTACK_COOLDOWN < now &&
+      gameState.stamina >= STAMINA_FOR_HEAVY_ATTACK
+    ) {
       isAttacking = true;
       lastHeavyAttackTime = now;
       gameState.stamina -= STAMINA_FOR_HEAVY_ATTACK;
       gameState.stamina = Math.max(gameState.stamina, 0);
-      
+
       // Use unit manager for heavy attack
       const result = unitManager.performHeavyAttack(character, now);
       unitManager.playAnimation(character, 'heavyAttack');
-      
+
       setTimeout(() => {
         isAttacking = false;
         unitManager.playAnimation(character, 'idle');
-      }, 1500); // Approximate attack duration
+      }, Constants.HEAVY_ATTACK_ACTION_DELAY); // Approximate attack duration
     }
   };
 
@@ -865,7 +805,8 @@ worldInstance.onReady((assets) => {
       }
     } else if (isRolling) {
       // Handle roll movement and end
-      if (lastRollTime + 1000 <= now) { // Approximate roll duration
+      if (lastRollTime + 1000 <= now) {
+        // Approximate roll duration
         isRolling = false;
         unitManager.playAnimation(character, 'idle');
       } else {
@@ -877,9 +818,11 @@ worldInstance.onReady((assets) => {
           (inputManager.isActionActive('run') ? FAST_ROLL_SPEED : ROLL_SPEED) *
             cycleData.delta,
         );
-        
+
         // Handle terrain height
-        const terrainHeight = getHeightFromPosition(character.model.position);
+        const terrainHeight = heightmapUtils.getHeightFromPosition(
+          character.model.position,
+        );
         if (terrainHeight < WATER_LEVEL - 0.5) {
           character.model.position.copy(character.userData.oldPos);
         }
@@ -938,20 +881,20 @@ worldInstance.onReady((assets) => {
     if (!character) return;
 
     const allUnits = unitManager.getAllUnits();
-    
+
     for (const unit of allUnits) {
       // Handle tree collisions and apple collection
       for (const tree of trees) {
         const { position, appleIndices, isActive } = tree;
         const dist = unit.model.position.distanceTo(position);
-        
+
         if (dist < TREE_COLLISION_RADIUS) {
           const away = unit.model.position.clone().sub(position).normalize();
           unit.model.position.addScaledVector(
             away,
             (TREE_COLLISION_RADIUS - dist) * 0.2,
           );
-          
+
           if (unit === character && appleIndices && isActive) {
             tree.isActive = false;
             removeApplesFromTree(appleIndices);
@@ -1045,7 +988,7 @@ worldInstance.onReady((assets) => {
             away,
             (CRATE_COLLISION_RADIUS - dist) * 0.2,
           );
-          
+
           if (unit === character && isActive) {
             // Remove outline and proxy mesh when crate is collected
             if (nearbyCreateOutlines.has(index)) {
@@ -1097,7 +1040,9 @@ worldInstance.onReady((assets) => {
   const updateCharactersYPosition = () => {
     const allUnits = unitManager.getAllUnits();
     allUnits.forEach((unit) => {
-      unit.model.position.y = getHeightFromPosition(unit.model.position);
+      unit.model.position.y = heightmapUtils.getHeightFromPosition(
+        unit.model.position,
+      );
     });
   };
 
@@ -1129,24 +1074,24 @@ worldInstance.onReady((assets) => {
     cycleData.elapsed = elapsedTime;
 
     updateParticleSystems(cycleData);
-    
+
     if (!cinamaticCameraController.isPlaying()) {
       updateCamera();
       handlePlayerInput();
     }
-    
+
     // Update world interactions
     handleWorldInteractions();
-    
+
     // Update particle effects
     updateParticleEffects();
-    
+
     // Update character positions
     updateCharactersYPosition();
-    
+
     // UnitManager handles all unit updates automatically (AI, animation, combat, physics)
     // No need for manual updateUnits() as the UnitManager is called in worldInstance.onUpdate()
-    
+
     updateTimeDisplay();
     cinamaticCameraController.update(cycleData.delta);
 
