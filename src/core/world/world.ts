@@ -200,7 +200,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   let isDestroyed = false;
 
   // Asset loading system
-  const assetLoader = new AssetLoader();
+  const assetLoader = new AssetLoader(logger);
   let loadedAssets: LoadedAssets | null = null;
   const progressCallbacks = new Set<ProgressCallback>();
   const readyCallbacks = new Set<ReadyCallback>();
@@ -208,6 +208,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   // Create outline manager
   const outlineManager: OutlineManager = createOutlineManager({
     outlinePass,
+    logger,
   });
 
   // Add initial callback if provided
@@ -232,6 +233,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       heightmapManager = createHeightmapManager(
         heightmapIntegrationConfig,
         assets,
+        logger,
       );
     }
 
@@ -321,6 +323,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
         ...unitsConfig,
         scene,
         loadedAssets: assets!,
+        logger,
       });
 
       // Register unit definitions if provided

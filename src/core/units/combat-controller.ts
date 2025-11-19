@@ -49,6 +49,7 @@ export const createCombatController = (
   unitManager: any, // We'll receive the unit manager reference
 ): CombatController => {
   const {
+    logger,
     lightAttack = {
       damage: 10,
       knockback: 5,
@@ -201,7 +202,7 @@ export const createCombatController = (
 
           if (isDead) {
             // Handle unit death if needed
-            console.log(`Unit ${target.id} was defeated!`);
+            logger?.info(`Unit ${target.id} was defeated!`);
           }
         }
 

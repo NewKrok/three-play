@@ -46,6 +46,8 @@ export type CombatConfig = {
   };
   /** Whether to apply damage to targets */
   enableDamage?: boolean;
+  /** Logger instance for debugging */
+  logger?: import('../core/utils/logger.js').Logger;
 };
 
 /**
@@ -220,6 +222,8 @@ export type UnitManagerConfig = {
   scene: THREE.Scene;
   /** Loaded assets from world */
   loadedAssets: LoadedAssets;
+  /** Logger instance for debugging */
+  logger?: import('../core/utils/logger.js').Logger;
   /** Enable unit management system */
   enabled?: boolean;
   /** Maximum number of units */

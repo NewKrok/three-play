@@ -94,7 +94,6 @@ Examples:
 
 ## Known Issues
 
-- Some code uses `console.*` instead of `logger` (see unit-manager.ts:72, animation-controller.ts:54)
 - AI pathfinding is basic (direct line, no obstacle avoidance)
 - Unit collision is O(n²) - needs spatial optimization for >100 units
 

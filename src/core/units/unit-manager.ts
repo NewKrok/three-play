@@ -17,6 +17,7 @@ import {
 import type { AIBehaviorController } from './ai-behavior-controller.js';
 import { createCombatController } from './combat-controller.js';
 import type { CombatController } from './combat-controller.js';
+import type { Logger } from '../utils/logger.js';
 
 /**
  * Create a unit manager instance
@@ -27,6 +28,7 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
   const {
     scene,
     loadedAssets,
+    logger,
     enabled = true,
     maxUnits = 1000,
     enableCollision = true,
@@ -42,7 +44,7 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
 
   // Create animation controller
   const animationController: AnimationControllerImpl =
-    createAnimationController();
+    createAnimationController({ logger });
 
   // Create AI behavior controller
   const aiBehaviorController: AIBehaviorController =
@@ -69,13 +71,13 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
   const createUnit = (params: CreateUnitParams): Unit | null => {
     const definition = definitions.get(params.definitionId);
     if (!definition) {
-      console.error(`Unit definition '${params.definitionId}' not found`);
+      logger?.error(`Unit definition '${params.definitionId}' not found`);
       return null;
     }
 
     // Check unit limit
     if (maxUnits && units.size >= maxUnits) {
-      console.warn('Maximum unit limit reached');
+      logger?.warn('Maximum unit limit reached');
       return null;
     }
 
@@ -134,7 +136,7 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
       units.set(unitId, unit);
       return unit;
     } catch (error) {
-      console.error('Failed to create unit:', error);
+      logger?.error('Failed to create unit:', error);
       return null;
     }
   };
@@ -333,7 +335,7 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
     config?: any,
   ): string | null => {
     if (!worldInstance || !worldInstance.addOutline) {
-      console.warn('World instance with addOutline method is required');
+      logger?.warn('World instance with addOutline method is required');
       return null;
     }
 
@@ -364,7 +366,7 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
    */
   const removeUnitOutline = (unit: Unit, worldInstance: any): boolean => {
     if (!worldInstance || !worldInstance.removeOutline) {
-      console.warn('World instance with removeOutline method is required');
+      logger?.warn('World instance with removeOutline method is required');
       return false;
     }
 
@@ -404,11 +406,11 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
    */
   const removeAllUnitOutlines = (worldInstance: any): void => {
     if (!worldInstance || !worldInstance.removeOutline) {
-      console.warn('World instance with removeOutline method is required');
+      logger?.warn('World instance with removeOutline method is required');
       return;
     }
 
-    for (const [unitId, outlineId] of unitOutlines.entries()) {
+    for (const outlineId of unitOutlines.values()) {
       worldInstance.removeOutline(outlineId);
     }
     unitOutlines.clear();
@@ -732,7 +734,7 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
   };
 
   // Now create combat controller with unit manager reference
-  combatController = createCombatController({}, unitManager);
+  combatController = createCombatController({ logger }, unitManager);
 
   // Add combat methods to unit manager
   unitManager.performLightAttack = combatController.performLightAttack;

@@ -7,6 +7,7 @@ import type {
   HeightmapManager,
 } from '../../types/heightmap.js';
 import type { WorldConfig } from '../../types/world.js';
+import type { Logger } from '../utils/logger.js';
 
 /**
  * Creates a heightmap integration configuration from world config
@@ -35,11 +36,13 @@ export const createHeightmapIntegrationConfig = (
  * Creates a heightmap manager for handling heightmap utilities
  * @param config - Configuration for heightmap integration
  * @param loadedAssets - The loaded assets containing the heightmap texture
+ * @param logger - Optional logger instance for debugging
  * @returns Heightmap manager instance
  */
 export const createHeightmapManager = (
   config: HeightmapIntegrationConfig,
   loadedAssets: LoadedAssets,
+  logger?: Logger,
 ): HeightmapManager => {
   let utils: HeightmapUtils | null = null;
 
@@ -56,7 +59,7 @@ export const createHeightmapManager = (
     const heightmapData = loadFromTexture(texture);
     utils = createHeightmapUtils(heightmapData, heightmapConfig);
   } else {
-    console.warn(
+    logger?.warn(
       `Heightmap texture with ID '${config.heightmapAssetId}' not found in loaded assets`,
     );
   }

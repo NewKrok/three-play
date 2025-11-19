@@ -204,6 +204,11 @@ export type InputManagerConfig = {
   preventDefaultMouse?: boolean;
 
   /**
+   * Logger instance for debugging
+   */
+  logger?: import('../core/utils/logger.js').Logger;
+
+  /**
    * Pre-configured actions with their bindings
    */
   actions?: Record<string, InputActionConfig>;

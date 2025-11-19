@@ -11,6 +11,7 @@ import type {
   ModelAssetConfig,
 } from '../../types/assets.js';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import type { Logger } from '../utils/logger.js';
 
 /**
  * Asset loader utility for handling texture and model loading with progress tracking
@@ -20,11 +21,13 @@ export class AssetLoader {
   private gltfLoader: GLTFLoader;
   private fbxLoader: FBXLoader;
   private progressCallbacks = new Set<ProgressCallback>();
+  private logger?: Logger;
 
-  constructor() {
+  constructor(logger?: Logger) {
     this.textureLoader = new THREE.TextureLoader();
     this.gltfLoader = new GLTFLoader();
     this.fbxLoader = new FBXLoader();
+    this.logger = logger;
   }
 
   /**
@@ -48,7 +51,7 @@ export class AssetLoader {
       try {
         callback(progress);
       } catch (error) {
-        console.error('Error in progress callback:', error);
+        this.logger?.error('Error in progress callback:', error);
       }
     });
   }
@@ -128,7 +131,7 @@ export class AssetLoader {
         },
         undefined,
         (error) => {
-          console.error(`Failed to load texture: ${url}`, error);
+          this.logger?.error(`Failed to load texture: ${url}`, error);
           reject(error);
         },
       );
@@ -169,7 +172,7 @@ export class AssetLoader {
         },
         undefined,
         (error) => {
-          console.error(`Failed to load GLTF model: ${url}`, error);
+          this.logger?.error(`Failed to load GLTF model: ${url}`, error);
           reject(error);
         },
       );
@@ -192,7 +195,7 @@ export class AssetLoader {
         },
         undefined,
         (error) => {
-          console.error(`Failed to load FBX model: ${url}`, error);
+          this.logger?.error(`Failed to load FBX model: ${url}`, error);
           reject(error);
         },
       );
@@ -258,7 +261,7 @@ export class AssetLoader {
         loadedTexturesCount++;
         updateProgress();
       } catch (error) {
-        console.error(`Failed to load texture '${key}':`, error);
+        this.logger?.error(`Failed to load texture '${key}':`, error);
         throw error;
       }
     });
@@ -271,7 +274,7 @@ export class AssetLoader {
         loadedModelsCount++;
         updateProgress();
       } catch (error) {
-        console.error(`Failed to load model '${key}':`, error);
+        this.logger?.error(`Failed to load model '${key}':`, error);
         throw error;
       }
     });

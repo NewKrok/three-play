@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 import type { OutlineConfig, OutlineEntry } from '../../types/effects.js';
 import type { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
+import type { Logger } from '../utils/logger.js';
 
 /**
  * Configuration for outline manager
  */
 export type OutlineManagerConfig = {
   outlinePass: OutlinePass | null;
+  logger?: Logger;
 };
 
 /**
@@ -32,7 +34,7 @@ export type OutlineManager = {
 export const createOutlineManager = (
   config: OutlineManagerConfig,
 ): OutlineManager => {
-  const { outlinePass } = config;
+  const { outlinePass, logger } = config;
 
   // Outline management system
   const outlineEntries = new Map<string, OutlineEntry>();
@@ -119,12 +121,12 @@ export const createOutlineManager = (
       config: OutlineConfig,
     ): string {
       if (isDestroyed) {
-        console.warn('Cannot add outline: outline manager is destroyed');
+        logger?.warn('Cannot add outline: outline manager is destroyed');
         return '';
       }
 
       if (!outlinePass) {
-        console.warn(
+        logger?.warn(
           'Outline pass is not available. Make sure useComposer is enabled.',
         );
         return '';
@@ -154,7 +156,7 @@ export const createOutlineManager = (
      */
     removeOutline(outlineId: string): void {
       if (isDestroyed) {
-        console.warn('Cannot remove outline: outline manager is destroyed');
+        logger?.warn('Cannot remove outline: outline manager is destroyed');
         return;
       }
 
@@ -174,7 +176,7 @@ export const createOutlineManager = (
      */
     updateOutline(outlineId: string, config: Partial<OutlineConfig>): void {
       if (isDestroyed) {
-        console.warn('Cannot update outline: outline manager is destroyed');
+        logger?.warn('Cannot update outline: outline manager is destroyed');
         return;
       }
 
@@ -184,7 +186,7 @@ export const createOutlineManager = (
       );
 
       if (entriesToUpdate.length === 0) {
-        console.warn(`Outline with ID ${outlineId} not found`);
+        logger?.warn(`Outline with ID ${outlineId} not found`);
         return;
       }
 
@@ -209,7 +211,7 @@ export const createOutlineManager = (
      */
     clearOutlines(): void {
       if (isDestroyed) {
-        console.warn('Cannot clear outlines: outline manager is destroyed');
+        logger?.warn('Cannot clear outlines: outline manager is destroyed');
         return;
       }
 
@@ -223,7 +225,7 @@ export const createOutlineManager = (
      */
     getOutlines(): OutlineEntry[] {
       if (isDestroyed) {
-        console.warn('Cannot get outlines: outline manager is destroyed');
+        logger?.warn('Cannot get outlines: outline manager is destroyed');
         return [];
       }
 

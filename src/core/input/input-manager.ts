@@ -25,6 +25,7 @@ import {
 export const createInputManager = (
   config: InputManagerConfig = {},
 ): InputManager => {
+  const { logger } = config;
   const actions = new Map<string, InputAction>();
   const actionStates = new Map<string, Map<string, InputState>>();
   let enabled = config.enabled !== false;
@@ -141,7 +142,7 @@ export const createInputManager = (
     ): void {
       // Warn if action already exists
       if (actions.has(actionName)) {
-        console.warn(
+        logger?.warn(
           `Action '${actionName}' is already registered. Overwriting.`,
         );
       }
@@ -161,7 +162,7 @@ export const createInputManager = (
     bindInput(actionName: string, binding: InputBinding): void {
       const action = actions.get(actionName);
       if (!action) {
-        console.error(
+        logger?.error(
           `Cannot bind input to unknown action '${actionName}'. Register the action first.`,
         );
         return;
@@ -174,7 +175,7 @@ export const createInputManager = (
       );
 
       if (existingBinding) {
-        console.warn(`Binding already exists for action '${actionName}'.`);
+        logger?.warn(`Binding already exists for action '${actionName}'.`);
         return;
       }
 
@@ -359,7 +360,7 @@ export const createInputManager = (
      */
     removeAction(actionName: string): void {
       if (!actions.has(actionName)) {
-        console.warn(`Action '${actionName}' does not exist.`);
+        logger?.warn(`Action '${actionName}' does not exist.`);
         return;
       }
 

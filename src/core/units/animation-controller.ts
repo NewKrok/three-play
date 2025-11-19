@@ -9,6 +9,8 @@ export type AnimationControllerConfig = {
   defaultFadeDuration?: number;
   /** Whether to automatically loop animations */
   autoLoop?: boolean;
+  /** Logger instance for debugging */
+  logger?: import('../utils/logger.js').Logger;
 };
 
 /**
@@ -43,7 +45,7 @@ export type AnimationControllerImpl = {
 export const createAnimationController = (
   config: AnimationControllerConfig = {},
 ): AnimationControllerImpl => {
-  const { defaultFadeDuration = 0.2, autoLoop = true } = config;
+  const { defaultFadeDuration = 0.2, autoLoop = true, logger } = config;
 
   const playAnimation = (
     unit: Unit,
@@ -51,7 +53,7 @@ export const createAnimationController = (
     fadeDuration: number = defaultFadeDuration,
   ): void => {
     if (!unit.actions || !unit.actions[animationName]) {
-      console.warn(`Animation "${animationName}" not found for unit`);
+      logger?.warn(`Animation "${animationName}" not found for unit`);
       return;
     }
 
