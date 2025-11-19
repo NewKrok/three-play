@@ -85,12 +85,19 @@ Each module in `src/core/` has a `CLAUDE.md` with specific details:
 
 Use Conventional Commits: `type(scope): description`
 
+**Format Rules:**
+- **Subject line**: Max 50 characters, clear and concise
+- **Body**: Optional, only if absolutely necessary (max 2-3 short lines)
+- **NO** emoji, **NO** "Generated with Claude Code" footer in commits
+- Focus on WHAT changed and WHY (brief), not HOW
+
 Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 Examples:
 - `feat(water): add ripple effect animation`
 - `fix(terrain): resolve texture loading issue`
 - `test(units): add comprehensive unit management tests`
+- `fix(units): apply rotation to instance not wrapper`
 
 ## Known Issues
 

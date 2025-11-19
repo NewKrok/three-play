@@ -27,6 +27,12 @@ export const CharacterAssetUtils = {
 
     const instance = SkeletonUtils.clone(baseModel);
 
+    // Apply appearance rotation to the instance (not wrapper)
+    // This ensures the model's initial orientation is correct
+    if (definition.appearance?.rotation !== undefined) {
+      instance.rotation.y = definition.appearance.rotation;
+    }
+
     // Create wrapper group
     const wrapper = new THREE.Group();
     wrapper.add(instance);
@@ -34,10 +40,6 @@ export const CharacterAssetUtils = {
     // Apply appearance settings from definition
     if (definition.appearance?.scale) {
       wrapper.scale.setScalar(definition.appearance.scale);
-    }
-
-    if (definition.appearance?.rotation !== undefined) {
-      wrapper.rotation.y = definition.appearance.rotation;
     }
 
     // Create animation mixer
