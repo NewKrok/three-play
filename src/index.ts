@@ -152,7 +152,6 @@ export type {
   DayNightColors,
   LightIntensityConfig,
   SunPositionConfig,
-  FogConfig,
 } from './types/day-night.js';
 export type {
   SkyboxConfig,

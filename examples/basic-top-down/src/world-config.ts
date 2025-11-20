@@ -51,7 +51,7 @@ const worldConfig: WorldConfig = {
   },
   dayNight: {
     enabled: true,
-    dayLengthSeconds: 120, // 2 minutes for a full day-night cycle
+    dayLengthSeconds: 12, // 2 minutes for a full day-night cycle
     startTimeOfDay: 0.25, // Start at dawn (6 AM)
     colors: {
       ambient: {
@@ -65,19 +65,11 @@ const worldConfig: WorldConfig = {
       moon: {
         color: 0xb3d9ff, // Cool moonlight blue
       },
-      fog: {
-        day: 0xe6f3ff,
-        night: 0x2a3a5c,
-      },
     },
     intensity: {
       ambient: { min: 0.6, max: 0.9 },
       directional: { min: 0.4, max: 1.0 },
       moon: { min: 0.0, max: 0.7 }, // Subtle but visible moonlight shadows
-    },
-    fog: {
-      enabled: true,
-      density: { min: 0.003, max: 0.012 },
     },
     sunPosition: {
       radius: 100,
