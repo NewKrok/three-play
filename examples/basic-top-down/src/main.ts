@@ -25,6 +25,7 @@ import worldConfig from './world-config.js';
 import * as Constants from './constants.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/Addons.js';
 import { LIGHT_ATTACK_ACTION_DELAY } from './constants.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 // Destructure constants for easier access
 const {
@@ -387,34 +388,16 @@ worldInstance.onReady((assets) => {
     unitManager.initializeCombat(character, MAX_STAMINA);
   }
 
-  // Create world objects (trees, rocks, crates) - same as original
-  const trunkGeometry = new THREE.BoxGeometry(0.4, 2, 0.4);
-  const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x895129 });
-  const trunkMesh = new THREE.InstancedMesh(
-    trunkGeometry,
-    trunkMaterial,
+  const treeModel = loadedAssets.models['low-poly-tree'] as THREE.Group;
+  // Create instanced mesh with merged geometry
+  const treeMesh = new THREE.InstancedMesh(
+    treeModel.scene.children[0].geometry,
+    treeModel.scene.children[0].material,
     TREE_COUNT,
   );
-  trunkMesh.castShadow = true;
-  trunkMesh.receiveShadow = true;
-  scene.add(trunkMesh);
-
-  const leafGeometry = new THREE.SphereGeometry(1, 16, 16);
-  const leafTexture = loadedAssets.textures.grass.clone();
-  leafTexture.repeat.x = 1;
-  leafTexture.repeat.y = 1;
-  const leafMaterial = new THREE.MeshStandardMaterial({
-    color: 0x00ff00,
-    map: leafTexture,
-  });
-  const leafMesh = new THREE.InstancedMesh(
-    leafGeometry,
-    leafMaterial,
-    TREE_COUNT,
-  );
-  leafMesh.castShadow = true;
-  leafMesh.receiveShadow = true;
-  scene.add(leafMesh);
+  treeMesh.castShadow = true;
+  treeMesh.receiveShadow = true;
+  scene.add(treeMesh);
 
   const appleGeometry = new THREE.SphereGeometry(0.2, 8, 8);
   const appleMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
@@ -488,18 +471,18 @@ worldInstance.onReady((assets) => {
 
   // Create trees with apples
   for (let i = 0; i < TREE_COUNT; i++) {
-    const scale = 1 + Math.random();
+    const scale = 1.5 + Math.random();
     const position = heightmapUtils.getPositionByHeight(9);
     if (!position) continue;
 
     const { x, z } = position;
-    const y = position.y - 0.5 * scale;
+    const y = position.y - 1 * scale;
 
     dummy.position.set(x, y + 1 * scale, z);
     dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
     dummy.scale.set(scale, scale, scale);
     dummy.updateMatrix();
-    trunkMesh.setMatrixAt(i, dummy.matrix);
+    treeMesh.setMatrixAt(i, dummy.matrix);
 
     const tree = {
       isActive: true,
@@ -512,7 +495,6 @@ worldInstance.onReady((assets) => {
     dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
     dummy.scale.set(scale, scale, scale);
     dummy.updateMatrix();
-    leafMesh.setMatrixAt(i, dummy.matrix);
 
     const appleCount =
       MIN_APPLES_PER_TREE +
@@ -532,8 +514,7 @@ worldInstance.onReady((assets) => {
     }
     tree.appleIndices = treeAppleIndices;
   }
-  trunkMesh.instanceMatrix.needsUpdate = true;
-  leafMesh.instanceMatrix.needsUpdate = true;
+  treeMesh.instanceMatrix.needsUpdate = true;
   appleMesh.instanceMatrix.needsUpdate = true;
 
   const removeApplesFromTree = (indices) => {

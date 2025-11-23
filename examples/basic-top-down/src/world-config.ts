@@ -51,8 +51,8 @@ const worldConfig: WorldConfig = {
   },
   dayNight: {
     enabled: true,
-    dayLengthSeconds: 12, // 2 minutes for a full day-night cycle
-    startTimeOfDay: 0.25, // Start at dawn (6 AM)
+    dayLengthSeconds: 120, // 2 minutes for a full day-night cycle
+    startTimeOfDay: 0.35,
     colors: {
       ambient: {
         day: 0xfef9e6,

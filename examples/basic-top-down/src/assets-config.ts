@@ -104,6 +104,9 @@ const assetConfig: AssetsConfig = {
     'hit-to-body': {
       url: 'assets/models/extra-low-poly-animations/hit-to-body.fbx',
     },
+    'low-poly-tree': {
+      url: 'assets/models/environments/low-poly-tree-1.glb',
+    },
   },
 };
 
