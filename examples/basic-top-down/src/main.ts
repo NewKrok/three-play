@@ -388,16 +388,33 @@ worldInstance.onReady((assets) => {
     unitManager.initializeCombat(character, MAX_STAMINA);
   }
 
-  const treeModel = loadedAssets.models['low-poly-tree'] as THREE.Group;
-  // Create instanced mesh with merged geometry
+  const treeModel = loadedAssets.models['low-poly-tree'] as any;
+
+  // Simple material - no shader modifications
+  const treeMaterial = (
+    treeModel.scene.children[0].material as THREE.Material
+  ).clone();
+  treeMaterial.transparent = true;
+
+  // Create instanced mesh
   const treeMesh = new THREE.InstancedMesh(
     treeModel.scene.children[0].geometry,
-    treeModel.scene.children[0].material,
+    treeMaterial,
     TREE_COUNT,
   );
   treeMesh.castShadow = true;
   treeMesh.receiveShadow = true;
   scene.add(treeMesh);
+
+  // Map to track proxy meshes for occluded trees
+  const treeProxyMeshes = new Map<
+    number,
+    {
+      mesh: THREE.Mesh;
+      opacity: number;
+      matrix: THREE.Matrix4;
+    }
+  >();
 
   const appleGeometry = new THREE.SphereGeometry(0.2, 8, 8);
   const appleMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
@@ -1007,6 +1024,136 @@ worldInstance.onReady((assets) => {
     }
   };
 
+  // Occlusion detection - proxy mesh approach for per-tree transparency
+  const raycaster = new THREE.Raycaster();
+  const targetOpacity = 0.3;
+  const fadeSpeed = 5;
+
+  const updateTreeOcclusion = () => {
+    if (!character) return;
+
+    // Raycast from camera to character
+    const cameraToCharacter = new THREE.Vector3()
+      .subVectors(character.model.position, camera.position)
+      .normalize();
+
+    raycaster.set(camera.position, cameraToCharacter);
+    const distance = camera.position.distanceTo(character.model.position);
+
+    // Track which trees are currently occluding
+    const currentlyOccluding = new Set<number>();
+
+    // Temp variables for matrix decomposition
+    const tempMatrix = new THREE.Matrix4();
+    const tempWorldMatrix = new THREE.Matrix4();
+    const tempPosition = new THREE.Vector3();
+    const tempQuaternion = new THREE.Quaternion();
+    const tempScale = new THREE.Vector3();
+
+    // Check each tree by reading its actual matrix position
+    for (let index = 0; index < TREE_COUNT; index++) {
+      // Get actual tree position from instance matrix
+      treeMesh.getMatrixAt(index, tempMatrix);
+      tempWorldMatrix.copy(treeMesh.matrixWorld).multiply(tempMatrix);
+      tempWorldMatrix.decompose(tempPosition, tempQuaternion, tempScale);
+
+      const distToTree = camera.position.distanceTo(tempPosition);
+      const distToCharacter = character.model.position.distanceTo(tempPosition);
+
+      if (distToTree >= distance) continue; // Behind character or at same distance
+
+      // Check if tree is close to the ray
+      const closestPoint = new THREE.Vector3();
+      raycaster.ray.closestPointToPoint(tempPosition, closestPoint);
+      const distToRay = tempPosition.distanceTo(closestPoint);
+
+      // Use larger detection radius - trees are scaled up to 2.5x (1.5 + 1.0)
+      // Increased from 2.5 to 3.5 for better coverage
+      const detectionRadius = TREE_COLLISION_RADIUS * 3.5;
+
+      // Additional check: if tree is very close to character, always occlude
+      // This catches trees where the raycast might miss due to geometry pivot offset
+      const isVeryCloseToCharacter =
+        distToCharacter < TREE_COLLISION_RADIUS * 2;
+
+      if (distToRay < detectionRadius || isVeryCloseToCharacter) {
+        currentlyOccluding.add(index);
+      }
+    }
+
+    // Create proxy meshes for newly occluding trees
+    currentlyOccluding.forEach((index) => {
+      if (!treeProxyMeshes.has(index)) {
+        const proxyMaterial = treeMaterial.clone();
+        proxyMaterial.transparent = true;
+        proxyMaterial.opacity = 1.0;
+        proxyMaterial.depthWrite = true;
+
+        const proxyMesh = new THREE.Mesh(treeMesh.geometry, proxyMaterial);
+
+        // Get tree's matrix from instanced mesh
+        const matrix = new THREE.Matrix4();
+        treeMesh.getMatrixAt(index, matrix);
+
+        // Apply the instance matrix to get world position
+        const worldMatrix = new THREE.Matrix4();
+        worldMatrix.copy(treeMesh.matrixWorld).multiply(matrix);
+
+        // Extract position, rotation, and scale from world matrix
+        const position = new THREE.Vector3();
+        const quaternion = new THREE.Quaternion();
+        const scale = new THREE.Vector3();
+        worldMatrix.decompose(position, quaternion, scale);
+
+        // Apply to proxy mesh
+        proxyMesh.position.copy(position);
+        proxyMesh.quaternion.copy(quaternion);
+        proxyMesh.scale.copy(scale);
+
+        proxyMesh.castShadow = true;
+        proxyMesh.receiveShadow = true;
+        scene.add(proxyMesh);
+
+        // Hide original instance by scaling to 0
+        dummy.position.copy(position);
+        dummy.quaternion.copy(quaternion);
+        dummy.scale.set(0, 0, 0);
+        dummy.updateMatrix();
+        treeMesh.setMatrixAt(index, dummy.matrix);
+        treeMesh.instanceMatrix.needsUpdate = true;
+
+        treeProxyMeshes.set(index, { mesh: proxyMesh, opacity: 1.0, matrix });
+      }
+    });
+
+    // Update proxy meshes
+    treeProxyMeshes.forEach((proxy, index) => {
+      const isOccluding = currentlyOccluding.has(index);
+      const targetAlpha = isOccluding ? targetOpacity : 1.0;
+
+      // Fade opacity
+      proxy.opacity = THREE.MathUtils.lerp(
+        proxy.opacity,
+        targetAlpha,
+        cycleData.delta * fadeSpeed,
+      );
+      (proxy.mesh.material as THREE.Material).opacity = proxy.opacity;
+
+      // Remove proxy if fully visible and restore original instance
+      if (!isOccluding && proxy.opacity > 0.99) {
+        scene.remove(proxy.mesh);
+        proxy.mesh.geometry.dispose();
+        (proxy.mesh.material as THREE.Material).dispose();
+
+        // Restore original instance
+        treeMesh.setMatrixAt(index, proxy.matrix);
+        treeMesh.instanceMatrix.needsUpdate = true;
+
+        treeProxyMeshes.delete(index);
+      }
+    });
+  };
+
   // Day/Night cycle time display helper
   const updateTimeDisplay = () => {
     const dayNightManager = worldInstance.getDayNightManager();
@@ -1066,6 +1213,9 @@ worldInstance.onReady((assets) => {
 
     // Update particle effects
     updateParticleEffects();
+
+    // Update tree occlusion (fade trees between camera and character)
+    updateTreeOcclusion();
 
     // Update character positions
     updateCharactersYPosition();
