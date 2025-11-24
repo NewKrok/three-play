@@ -391,10 +391,20 @@ worldInstance.onReady((assets) => {
   const treeModel = loadedAssets.models['low-poly-tree'] as any;
 
   // Simple material - no shader modifications
-  const treeMaterial = (
-    treeModel.scene.children[0].material as THREE.Material
-  ).clone();
+  const originalMaterial = treeModel.scene.children[0]
+    .material as THREE.MeshStandardMaterial;
+  const treeMaterial = originalMaterial.clone();
   treeMaterial.transparent = true;
+
+  // Preserve textures from original material
+  if (originalMaterial.map) treeMaterial.map = originalMaterial.map;
+  if (originalMaterial.normalMap)
+    treeMaterial.normalMap = originalMaterial.normalMap;
+  if (originalMaterial.roughnessMap)
+    treeMaterial.roughnessMap = originalMaterial.roughnessMap;
+  if (originalMaterial.metalnessMap)
+    treeMaterial.metalnessMap = originalMaterial.metalnessMap;
+  if (originalMaterial.aoMap) treeMaterial.aoMap = originalMaterial.aoMap;
 
   // Create instanced mesh
   const treeMesh = new THREE.InstancedMesh(
@@ -1069,7 +1079,7 @@ worldInstance.onReady((assets) => {
 
       // Use larger detection radius - trees are scaled up to 2.5x (1.5 + 1.0)
       // Increased from 2.5 to 3.5 for better coverage
-      const detectionRadius = TREE_COLLISION_RADIUS * 3.5;
+      const detectionRadius = TREE_COLLISION_RADIUS * 2;
 
       // Additional check: if tree is very close to character, always occlude
       // This catches trees where the raycast might miss due to geometry pivot offset
@@ -1084,10 +1094,22 @@ worldInstance.onReady((assets) => {
     // Create proxy meshes for newly occluding trees
     currentlyOccluding.forEach((index) => {
       if (!treeProxyMeshes.has(index)) {
-        const proxyMaterial = treeMaterial.clone();
+        const proxyMaterial = treeMaterial.clone() as THREE.MeshStandardMaterial;
         proxyMaterial.transparent = true;
         proxyMaterial.opacity = 1.0;
-        proxyMaterial.depthWrite = true;
+        proxyMaterial.depthWrite = false;
+
+        // Ensure textures are preserved (clone doesn't always copy references)
+        if (treeMaterial instanceof THREE.MeshStandardMaterial) {
+          if (treeMaterial.map) proxyMaterial.map = treeMaterial.map;
+          if (treeMaterial.normalMap)
+            proxyMaterial.normalMap = treeMaterial.normalMap;
+          if (treeMaterial.roughnessMap)
+            proxyMaterial.roughnessMap = treeMaterial.roughnessMap;
+          if (treeMaterial.metalnessMap)
+            proxyMaterial.metalnessMap = treeMaterial.metalnessMap;
+          if (treeMaterial.aoMap) proxyMaterial.aoMap = treeMaterial.aoMap;
+        }
 
         const proxyMesh = new THREE.Mesh(treeMesh.geometry, proxyMaterial);
 
