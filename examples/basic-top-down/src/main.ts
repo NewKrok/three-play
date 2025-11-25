@@ -390,37 +390,75 @@ worldInstance.onReady((assets) => {
 
   const treeModel = loadedAssets.models['low-poly-tree'] as any;
 
-  // Simple material - no shader modifications
-  const originalMaterial = treeModel.scene.children[0]
-    .material as THREE.MeshStandardMaterial;
-  const treeMaterial = originalMaterial.clone();
-  treeMaterial.transparent = true;
+  // Get both meshes from the tree model (typically trunk and leaves)
+  const treeMesh1 = treeModel.scene.children[0].children[0];
+  const treeMesh2 = treeModel.scene.children[0].children[1];
 
-  // Preserve textures from original material
-  if (originalMaterial.map) treeMaterial.map = originalMaterial.map;
-  if (originalMaterial.normalMap)
-    treeMaterial.normalMap = originalMaterial.normalMap;
-  if (originalMaterial.roughnessMap)
-    treeMaterial.roughnessMap = originalMaterial.roughnessMap;
-  if (originalMaterial.metalnessMap)
-    treeMaterial.metalnessMap = originalMaterial.metalnessMap;
-  if (originalMaterial.aoMap) treeMaterial.aoMap = originalMaterial.aoMap;
+  // Clone materials to avoid modifying the original
+  const material1 = treeMesh1.material.clone();
+  const material2 = treeMesh2.material.clone();
 
-  // Create instanced mesh
-  const treeMesh = new THREE.InstancedMesh(
-    treeModel.scene.children[0].geometry,
-    treeMaterial,
+  // Ensure proper material setup for instancing
+  if (material1 instanceof THREE.MeshStandardMaterial) {
+    // Adjust material properties for better appearance
+    material1.metalness = 0;
+    material1.roughness = 1;
+
+    // If no texture or color is too dark, set appropriate colors
+    if (!material1.map) {
+      material1.color.setHex(0x8b6f47); // Brown color for trunk
+    } else {
+      // If there's a texture but color is too dark, brighten it
+      // GLTF often uses vertex colors or material color to tint textures
+      if (material1.color.r < 0.3 && material1.color.g < 0.3 && material1.color.b < 0.3) {
+        material1.color.setHex(0xffffff); // Reset to white to show texture properly
+      }
+    }
+
+    material1.needsUpdate = true;
+  }
+  if (material2 instanceof THREE.MeshStandardMaterial) {
+    // Adjust material properties for better appearance
+    material2.metalness = 0;
+    material2.roughness = 1;
+
+    // If no texture or color is too dark, set appropriate colors
+    if (!material2.map) {
+      material2.color.setHex(0x4a7c3f); // Green color for leaves
+    } else {
+      // If there's a texture but color is too dark, brighten it
+      if (material2.color.r < 0.3 && material2.color.g < 0.3 && material2.color.b < 0.3) {
+        material2.color.setHex(0xffffff); // Reset to white to show texture properly
+      }
+    }
+
+    material2.needsUpdate = true;
+  }
+
+  // Create instanced meshes for both parts
+  const treeInstanceMesh1 = new THREE.InstancedMesh(
+    treeMesh1.geometry,
+    material1,
     TREE_COUNT,
   );
-  treeMesh.castShadow = true;
-  treeMesh.receiveShadow = true;
-  scene.add(treeMesh);
+  treeInstanceMesh1.castShadow = true;
+  treeInstanceMesh1.receiveShadow = true;
+  scene.add(treeInstanceMesh1);
 
-  // Map to track proxy meshes for occluded trees
+  const treeInstanceMesh2 = new THREE.InstancedMesh(
+    treeMesh2.geometry,
+    material2,
+    TREE_COUNT,
+  );
+  treeInstanceMesh2.castShadow = true;
+  treeInstanceMesh2.receiveShadow = true;
+  scene.add(treeInstanceMesh2);
+
+  // Map to track proxy meshes for occluded trees (now stores both meshes)
   const treeProxyMeshes = new Map<
     number,
     {
-      mesh: THREE.Mesh;
+      meshes: THREE.Mesh[];
       opacity: number;
       matrix: THREE.Matrix4;
     }
@@ -509,7 +547,9 @@ worldInstance.onReady((assets) => {
     dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
     dummy.scale.set(scale, scale, scale);
     dummy.updateMatrix();
-    treeMesh.setMatrixAt(i, dummy.matrix);
+    // Set same matrix for both tree parts
+    treeInstanceMesh1.setMatrixAt(i, dummy.matrix);
+    treeInstanceMesh2.setMatrixAt(i, dummy.matrix);
 
     const tree = {
       isActive: true,
@@ -541,7 +581,8 @@ worldInstance.onReady((assets) => {
     }
     tree.appleIndices = treeAppleIndices;
   }
-  treeMesh.instanceMatrix.needsUpdate = true;
+  treeInstanceMesh1.instanceMatrix.needsUpdate = true;
+  treeInstanceMesh2.instanceMatrix.needsUpdate = true;
   appleMesh.instanceMatrix.needsUpdate = true;
 
   const removeApplesFromTree = (indices) => {
@@ -1062,9 +1103,9 @@ worldInstance.onReady((assets) => {
 
     // Check each tree by reading its actual matrix position
     for (let index = 0; index < TREE_COUNT; index++) {
-      // Get actual tree position from instance matrix
-      treeMesh.getMatrixAt(index, tempMatrix);
-      tempWorldMatrix.copy(treeMesh.matrixWorld).multiply(tempMatrix);
+      // Get actual tree position from instance matrix (use first mesh as reference)
+      treeInstanceMesh1.getMatrixAt(index, tempMatrix);
+      tempWorldMatrix.copy(treeInstanceMesh1.matrixWorld).multiply(tempMatrix);
       tempWorldMatrix.decompose(tempPosition, tempQuaternion, tempScale);
 
       const distToTree = camera.position.distanceTo(tempPosition);
@@ -1094,32 +1135,16 @@ worldInstance.onReady((assets) => {
     // Create proxy meshes for newly occluding trees
     currentlyOccluding.forEach((index) => {
       if (!treeProxyMeshes.has(index)) {
-        const proxyMaterial = treeMaterial.clone() as THREE.MeshStandardMaterial;
-        proxyMaterial.transparent = true;
-        proxyMaterial.opacity = 1.0;
-        proxyMaterial.depthWrite = false;
-
-        // Ensure textures are preserved (clone doesn't always copy references)
-        if (treeMaterial instanceof THREE.MeshStandardMaterial) {
-          if (treeMaterial.map) proxyMaterial.map = treeMaterial.map;
-          if (treeMaterial.normalMap)
-            proxyMaterial.normalMap = treeMaterial.normalMap;
-          if (treeMaterial.roughnessMap)
-            proxyMaterial.roughnessMap = treeMaterial.roughnessMap;
-          if (treeMaterial.metalnessMap)
-            proxyMaterial.metalnessMap = treeMaterial.metalnessMap;
-          if (treeMaterial.aoMap) proxyMaterial.aoMap = treeMaterial.aoMap;
-        }
-
-        const proxyMesh = new THREE.Mesh(treeMesh.geometry, proxyMaterial);
+        // Create proxy meshes for both tree parts
+        const proxyMeshes: THREE.Mesh[] = [];
 
         // Get tree's matrix from instanced mesh
         const matrix = new THREE.Matrix4();
-        treeMesh.getMatrixAt(index, matrix);
+        treeInstanceMesh1.getMatrixAt(index, matrix);
 
         // Apply the instance matrix to get world position
         const worldMatrix = new THREE.Matrix4();
-        worldMatrix.copy(treeMesh.matrixWorld).multiply(matrix);
+        worldMatrix.copy(treeInstanceMesh1.matrixWorld).multiply(matrix);
 
         // Extract position, rotation, and scale from world matrix
         const position = new THREE.Vector3();
@@ -1127,24 +1152,51 @@ worldInstance.onReady((assets) => {
         const scale = new THREE.Vector3();
         worldMatrix.decompose(position, quaternion, scale);
 
-        // Apply to proxy mesh
-        proxyMesh.position.copy(position);
-        proxyMesh.quaternion.copy(quaternion);
-        proxyMesh.scale.copy(scale);
+        // Create proxy for first mesh
+        const proxyMaterial1 = (
+          treeMesh1.material as THREE.MeshStandardMaterial
+        ).clone();
+        proxyMaterial1.transparent = true;
+        proxyMaterial1.opacity = 1.0;
+        proxyMaterial1.depthWrite = false;
 
-        proxyMesh.castShadow = true;
-        proxyMesh.receiveShadow = true;
-        scene.add(proxyMesh);
+        const proxyMesh1 = new THREE.Mesh(treeMesh1.geometry, proxyMaterial1);
+        proxyMesh1.position.copy(position);
+        proxyMesh1.quaternion.copy(quaternion);
+        proxyMesh1.scale.copy(scale);
+        proxyMesh1.castShadow = true;
+        proxyMesh1.receiveShadow = true;
+        scene.add(proxyMesh1);
+        proxyMeshes.push(proxyMesh1);
 
-        // Hide original instance by scaling to 0
+        // Create proxy for second mesh
+        const proxyMaterial2 = (
+          treeMesh2.material as THREE.MeshStandardMaterial
+        ).clone();
+        proxyMaterial2.transparent = true;
+        proxyMaterial2.opacity = 1.0;
+        proxyMaterial2.depthWrite = false;
+
+        const proxyMesh2 = new THREE.Mesh(treeMesh2.geometry, proxyMaterial2);
+        proxyMesh2.position.copy(position);
+        proxyMesh2.quaternion.copy(quaternion);
+        proxyMesh2.scale.copy(scale);
+        proxyMesh2.castShadow = true;
+        proxyMesh2.receiveShadow = true;
+        scene.add(proxyMesh2);
+        proxyMeshes.push(proxyMesh2);
+
+        // Hide original instances by scaling to 0
         dummy.position.copy(position);
         dummy.quaternion.copy(quaternion);
         dummy.scale.set(0, 0, 0);
         dummy.updateMatrix();
-        treeMesh.setMatrixAt(index, dummy.matrix);
-        treeMesh.instanceMatrix.needsUpdate = true;
+        treeInstanceMesh1.setMatrixAt(index, dummy.matrix);
+        treeInstanceMesh2.setMatrixAt(index, dummy.matrix);
+        treeInstanceMesh1.instanceMatrix.needsUpdate = true;
+        treeInstanceMesh2.instanceMatrix.needsUpdate = true;
 
-        treeProxyMeshes.set(index, { mesh: proxyMesh, opacity: 1.0, matrix });
+        treeProxyMeshes.set(index, { meshes: proxyMeshes, opacity: 1.0, matrix });
       }
     });
 
@@ -1153,23 +1205,31 @@ worldInstance.onReady((assets) => {
       const isOccluding = currentlyOccluding.has(index);
       const targetAlpha = isOccluding ? targetOpacity : 1.0;
 
-      // Fade opacity
+      // Fade opacity for all proxy meshes
       proxy.opacity = THREE.MathUtils.lerp(
         proxy.opacity,
         targetAlpha,
         cycleData.delta * fadeSpeed,
       );
-      (proxy.mesh.material as THREE.Material).opacity = proxy.opacity;
 
-      // Remove proxy if fully visible and restore original instance
+      // Update opacity for both meshes
+      proxy.meshes.forEach((mesh) => {
+        (mesh.material as THREE.Material).opacity = proxy.opacity;
+      });
+
+      // Remove proxy if fully visible and restore original instances
       if (!isOccluding && proxy.opacity > 0.99) {
-        scene.remove(proxy.mesh);
-        proxy.mesh.geometry.dispose();
-        (proxy.mesh.material as THREE.Material).dispose();
+        proxy.meshes.forEach((mesh) => {
+          scene.remove(mesh);
+          mesh.geometry.dispose();
+          (mesh.material as THREE.Material).dispose();
+        });
 
-        // Restore original instance
-        treeMesh.setMatrixAt(index, proxy.matrix);
-        treeMesh.instanceMatrix.needsUpdate = true;
+        // Restore original instances for both tree parts
+        treeInstanceMesh1.setMatrixAt(index, proxy.matrix);
+        treeInstanceMesh2.setMatrixAt(index, proxy.matrix);
+        treeInstanceMesh1.instanceMatrix.needsUpdate = true;
+        treeInstanceMesh2.instanceMatrix.needsUpdate = true;
 
         treeProxyMeshes.delete(index);
       }
