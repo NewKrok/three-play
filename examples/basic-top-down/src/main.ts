@@ -36,7 +36,9 @@ const {
   WATER_SPEED_MULTIPLIER,
   WATER_SPEED_LEVEL,
   DISTANCE_FROM_CAMERA,
-  ROCK_COUNT,
+  SMALL_ROCK_COUNT,
+  LARGE_ROCK_COUNT,
+  LARGE_ROCK_COLLISION_RADIUS,
   TREE_COUNT,
   CRATE_COUNT,
   TREE_COLLISION_RADIUS,
@@ -79,6 +81,7 @@ const crateEffects = [
 
 let direction = 0;
 let trees = [];
+let largeRocks = [];
 let character: Unit | null = null;
 
 let crates = [];
@@ -594,34 +597,91 @@ worldInstance.onReady((assets) => {
     appleMesh.instanceMatrix.needsUpdate = true;
   };
 
-  // Create rocks
-  const rockGeometry = new THREE.IcosahedronGeometry(0.3, 0);
-  const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
-  const rockMesh = new THREE.InstancedMesh(
-    rockGeometry,
-    rockMaterial,
-    ROCK_COUNT,
+  // Create small decorative rocks (rock-1) - walkable
+  const smallRockModel = loadedAssets.models['low-poly-rock-1'] as any;
+  const smallRockMesh = smallRockModel.scene.children[0].children[0];
+  const smallRockMaterial = smallRockMesh.material.clone();
+
+  if (smallRockMaterial instanceof THREE.MeshStandardMaterial) {
+    smallRockMaterial.metalness = 0;
+    smallRockMaterial.roughness = 1;
+    if (!smallRockMaterial.map) {
+      smallRockMaterial.color.setHex(0x888888);
+    }
+    smallRockMaterial.needsUpdate = true;
+  }
+
+  const smallRockInstanceMesh = new THREE.InstancedMesh(
+    smallRockMesh.geometry,
+    smallRockMaterial,
+    SMALL_ROCK_COUNT,
   );
-  rockMesh.castShadow = true;
-  rockMesh.receiveShadow = true;
-  scene.add(rockMesh);
-  for (let i = 0; i < ROCK_COUNT; i++) {
+  smallRockInstanceMesh.castShadow = true;
+  smallRockInstanceMesh.receiveShadow = true;
+  scene.add(smallRockInstanceMesh);
+
+  for (let i = 0; i < SMALL_ROCK_COUNT; i++) {
     const position = heightmapUtils.getPositionByHeight(7);
     if (!position) continue;
+
     const { x, y, z } = position;
+    const scale = 0.5 + Math.random() * 0.4; // 0.5-0.9x scale (small pebbles)
 
     dummy.position.set(x, y, z);
     dummy.rotation.set(
-      Math.random() * Math.PI,
-      Math.random() * Math.PI,
-      Math.random() * Math.PI,
+      Math.random() * Math.PI * 2,
+      Math.random() * Math.PI * 2,
+      Math.random() * Math.PI * 2,
     );
-    const scale = 0.5 + Math.random();
     dummy.scale.set(scale, scale, scale);
     dummy.updateMatrix();
-    rockMesh.setMatrixAt(i, dummy.matrix);
+    smallRockInstanceMesh.setMatrixAt(i, dummy.matrix);
   }
-  rockMesh.instanceMatrix.needsUpdate = true;
+  smallRockInstanceMesh.instanceMatrix.needsUpdate = true;
+
+  // Create large rocks (rock-2) - not walkable, with collision
+  const largeRockModel = loadedAssets.models['low-poly-rock-2'] as any;
+  const largeRockMesh = largeRockModel.scene.children[0].children[0];
+  const largeRockMaterial = largeRockMesh.material.clone();
+
+  if (largeRockMaterial instanceof THREE.MeshStandardMaterial) {
+    largeRockMaterial.metalness = 0;
+    largeRockMaterial.roughness = 1;
+    if (!largeRockMaterial.map) {
+      largeRockMaterial.color.setHex(0x888888);
+    }
+    largeRockMaterial.needsUpdate = true;
+  }
+
+  const largeRockInstanceMesh = new THREE.InstancedMesh(
+    largeRockMesh.geometry,
+    largeRockMaterial,
+    LARGE_ROCK_COUNT,
+  );
+  largeRockInstanceMesh.castShadow = true;
+  largeRockInstanceMesh.receiveShadow = true;
+  scene.add(largeRockInstanceMesh);
+
+  for (let i = 0; i < LARGE_ROCK_COUNT; i++) {
+    const position = heightmapUtils.getPositionByHeight(9);
+    if (!position) continue;
+
+    const { x, y, z } = position;
+    const scale = 1.5 + Math.random() * 1.5; // 1.5-3.0x scale (large obstacles)
+
+    dummy.position.set(x, y, z);
+    dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
+    dummy.scale.set(scale, scale, scale);
+    dummy.updateMatrix();
+    largeRockInstanceMesh.setMatrixAt(i, dummy.matrix);
+
+    // Store large rock data for collision detection
+    const largeRock = {
+      position: dummy.position.clone(),
+    };
+    largeRocks.push(largeRock);
+  }
+  largeRockInstanceMesh.instanceMatrix.needsUpdate = true;
 
   // Create crates
   const crateGeometry = new THREE.BoxGeometry(1, 1, 1);
@@ -970,6 +1030,20 @@ worldInstance.onReady((assets) => {
 
             tree.appleIndices = null;
           }
+        }
+      }
+
+      // Handle large rock collisions
+      for (const rock of largeRocks) {
+        const { position } = rock;
+        const dist = unit.model.position.distanceTo(position);
+
+        if (dist < LARGE_ROCK_COLLISION_RADIUS) {
+          const away = unit.model.position.clone().sub(position).normalize();
+          unit.model.position.addScaledVector(
+            away,
+            (LARGE_ROCK_COLLISION_RADIUS - dist) * 0.2,
+          );
         }
       }
 

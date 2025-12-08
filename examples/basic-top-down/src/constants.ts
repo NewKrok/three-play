@@ -18,13 +18,15 @@ export const ENEMY_SPEED = 5;
 export const DISTANCE_FROM_CAMERA = 16;
 
 // Object generation constants
-export const ROCK_COUNT = 1000;
+export const SMALL_ROCK_COUNT = 200;
+export const LARGE_ROCK_COUNT = 100;
 export const TREE_COUNT = 1000;
 export const CRATE_COUNT = 100;
 export const ENEMY_COUNT = 20;
 
 // Collision constants
 export const TREE_COLLISION_RADIUS = 1.5;
+export const LARGE_ROCK_COLLISION_RADIUS = 2.5;
 export const CRATE_COLLISION_RADIUS = 1.2;
 export const CRATE_INTERACTION_RADIUS = 3.0;
 export const APPLE_HIT_RADIUS = 1;

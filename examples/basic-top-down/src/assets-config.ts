@@ -107,6 +107,12 @@ const assetConfig: AssetsConfig = {
     'low-poly-tree': {
       url: 'assets/models/environments/low-poly-tree-1.glb',
     },
+    'low-poly-rock-1': {
+      url: 'assets/models/environments/low-poly-rock-1.glb',
+    },
+    'low-poly-rock-2': {
+      url: 'assets/models/environments/low-poly-rock-2.glb',
+    },
   },
 };
 
