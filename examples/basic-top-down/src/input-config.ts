@@ -128,6 +128,18 @@ const inputConfig: InputManagerConfig = {
         },
       ],
     },
+    aim: {
+      action: {
+        type: 'trigger',
+        valueType: 'boolean',
+      },
+      bindings: [
+        {
+          type: 'mouse',
+          button: 2, // 0=left, 1=middle, 2=right
+        },
+      ],
+    },
   },
 };
 

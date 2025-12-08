@@ -31,6 +31,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 const {
   WALK_SPEED,
   RUN_SPEED,
+  AIM_WALK_SPEED,
   ROLL_SPEED,
   FAST_ROLL_SPEED,
   WATER_SPEED_MULTIPLIER,
@@ -97,6 +98,7 @@ let lastLightAttackTime = 0;
 let lastHeavyAttackTime = 0;
 let isRolling = false;
 let isAttacking = false;
+let isAiming = false;
 const throwCooldown = 250;
 const rollCooldown = 500;
 const throwStrength = 15;
@@ -105,6 +107,10 @@ const charactersWorldDirection = new THREE.Vector3();
 const correctedDir = new THREE.Vector3();
 const rotationTargetQuaternion = new THREE.Quaternion();
 const dummy = new THREE.Object3D();
+const mousePosition = new THREE.Vector2();
+const raycasterMouse = new THREE.Raycaster();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const mouseWorldPosition = new THREE.Vector3();
 
 const gameState = {
   collectedApples: 0,
@@ -283,6 +289,18 @@ worldInstance.onReady((assets) => {
 
   // Append renderer to DOM
   document.querySelector('#demo').appendChild(renderer.domElement);
+
+  // Disable context menu on right click
+  renderer.domElement.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+  });
+
+  // Mouse movement tracking for aim mode
+  renderer.domElement.addEventListener('mousemove', (event) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    mousePosition.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mousePosition.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  });
 
   const cycleData = {
     now: 0,
@@ -759,14 +777,29 @@ worldInstance.onReady((assets) => {
   const handlePlayerInput = () => {
     if (!character) return;
 
+    // Check aim mode
+    isAiming = inputManager.isActionActive('aim');
+
     // Movement input
     const moveLeft = inputManager.isActionActive('moveLeft');
     const moveRight = inputManager.isActionActive('moveRight');
     const moveUp = inputManager.isActionActive('moveUp');
     const moveDown = inputManager.isActionActive('moveDown');
-    const isRunningKey = inputManager.isActionActive('run');
+    const isRunningKey = inputManager.isActionActive('run') && !isAiming;
 
-    // Calculate direction
+    // Calculate movement direction (world space, not relative to character)
+    let movementDirection = new THREE.Vector3(0, 0, 0);
+
+    if (moveLeft) movementDirection.x -= 1;
+    if (moveRight) movementDirection.x += 1;
+    if (moveUp) movementDirection.z -= 1;
+    if (moveDown) movementDirection.z += 1;
+
+    if (movementDirection.lengthSq() > 0) {
+      movementDirection.normalize();
+    }
+
+    // Calculate direction for normal mode rotation
     if (moveLeft) direction = Math.PI;
     if (moveRight) direction = 0;
     if (moveUp) direction = Math.PI / 2;
@@ -776,23 +809,49 @@ worldInstance.onReady((assets) => {
     if (moveRight && moveUp) direction = Math.PI / 4;
     if (moveRight && moveDown) direction = Math.PI + (Math.PI / 4) * 3;
 
-    // Apply rotation
+    // Handle rotation based on mode
     if (!isRolling && !isAttacking) {
-      rotationTargetQuaternion.setFromAxisAngle(
-        new THREE.Vector3(0, 1, 0),
-        direction,
-      );
-      character.model.quaternion.slerp(
-        rotationTargetQuaternion,
-        cycleData.delta * (isAttacking ? 0.5 : 10),
-      );
+      if (isAiming) {
+        // Aim mode: rotate toward mouse position
+        raycasterMouse.setFromCamera(mousePosition, camera);
+        const intersectPoint = new THREE.Vector3();
+        raycasterMouse.ray.intersectPlane(groundPlane, intersectPoint);
+
+        if (intersectPoint) {
+          mouseWorldPosition.copy(intersectPoint);
+          const lookDirection = new THREE.Vector2(
+            mouseWorldPosition.x - character.model.position.x,
+            mouseWorldPosition.z - character.model.position.z,
+          );
+          // Adjust angle by -90 degrees to compensate for model orientation
+          const angleToMouse = Math.atan2(lookDirection.x, lookDirection.y) - Math.PI / 2;
+          rotationTargetQuaternion.setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            angleToMouse,
+          );
+          character.model.quaternion.slerp(
+            rotationTargetQuaternion,
+            cycleData.delta * 15,
+          );
+        }
+      } else {
+        // Normal mode: rotate toward movement direction
+        rotationTargetQuaternion.setFromAxisAngle(
+          new THREE.Vector3(0, 1, 0),
+          direction,
+        );
+        character.model.quaternion.slerp(
+          rotationTargetQuaternion,
+          cycleData.delta * 10,
+        );
+      }
     }
 
     // Handle movement
     const isMoving = moveLeft || moveRight || moveUp || moveDown;
     let isRunning = false;
 
-    if (isMoving && isRunningKey && !isRolling && !isAttacking) {
+    if (isMoving && isRunningKey && !isRolling && !isAttacking && !isAiming) {
       if (gameState.stamina > 0) {
         isRunning = true;
         gameState.stamina -= STAMINA_DRAIN * cycleData.delta;
@@ -804,24 +863,79 @@ worldInstance.onReady((assets) => {
     }
 
     if (isMoving && !isRolling && !isAttacking) {
-      character.model.getWorldDirection(charactersWorldDirection);
-      correctedDir.set(
-        charactersWorldDirection.z,
-        0,
-        -charactersWorldDirection.x,
-      );
       character.userData.oldPos = character.model.position.clone();
-      character.model.position.addScaledVector(
-        correctedDir,
-        (isRunning ? RUN_SPEED : WALK_SPEED) *
-          (character.model.position.y < WATER_SPEED_LEVEL
-            ? WATER_SPEED_MULTIPLIER
-            : 1) *
-          cycleData.delta,
-      );
+
+      // Use different speed for aim mode
+      const moveSpeed = isAiming
+        ? AIM_WALK_SPEED
+        : isRunning
+          ? RUN_SPEED
+          : WALK_SPEED;
+
+      if (isAiming) {
+        // In aim mode, use world space movement direction
+        character.model.position.addScaledVector(
+          movementDirection,
+          moveSpeed *
+            (character.model.position.y < WATER_SPEED_LEVEL
+              ? WATER_SPEED_MULTIPLIER
+              : 1) *
+            cycleData.delta,
+        );
+      } else {
+        // In normal mode, use character's forward direction
+        character.model.getWorldDirection(charactersWorldDirection);
+        correctedDir.set(
+          charactersWorldDirection.z,
+          0,
+          -charactersWorldDirection.x,
+        );
+        character.model.position.addScaledVector(
+          correctedDir,
+          moveSpeed *
+            (character.model.position.y < WATER_SPEED_LEVEL
+              ? WATER_SPEED_MULTIPLIER
+              : 1) *
+            cycleData.delta,
+        );
+      }
 
       // Use unit manager for animation
-      if (isRunning) {
+      if (isAiming) {
+        // In aim mode, choose animation based on movement direction relative to facing
+        character.model.getWorldDirection(charactersWorldDirection);
+
+        // Get facing angle (character's forward direction)
+        // Apply same compensation as mouse aim calculation
+        const facingAngle =
+          Math.atan2(charactersWorldDirection.x, charactersWorldDirection.z) -
+          Math.PI / 2;
+
+        // Get movement angle (world space WASD direction)
+        const movementAngle = Math.atan2(movementDirection.x, movementDirection.z);
+
+        // Calculate relative angle between movement and facing direction
+        let relativeAngle = movementAngle - facingAngle;
+        // Normalize to -PI to PI range
+        while (relativeAngle > Math.PI) relativeAngle -= Math.PI * 2;
+        while (relativeAngle < -Math.PI) relativeAngle += Math.PI * 2;
+
+        // Choose animation based on relative angle
+        const absAngle = Math.abs(relativeAngle);
+        if (absAngle < Math.PI / 4) {
+          // Moving forward (±45°)
+          unitManager.playAnimation(character, 'jogBackward');
+        } else if (absAngle > (Math.PI * 3) / 4) {
+          // Moving backward (±135° to ±180°)
+          unitManager.playAnimation(character, 'jogForward');
+        } else if (relativeAngle > 0) {
+          // Moving right (45° to 135°)
+          unitManager.playAnimation(character, 'jogStrafeRight');
+        } else {
+          // Moving left (-45° to -135°)
+          unitManager.playAnimation(character, 'jogStrafeLeft');
+        }
+      } else if (isRunning) {
         unitManager.playAnimation(character, 'run');
       } else {
         unitManager.playAnimation(character, 'walk');
@@ -839,7 +953,12 @@ worldInstance.onReady((assets) => {
         character.model.position.copy(character.userData.oldPos);
       }
     } else if (!isRolling && !isAttacking) {
-      unitManager.playAnimation(character, 'idle');
+      // Use aim idle animation when in aim mode and not moving
+      if (isAiming) {
+        unitManager.playAnimation(character, 'aimIdle');
+      } else {
+        unitManager.playAnimation(character, 'idle');
+      }
     }
 
     // Handle combat

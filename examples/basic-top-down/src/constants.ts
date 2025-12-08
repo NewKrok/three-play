@@ -8,6 +8,7 @@ export const WATER_LEVEL = 7.8;
 // Movement constants
 export const WALK_SPEED = 5;
 export const RUN_SPEED = 10;
+export const AIM_WALK_SPEED = 3.5;
 export const ROLL_SPEED = 5;
 export const FAST_ROLL_SPEED = 10;
 export const WATER_SPEED_MULTIPLIER = 0.4;

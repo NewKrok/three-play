@@ -104,6 +104,21 @@ const assetConfig: AssetsConfig = {
     'hit-to-body': {
       url: 'assets/models/extra-low-poly-animations/hit-to-body.fbx',
     },
+    'jog-forward': {
+      url: 'assets/models/extra-low-poly-animations/jog-forward.fbx',
+    },
+    'jog-backward': {
+      url: 'assets/models/extra-low-poly-animations/jog-backward.fbx',
+    },
+    'jog-strafe-left': {
+      url: 'assets/models/extra-low-poly-animations/jog-strafe-left.fbx',
+    },
+    'jog-strafe-right': {
+      url: 'assets/models/extra-low-poly-animations/jog-strafe-right.fbx',
+    },
+    'aim-hand-idle': {
+      url: 'assets/models/extra-low-poly-animations/aim-hand-idle.fbx',
+    },
     'low-poly-tree': {
       url: 'assets/models/environments/low-poly-tree-1.glb',
     },

@@ -17,6 +17,11 @@ export const humanUnitDefinition: UnitDefinition = {
       lightAttack: 'light-attack',
       heavyAttack: 'heavy-attack',
       hitToBody: 'hit-to-body',
+      aimIdle: 'aim-hand-idle',
+      jogForward: 'jog-forward',
+      jogBackward: 'jog-backward',
+      jogStrafeLeft: 'jog-strafe-left',
+      jogStrafeRight: 'jog-strafe-right',
     },
   },
   stats: {
