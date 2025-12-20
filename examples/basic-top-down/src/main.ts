@@ -90,6 +90,7 @@ let nearbyCreateOutlines = new Map();
 let crateProxyMeshes = new Map(); // Individual meshes for outlined crates
 let lastThrowTime = 0;
 let lastRollTime = 0;
+let isMousePressed = false;
 
 // Unit and Projectile systems
 let unitManager: UnitManagerType;
@@ -295,6 +296,21 @@ worldInstance.onReady((assets) => {
   // Disable context menu on right click
   renderer.domElement.addEventListener('contextmenu', (event) => {
     event.preventDefault();
+  });
+
+  // Mouse button press/release handlers for throwing
+  renderer.domElement.addEventListener('mousedown', (event) => {
+    // Left click (button 0)
+    if (event.button === 0) {
+      isMousePressed = true;
+    }
+  });
+
+  renderer.domElement.addEventListener('mouseup', (event) => {
+    // Left click (button 0)
+    if (event.button === 0) {
+      isMousePressed = false;
+    }
   });
 
   // Get crosshair element
@@ -1114,7 +1130,8 @@ worldInstance.onReady((assets) => {
   const handleThrowInput = () => {
     if (!character) return;
 
-    if (inputManager.isActionActive('throwApple')) {
+    // Check for mouse press and aim mode
+    if (isMousePressed && isAiming) {
       const now = performance.now();
       if (
         now - lastThrowTime > throwCooldown &&
@@ -1221,7 +1238,7 @@ worldInstance.onReady((assets) => {
 
       // Handle crate interactions
       for (const crate of crates) {
-        const { position, effect, index, isActive } = crate;
+        const { position, index, isActive } = crate;
         if (!isActive) continue;
 
         const dist = unit.model.position.distanceTo(position);
@@ -1297,8 +1314,11 @@ worldInstance.onReady((assets) => {
             }
 
             crate.isActive = false;
+
+            // Add 30 apples when collecting a crate
+            gameState.collectedApples += 30;
             showFloatingLabel({
-              text: JSON.stringify(effect),
+              text: '+30 apples',
               position: character.model.position,
             });
             removeCrate(index);
