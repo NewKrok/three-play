@@ -298,11 +298,20 @@ worldInstance.onReady((assets) => {
     event.preventDefault();
   });
 
+  // Get crosshair element
+  const crosshairElement = document.getElementById('crosshair');
+
   // Mouse movement tracking for aim mode
   renderer.domElement.addEventListener('mousemove', (event) => {
     const rect = renderer.domElement.getBoundingClientRect();
     mousePosition.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mousePosition.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    // Update crosshair position
+    if (crosshairElement) {
+      crosshairElement.style.left = `${event.clientX}px`;
+      crosshairElement.style.top = `${event.clientY}px`;
+    }
   });
 
   const cycleData = {
@@ -806,6 +815,17 @@ worldInstance.onReady((assets) => {
 
     // Check aim mode
     isAiming = inputManager.isActionActive('aim');
+
+    // Toggle crosshair visibility based on aim mode
+    if (crosshairElement) {
+      if (isAiming) {
+        crosshairElement.classList.add('active');
+        document.body.classList.add('aim-mode');
+      } else {
+        crosshairElement.classList.remove('active');
+        document.body.classList.remove('aim-mode');
+      }
+    }
 
     // Movement input
     const moveLeft = inputManager.isActionActive('moveLeft');

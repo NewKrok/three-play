@@ -13,6 +13,10 @@
         font-family: Arial, sans-serif;
       }
 
+      body.aim-mode {
+        cursor: none;
+      }
+
       #gameContainer {
         width: 100vw;
         height: 100vh;
@@ -37,10 +41,34 @@
         font-size: 12px;
         opacity: 0.8;
       }
+
+      #crosshair {
+        position: fixed;
+        width: 32px;
+        height: 32px;
+        pointer-events: none;
+        z-index: 1000;
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        display: none;
+      }
+
+      #crosshair.active {
+        display: block;
+        opacity: 1;
+      }
     </style>
   </head>
   <body>
     <div id="demo" />
+    <div id="crosshair">
+      <img
+        src="./assets/textures/crosshair.svg"
+        alt="crosshair"
+        style="width: 100%; height: 100%"
+      />
+    </div>
     <div class="ui">
       <div class="apples">
         <span id="apple-count">0</span>
