@@ -99,6 +99,8 @@ let lastHeavyAttackTime = 0;
 let isRolling = false;
 let isAttacking = false;
 let isAiming = false;
+let aimCameraOffset = new THREE.Vector3(0, 0, 0);
+let aimCameraLookAtOffset = new THREE.Vector3(0, 0, 0);
 const throwCooldown = 250;
 const rollCooldown = 500;
 const throwStrength = 15;
@@ -123,6 +125,7 @@ const labelRenderer = new CSS2DRenderer();
 labelRenderer.setSize(window.innerWidth, window.innerHeight);
 labelRenderer.domElement.style.position = 'absolute';
 labelRenderer.domElement.style.top = '0px';
+labelRenderer.domElement.style.pointerEvents = 'none';
 document.body.appendChild(labelRenderer.domElement);
 
 /**
@@ -762,15 +765,39 @@ worldInstance.onReady((assets) => {
 
   const updateCamera = () => {
     if (!character) return;
-    camera.position.lerp(
-      new THREE.Vector3(
-        character.model.position.x,
-        character.model.position.y + DISTANCE_FROM_CAMERA,
-        character.model.position.z + 8,
-      ),
-      cycleData.delta * 5,
+
+    let targetCameraPosition = new THREE.Vector3(
+      character.model.position.x,
+      character.model.position.y + DISTANCE_FROM_CAMERA,
+      character.model.position.z + 8,
     );
-    camera.lookAt(character.model.position);
+
+    let targetLookAt = character.model.position.clone();
+
+    // In aim mode, calculate target offset but lerp smoothly towards it
+    if (isAiming && mouseWorldPosition) {
+      const targetAimOffset = new THREE.Vector3()
+        .subVectors(mouseWorldPosition, character.model.position)
+        .normalize()
+        .multiplyScalar(4); // Fixed offset distance
+
+      // Smoothly interpolate current offset towards target (takes ~1 second)
+      aimCameraOffset.lerp(targetAimOffset, cycleData.delta * 2);
+      aimCameraLookAtOffset.lerp(targetAimOffset, cycleData.delta * 2);
+    } else {
+      // When not aiming, smoothly return to zero offset
+      aimCameraOffset.lerp(new THREE.Vector3(0, 0, 0), cycleData.delta * 3);
+      aimCameraLookAtOffset.lerp(new THREE.Vector3(0, 0, 0), cycleData.delta * 3);
+    }
+
+    // Apply the smoothed offset
+    targetCameraPosition.x += aimCameraOffset.x;
+    targetCameraPosition.z += aimCameraOffset.z;
+    targetLookAt.x += aimCameraLookAtOffset.x;
+    targetLookAt.z += aimCameraLookAtOffset.z;
+
+    camera.position.lerp(targetCameraPosition, cycleData.delta * 5);
+    camera.lookAt(targetLookAt);
   };
 
   // Player input handling
