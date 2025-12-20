@@ -24,6 +24,7 @@ export const humanUnitDefinition: UnitDefinition = {
       jogStrafeRight: 'jog-strafe-right',
       leftTurn: 'left-turn',
       rightTurn: 'right-turn',
+      throw: 'throw',
     },
   },
   stats: {

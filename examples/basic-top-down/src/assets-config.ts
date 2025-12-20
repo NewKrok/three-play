@@ -125,6 +125,9 @@ const assetConfig: AssetsConfig = {
     'right-turn': {
       url: 'assets/models/extra-low-poly-animations/right-turn.fbx',
     },
+    'throw': {
+      url: 'assets/models/extra-low-poly-animations/throw.fbx',
+    },
     'low-poly-tree': {
       url: 'assets/models/environments/low-poly-tree-1.glb',
     },

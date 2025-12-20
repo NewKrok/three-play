@@ -91,6 +91,8 @@ let crateProxyMeshes = new Map(); // Individual meshes for outlined crates
 let lastThrowTime = 0;
 let lastRollTime = 0;
 let isMousePressed = false;
+let isThrowing = false;
+let rightHandBone: THREE.Bone | null = null;
 
 // Unit and Projectile systems
 let unitManager: UnitManagerType;
@@ -272,7 +274,7 @@ worldConfig.projectiles = {
       // Check if projectile is within horizontal range
       const horizontalDist = Math.sqrt(
         Math.pow(projectile.position.x - unit.model.position.x, 2) +
-        Math.pow(projectile.position.z - unit.model.position.z, 2)
+          Math.pow(projectile.position.z - unit.model.position.z, 2),
       );
 
       if (horizontalDist < radius + APPLE_HIT_RADIUS) {
@@ -444,6 +446,27 @@ worldInstance.onReady((assets) => {
       running: runningEffectParticleSystem,
       runningInWater: runningInWaterEffectParticleSystem,
     };
+
+    // Find the right hand bone for throwing
+    const actualModel = character.model.children[0];
+    if (actualModel) {
+      // Find the root bone (mixamorigHips) which contains all other bones in hierarchy
+      let rootBone: THREE.Object3D | null = null;
+      actualModel.children.forEach((child) => {
+        if (child.name === 'mixamorigHips') {
+          rootBone = child;
+        }
+      });
+
+      if (rootBone) {
+        // Traverse the bone hierarchy to find right hand
+        rootBone.traverse((bone) => {
+          if (bone.name === 'mixamorigRightHand') {
+            rightHandBone = bone as THREE.Bone;
+          }
+        });
+      }
+    }
   }
 
   // Configure day/night system to follow the main character for optimized shadows
@@ -508,7 +531,11 @@ worldInstance.onReady((assets) => {
     } else {
       // If there's a texture but color is too dark, brighten it
       // GLTF often uses vertex colors or material color to tint textures
-      if (material1.color.r < 0.3 && material1.color.g < 0.3 && material1.color.b < 0.3) {
+      if (
+        material1.color.r < 0.3 &&
+        material1.color.g < 0.3 &&
+        material1.color.b < 0.3
+      ) {
         material1.color.setHex(0xffffff); // Reset to white to show texture properly
       }
     }
@@ -525,7 +552,11 @@ worldInstance.onReady((assets) => {
       material2.color.setHex(0x4a7c3f); // Green color for leaves
     } else {
       // If there's a texture but color is too dark, brighten it
-      if (material2.color.r < 0.3 && material2.color.g < 0.3 && material2.color.b < 0.3) {
+      if (
+        material2.color.r < 0.3 &&
+        material2.color.g < 0.3 &&
+        material2.color.b < 0.3
+      ) {
         material2.color.setHex(0xffffff); // Reset to white to show texture properly
       }
     }
@@ -860,7 +891,10 @@ worldInstance.onReady((assets) => {
     } else {
       // When not aiming, smoothly return to zero offset
       aimCameraOffset.lerp(new THREE.Vector3(0, 0, 0), cycleData.delta * 3);
-      aimCameraLookAtOffset.lerp(new THREE.Vector3(0, 0, 0), cycleData.delta * 3);
+      aimCameraLookAtOffset.lerp(
+        new THREE.Vector3(0, 0, 0),
+        cycleData.delta * 3,
+      );
     }
 
     // Apply the smoothed offset
@@ -937,7 +971,7 @@ worldInstance.onReady((assets) => {
         // Create ground plane at character's current height
         const characterGroundPlane = new THREE.Plane(
           new THREE.Vector3(0, 1, 0),
-          -character.model.position.y
+          -character.model.position.y,
         );
 
         const intersectPoint = new THREE.Vector3();
@@ -950,12 +984,18 @@ worldInstance.onReady((assets) => {
             mouseWorldPosition.z - character.model.position.z,
           );
           // Adjust angle by -90 degrees to compensate for model orientation
-          const angleToMouse = Math.atan2(lookDirection.x, lookDirection.y) - Math.PI / 2;
+          const angleToMouse =
+            Math.atan2(lookDirection.x, lookDirection.y) - Math.PI / 2;
 
           // Get current rotation angle for angular velocity calculation
           const currentRotation = Math.atan2(
-            2 * (character.model.quaternion.w * character.model.quaternion.y + character.model.quaternion.x * character.model.quaternion.z),
-            1 - 2 * (character.model.quaternion.y * character.model.quaternion.y + character.model.quaternion.z * character.model.quaternion.z)
+            2 *
+              (character.model.quaternion.w * character.model.quaternion.y +
+                character.model.quaternion.x * character.model.quaternion.z),
+            1 -
+              2 *
+                (character.model.quaternion.y * character.model.quaternion.y +
+                  character.model.quaternion.z * character.model.quaternion.z),
           );
 
           rotationTargetQuaternion.setFromAxisAngle(
@@ -980,7 +1020,9 @@ worldInstance.onReady((assets) => {
           // Smooth the angular velocity using exponential moving average
           // This reduces jittering from frame-to-frame velocity changes
           const smoothingFactor = 0.3; // Lower = smoother, higher = more responsive
-          smoothedAngularVelocity = smoothedAngularVelocity * (1 - smoothingFactor) + currentAngularVelocity * smoothingFactor;
+          smoothedAngularVelocity =
+            smoothedAngularVelocity * (1 - smoothingFactor) +
+            currentAngularVelocity * smoothingFactor;
 
           previousRotation = currentRotation;
         }
@@ -1001,7 +1043,14 @@ worldInstance.onReady((assets) => {
     const isMoving = moveLeft || moveRight || moveUp || moveDown;
     let isRunning = false;
 
-    if (isMoving && isRunningKey && !isRolling && !isAttacking && !isAiming) {
+    if (
+      isMoving &&
+      isRunningKey &&
+      !isRolling &&
+      !isAttacking &&
+      !isAiming &&
+      !isThrowing
+    ) {
       if (gameState.stamina > 0) {
         isRunning = true;
         gameState.stamina -= STAMINA_DRAIN * cycleData.delta;
@@ -1012,7 +1061,7 @@ worldInstance.onReady((assets) => {
       gameState.stamina = Math.min(gameState.stamina, MAX_STAMINA);
     }
 
-    if (isMoving && !isRolling && !isAttacking) {
+    if (isMoving && !isRolling && !isAttacking && !isThrowing) {
       character.userData.oldPos = character.model.position.clone();
 
       // Use different speed for aim mode
@@ -1062,7 +1111,10 @@ worldInstance.onReady((assets) => {
           Math.PI / 2;
 
         // Get movement angle (world space WASD direction)
-        const movementAngle = Math.atan2(movementDirection.x, movementDirection.z);
+        const movementAngle = Math.atan2(
+          movementDirection.x,
+          movementDirection.z,
+        );
 
         // Calculate relative angle between movement and facing direction
         let relativeAngle = movementAngle - facingAngle;
@@ -1102,7 +1154,7 @@ worldInstance.onReady((assets) => {
       if (terrainHeight < WATER_LEVEL - 0.5) {
         character.model.position.copy(character.userData.oldPos);
       }
-    } else if (!isRolling && !isAttacking) {
+    } else if (!isRolling && !isAttacking && !isThrowing) {
       // Use aim idle animation when in aim mode and not moving
       if (isAiming) {
         // Use same hysteresis logic as movement for consistent behavior
@@ -1111,7 +1163,10 @@ worldInstance.onReady((assets) => {
 
         if (!isTurning && Math.abs(smoothedAngularVelocity) > turnOnThreshold) {
           isTurning = true;
-        } else if (isTurning && Math.abs(smoothedAngularVelocity) < turnOffThreshold) {
+        } else if (
+          isTurning &&
+          Math.abs(smoothedAngularVelocity) < turnOffThreshold
+        ) {
           isTurning = false;
         }
 
@@ -1231,14 +1286,34 @@ worldInstance.onReady((assets) => {
     if (!character) return;
 
     // Check for mouse press and aim mode
-    if (isMousePressed && isAiming) {
+    if (isMousePressed && isAiming && !isThrowing) {
       const now = performance.now();
       if (
         now - lastThrowTime > throwCooldown &&
         gameState.collectedApples > 0
       ) {
         gameState.collectedApples--;
-        throwApple();
+        isThrowing = true;
+
+        // Play throw animation (non-looping)
+        unitManager.playAnimation(character, 'throw');
+
+        // Throw apple 0.4 seconds after animation starts
+        setTimeout(() => {
+          throwApple();
+        }, 400);
+
+        // Reset throwing state when animation completes (1 second for full throw animation)
+        setTimeout(() => {
+          isThrowing = false;
+          // Return to appropriate idle animation
+          if (isAiming) {
+            unitManager.playAnimation(character, 'aimIdle');
+          } else {
+            unitManager.playAnimation(character, 'idle');
+          }
+        }, 1000);
+
         lastThrowTime = now;
       }
     }
@@ -1247,8 +1322,50 @@ worldInstance.onReady((assets) => {
   const throwApple = () => {
     if (!character) return;
 
-    const origin = character.model.position.clone();
-    origin.y += 0.5; // Throw from slightly above character
+    // Use right hand bone position if available, otherwise use character position
+    const origin = new THREE.Vector3();
+
+    // Try to find the bone now if we haven't found it yet
+    if (!rightHandBone && character.model.children[0]) {
+      const actualModel = character.model.children[0];
+      let rootBone: THREE.Bone | null = null;
+      actualModel.children.forEach((child) => {
+        if (child instanceof THREE.Bone && child.name === 'mixamorigHips') {
+          rootBone = child;
+        }
+      });
+
+      if (rootBone) {
+        rootBone.traverse((bone) => {
+          if (
+            bone instanceof THREE.Bone &&
+            bone.name === 'mixamorigRightHand'
+          ) {
+            rightHandBone = bone;
+          }
+        });
+      }
+    }
+
+    if (rightHandBone) {
+      // Get world position of right hand bone (wrist)
+      rightHandBone.getWorldPosition(origin);
+
+      // Add offset to position apple at palm/fingertips instead of wrist
+      // Get character's forward direction
+      const forward = character.model.getWorldDirection(new THREE.Vector3());
+      forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+
+      // Offset forward (towards fingers)
+      origin.addScaledVector(forward, 0.2);
+
+      // Offset slightly downward
+      origin.y -= 0.1;
+    } else {
+      // Fallback to character position + offset
+      origin.copy(character.model.position);
+      origin.y += 0.5;
+    }
 
     // Get character's forward direction
     const direction = character.model.getWorldDirection(new THREE.Vector3());
@@ -1562,7 +1679,11 @@ worldInstance.onReady((assets) => {
         treeInstanceMesh1.instanceMatrix.needsUpdate = true;
         treeInstanceMesh2.instanceMatrix.needsUpdate = true;
 
-        treeProxyMeshes.set(index, { meshes: proxyMeshes, opacity: 1.0, matrix });
+        treeProxyMeshes.set(index, {
+          meshes: proxyMeshes,
+          opacity: 1.0,
+          matrix,
+        });
       }
     });
 
