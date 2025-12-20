@@ -119,6 +119,12 @@ const assetConfig: AssetsConfig = {
     'aim-hand-idle': {
       url: 'assets/models/extra-low-poly-animations/aim-hand-idle.fbx',
     },
+    'left-turn': {
+      url: 'assets/models/extra-low-poly-animations/left-turn.fbx',
+    },
+    'right-turn': {
+      url: 'assets/models/extra-low-poly-animations/right-turn.fbx',
+    },
     'low-poly-tree': {
       url: 'assets/models/environments/low-poly-tree-1.glb',
     },

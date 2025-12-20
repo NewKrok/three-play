@@ -102,6 +102,10 @@ let isAttacking = false;
 let isAiming = false;
 let aimCameraOffset = new THREE.Vector3(0, 0, 0);
 let aimCameraLookAtOffset = new THREE.Vector3(0, 0, 0);
+let previousRotation = 0;
+let currentAngularVelocity = 0;
+let smoothedAngularVelocity = 0;
+let isTurning = false;
 const throwCooldown = 250;
 const rollCooldown = 500;
 const throwStrength = 15;
@@ -829,7 +833,15 @@ worldInstance.onReady((assets) => {
     if (!character) return;
 
     // Check aim mode
+    const wasAiming = isAiming;
     isAiming = inputManager.isActionActive('aim');
+
+    // Reset turn state when exiting aim mode
+    if (wasAiming && !isAiming) {
+      isTurning = false;
+      smoothedAngularVelocity = 0;
+      currentAngularVelocity = 0;
+    }
 
     // Toggle crosshair visibility based on aim mode
     if (crosshairElement) {
@@ -874,7 +886,7 @@ worldInstance.onReady((assets) => {
     // Handle rotation based on mode
     if (!isRolling && !isAttacking) {
       if (isAiming) {
-        // Aim mode: rotate toward mouse position
+        // Aim mode: rotate toward mouse position with smooth, slower rotation
         raycasterMouse.setFromCamera(mousePosition, camera);
 
         // Create ground plane at character's current height
@@ -894,14 +906,38 @@ worldInstance.onReady((assets) => {
           );
           // Adjust angle by -90 degrees to compensate for model orientation
           const angleToMouse = Math.atan2(lookDirection.x, lookDirection.y) - Math.PI / 2;
+
+          // Get current rotation angle for angular velocity calculation
+          const currentRotation = Math.atan2(
+            2 * (character.model.quaternion.w * character.model.quaternion.y + character.model.quaternion.x * character.model.quaternion.z),
+            1 - 2 * (character.model.quaternion.y * character.model.quaternion.y + character.model.quaternion.z * character.model.quaternion.z)
+          );
+
           rotationTargetQuaternion.setFromAxisAngle(
             new THREE.Vector3(0, 1, 0),
             angleToMouse,
           );
+
+          // Slower rotation speed in aim mode (reduced from 15 to 5)
           character.model.quaternion.slerp(
             rotationTargetQuaternion,
-            cycleData.delta * 15,
+            cycleData.delta * 5,
           );
+
+          // Calculate angular velocity (change in rotation per second)
+          let rotationDelta = currentRotation - previousRotation;
+          // Normalize to -PI to PI range
+          while (rotationDelta > Math.PI) rotationDelta -= Math.PI * 2;
+          while (rotationDelta < -Math.PI) rotationDelta += Math.PI * 2;
+
+          currentAngularVelocity = rotationDelta / cycleData.delta;
+
+          // Smooth the angular velocity using exponential moving average
+          // This reduces jittering from frame-to-frame velocity changes
+          const smoothingFactor = 0.3; // Lower = smoother, higher = more responsive
+          smoothedAngularVelocity = smoothedAngularVelocity * (1 - smoothingFactor) + currentAngularVelocity * smoothingFactor;
+
+          previousRotation = currentRotation;
         }
       } else {
         // Normal mode: rotate toward movement direction
@@ -971,38 +1007,58 @@ worldInstance.onReady((assets) => {
 
       // Use unit manager for animation
       if (isAiming) {
-        // In aim mode, choose animation based on movement direction relative to facing
-        character.model.getWorldDirection(charactersWorldDirection);
+        // In aim mode, prioritize turn animation if turning significantly
+        // Use hysteresis to prevent rapid animation switching
+        const turnOnThreshold = 1.5;  // Higher threshold to start turning
+        const turnOffThreshold = 0.8; // Lower threshold to stop turning
 
-        // Get facing angle (character's forward direction)
-        // Apply same compensation as mouse aim calculation
-        const facingAngle =
-          Math.atan2(charactersWorldDirection.x, charactersWorldDirection.z) -
-          Math.PI / 2;
+        if (!isTurning && Math.abs(smoothedAngularVelocity) > turnOnThreshold) {
+          isTurning = true;
+        } else if (isTurning && Math.abs(smoothedAngularVelocity) < turnOffThreshold) {
+          isTurning = false;
+        }
 
-        // Get movement angle (world space WASD direction)
-        const movementAngle = Math.atan2(movementDirection.x, movementDirection.z);
-
-        // Calculate relative angle between movement and facing direction
-        let relativeAngle = movementAngle - facingAngle;
-        // Normalize to -PI to PI range
-        while (relativeAngle > Math.PI) relativeAngle -= Math.PI * 2;
-        while (relativeAngle < -Math.PI) relativeAngle += Math.PI * 2;
-
-        // Choose animation based on relative angle
-        const absAngle = Math.abs(relativeAngle);
-        if (absAngle < Math.PI / 4) {
-          // Moving forward (±45°)
-          unitManager.playAnimation(character, 'jogBackward');
-        } else if (absAngle > (Math.PI * 3) / 4) {
-          // Moving backward (±135° to ±180°)
-          unitManager.playAnimation(character, 'jogForward');
-        } else if (relativeAngle > 0) {
-          // Moving right (45° to 135°)
-          unitManager.playAnimation(character, 'jogStrafeRight');
+        if (isTurning) {
+          // Play turn animation based on direction
+          if (smoothedAngularVelocity > 0) {
+            unitManager.playAnimation(character, 'leftTurn');
+          } else {
+            unitManager.playAnimation(character, 'rightTurn');
+          }
         } else {
-          // Moving left (-45° to -135°)
-          unitManager.playAnimation(character, 'jogStrafeLeft');
+          // Otherwise, choose animation based on movement direction relative to facing
+          character.model.getWorldDirection(charactersWorldDirection);
+
+          // Get facing angle (character's forward direction)
+          // Apply same compensation as mouse aim calculation
+          const facingAngle =
+            Math.atan2(charactersWorldDirection.x, charactersWorldDirection.z) -
+            Math.PI / 2;
+
+          // Get movement angle (world space WASD direction)
+          const movementAngle = Math.atan2(movementDirection.x, movementDirection.z);
+
+          // Calculate relative angle between movement and facing direction
+          let relativeAngle = movementAngle - facingAngle;
+          // Normalize to -PI to PI range
+          while (relativeAngle > Math.PI) relativeAngle -= Math.PI * 2;
+          while (relativeAngle < -Math.PI) relativeAngle += Math.PI * 2;
+
+          // Choose animation based on relative angle
+          const absAngle = Math.abs(relativeAngle);
+          if (absAngle < Math.PI / 4) {
+            // Moving forward (±45°)
+            unitManager.playAnimation(character, 'jogBackward');
+          } else if (absAngle > (Math.PI * 3) / 4) {
+            // Moving backward (±135° to ±180°)
+            unitManager.playAnimation(character, 'jogForward');
+          } else if (relativeAngle > 0) {
+            // Moving right (45° to 135°)
+            unitManager.playAnimation(character, 'jogStrafeRight');
+          } else {
+            // Moving left (-45° to -135°)
+            unitManager.playAnimation(character, 'jogStrafeLeft');
+          }
         }
       } else if (isRunning) {
         unitManager.playAnimation(character, 'run');
@@ -1024,7 +1080,26 @@ worldInstance.onReady((assets) => {
     } else if (!isRolling && !isAttacking) {
       // Use aim idle animation when in aim mode and not moving
       if (isAiming) {
-        unitManager.playAnimation(character, 'aimIdle');
+        // Use same hysteresis logic as movement for consistent behavior
+        const turnOnThreshold = 1.5;
+        const turnOffThreshold = 0.8;
+
+        if (!isTurning && Math.abs(smoothedAngularVelocity) > turnOnThreshold) {
+          isTurning = true;
+        } else if (isTurning && Math.abs(smoothedAngularVelocity) < turnOffThreshold) {
+          isTurning = false;
+        }
+
+        if (isTurning) {
+          // Play turn animation based on direction
+          if (smoothedAngularVelocity > 0) {
+            unitManager.playAnimation(character, 'leftTurn');
+          } else {
+            unitManager.playAnimation(character, 'rightTurn');
+          }
+        } else {
+          unitManager.playAnimation(character, 'aimIdle');
+        }
       } else {
         unitManager.playAnimation(character, 'idle');
       }

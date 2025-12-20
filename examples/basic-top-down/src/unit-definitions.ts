@@ -22,6 +22,8 @@ export const humanUnitDefinition: UnitDefinition = {
       jogBackward: 'jog-backward',
       jogStrafeLeft: 'jog-strafe-left',
       jogStrafeRight: 'jog-strafe-right',
+      leftTurn: 'left-turn',
+      rightTurn: 'right-turn',
     },
   },
   stats: {
