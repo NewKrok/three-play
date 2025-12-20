@@ -1372,7 +1372,7 @@ worldInstance.onReady((assets) => {
     direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
 
     // Add consistent upward trajectory for arc
-    direction.y += 0.3;
+    direction.y += 0.05;
     direction.normalize();
 
     // Launch projectile with spread and strength
