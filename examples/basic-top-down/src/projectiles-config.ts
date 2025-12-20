@@ -37,8 +37,8 @@ export const createAppleProjectileDefinition = (
   },
   spread: {
     horizontal: throwSpread,
-    vertical: 0.2,
-    velocityVariance: 0.1,
+    vertical: 0.02,
+    velocityVariance: 0.02,
   },
   poolSize: 50,
 });

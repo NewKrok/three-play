@@ -108,8 +108,8 @@ let smoothedAngularVelocity = 0;
 let isTurning = false;
 const throwCooldown = 250;
 const rollCooldown = 500;
-const throwStrength = 15;
-const throwSpread = 0.2;
+const throwStrength = 18;
+const throwSpread = 0.02;
 const charactersWorldDirection = new THREE.Vector3();
 const correctedDir = new THREE.Vector3();
 const rotationTargetQuaternion = new THREE.Quaternion();
@@ -252,6 +252,52 @@ worldConfig.units = {
   },
   definitions: [humanUnitDefinition, zombieUnitDefinition],
 } as any;
+
+// Set up projectile collision detection callback
+worldConfig.projectiles = {
+  enabled: true,
+  maxProjectiles: 100,
+  checkObjectCollision: (projectile, radius) => {
+    // This will be called during projectile update to check collisions
+    const unitManagerInstance = worldInstance?.getUnitManager();
+    if (!unitManagerInstance) return null;
+
+    const allUnits = unitManagerInstance.getAllUnits();
+
+    for (const unit of allUnits) {
+      // Don't hit the player
+      if (character && unit === character) continue;
+
+      // Check collision with unit's body using a capsule approximation
+      // Check if projectile is within horizontal range
+      const horizontalDist = Math.sqrt(
+        Math.pow(projectile.position.x - unit.model.position.x, 2) +
+        Math.pow(projectile.position.z - unit.model.position.z, 2)
+      );
+
+      if (horizontalDist < radius + APPLE_HIT_RADIUS) {
+        // Check if projectile is within vertical range (0.3 to 1.8 meters above ground)
+        const verticalOffset = projectile.position.y - unit.model.position.y;
+        if (verticalOffset >= 0.3 && verticalOffset <= 1.8) {
+          // Hit detected! Calculate hit point on unit's body
+          const unitBodyPosition = unit.model.position.clone();
+          unitBodyPosition.y += Math.max(0.3, Math.min(1.8, verticalOffset));
+
+          return {
+            object: unit.model,
+            point: projectile.position.clone(),
+            normal: projectile.position
+              .clone()
+              .sub(unitBodyPosition)
+              .normalize(),
+          };
+        }
+      }
+    }
+
+    return null; // No collision
+  },
+};
 
 const worldInstance = createWorld(worldConfig);
 
@@ -557,30 +603,29 @@ worldInstance.onReady((assets) => {
       scene.add(splashEffectInstance);
       setTimeout(dispose, 1000);
 
-      // Check if hit a unit (enemy) using unit manager
-      const allUnits = unitManager.getAllUnits();
-      for (const unit of allUnits) {
-        if (unit === character) continue; // Don't hit the player
-        const dist = position.distanceTo(unit.model.position);
-        if (dist < APPLE_HIT_RADIUS) {
+      // Check if we hit a unit (target will be the unit's model if we hit one)
+      if (target) {
+        const allUnits = unitManager.getAllUnits();
+        const hitUnit = allUnits.find((unit) => unit.model === target);
+
+        if (hitUnit && hitUnit !== character) {
           // Apply knockback using unit physics
-          const away = unit.model.position.clone().sub(position).normalize();
+          const away = hitUnit.model.position.clone().sub(position).normalize();
           const knockback = away.multiplyScalar(APPLE_PUSH_FORCE);
 
           // Add knockback to unit
-          if (!unit.userData.knockbackVelocity)
-            unit.userData.knockbackVelocity = new THREE.Vector3();
-          unit.userData.knockbackVelocity.add(knockback);
+          if (!hitUnit.userData.knockbackVelocity)
+            hitUnit.userData.knockbackVelocity = new THREE.Vector3();
+          hitUnit.userData.knockbackVelocity.add(knockback);
 
           // Show floating text
           showFloatingLabel({
             text: getSplashText(),
-            position: unit.model.position,
+            position: hitUnit.model.position,
           });
 
           // Update score
           gameState.score++;
-          break;
         }
       }
     }
@@ -1209,8 +1254,8 @@ worldInstance.onReady((assets) => {
     const direction = character.model.getWorldDirection(new THREE.Vector3());
     direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
 
-    // Add some upward trajectory
-    direction.y += 0.2;
+    // Add consistent upward trajectory for arc
+    direction.y += 0.3;
     direction.normalize();
 
     // Launch projectile with spread and strength

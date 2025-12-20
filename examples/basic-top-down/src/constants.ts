@@ -30,7 +30,7 @@ export const TREE_COLLISION_RADIUS = 1.5;
 export const LARGE_ROCK_COLLISION_RADIUS = 2.5;
 export const CRATE_COLLISION_RADIUS = 1.2;
 export const CRATE_INTERACTION_RADIUS = 3.0;
-export const APPLE_HIT_RADIUS = 1;
+export const APPLE_HIT_RADIUS = 0.8;
 
 // Apple constants
 export const MIN_APPLES_PER_TREE = 2;

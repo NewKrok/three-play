@@ -97,11 +97,7 @@ const worldConfig: WorldConfig = {
       backAssetId: 'skybox-back',
     },
   },
-  projectiles: {
-    enabled: true,
-    maxProjectiles: 100,
-    // checkObjectCollision will be set dynamically in main.ts
-  },
+  // projectiles config is set dynamically in main.ts to access unitManager
 };
 
 export default worldConfig;
