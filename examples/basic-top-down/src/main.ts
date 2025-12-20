@@ -111,7 +111,6 @@ const rotationTargetQuaternion = new THREE.Quaternion();
 const dummy = new THREE.Object3D();
 const mousePosition = new THREE.Vector2();
 const raycasterMouse = new THREE.Raycaster();
-const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const mouseWorldPosition = new THREE.Vector3();
 
 const gameState = {
@@ -861,8 +860,15 @@ worldInstance.onReady((assets) => {
       if (isAiming) {
         // Aim mode: rotate toward mouse position
         raycasterMouse.setFromCamera(mousePosition, camera);
+
+        // Create ground plane at character's current height
+        const characterGroundPlane = new THREE.Plane(
+          new THREE.Vector3(0, 1, 0),
+          -character.model.position.y
+        );
+
         const intersectPoint = new THREE.Vector3();
-        raycasterMouse.ray.intersectPlane(groundPlane, intersectPoint);
+        raycasterMouse.ray.intersectPlane(characterGroundPlane, intersectPoint);
 
         if (intersectPoint) {
           mouseWorldPosition.copy(intersectPoint);
