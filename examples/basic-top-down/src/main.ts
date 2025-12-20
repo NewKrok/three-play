@@ -1007,58 +1007,38 @@ worldInstance.onReady((assets) => {
 
       // Use unit manager for animation
       if (isAiming) {
-        // In aim mode, prioritize turn animation if turning significantly
-        // Use hysteresis to prevent rapid animation switching
-        const turnOnThreshold = 1.5;  // Higher threshold to start turning
-        const turnOffThreshold = 0.8; // Lower threshold to stop turning
+        // Choose animation based on movement direction relative to facing
+        character.model.getWorldDirection(charactersWorldDirection);
 
-        if (!isTurning && Math.abs(smoothedAngularVelocity) > turnOnThreshold) {
-          isTurning = true;
-        } else if (isTurning && Math.abs(smoothedAngularVelocity) < turnOffThreshold) {
-          isTurning = false;
-        }
+        // Get facing angle (character's forward direction)
+        // Apply same compensation as mouse aim calculation
+        const facingAngle =
+          Math.atan2(charactersWorldDirection.x, charactersWorldDirection.z) -
+          Math.PI / 2;
 
-        if (isTurning) {
-          // Play turn animation based on direction
-          if (smoothedAngularVelocity > 0) {
-            unitManager.playAnimation(character, 'leftTurn');
-          } else {
-            unitManager.playAnimation(character, 'rightTurn');
-          }
+        // Get movement angle (world space WASD direction)
+        const movementAngle = Math.atan2(movementDirection.x, movementDirection.z);
+
+        // Calculate relative angle between movement and facing direction
+        let relativeAngle = movementAngle - facingAngle;
+        // Normalize to -PI to PI range
+        while (relativeAngle > Math.PI) relativeAngle -= Math.PI * 2;
+        while (relativeAngle < -Math.PI) relativeAngle += Math.PI * 2;
+
+        // Choose animation based on relative angle
+        const absAngle = Math.abs(relativeAngle);
+        if (absAngle < Math.PI / 4) {
+          // Moving forward (±45°)
+          unitManager.playAnimation(character, 'jogBackward');
+        } else if (absAngle > (Math.PI * 3) / 4) {
+          // Moving backward (±135° to ±180°)
+          unitManager.playAnimation(character, 'jogForward');
+        } else if (relativeAngle > 0) {
+          // Moving right (45° to 135°)
+          unitManager.playAnimation(character, 'jogStrafeRight');
         } else {
-          // Otherwise, choose animation based on movement direction relative to facing
-          character.model.getWorldDirection(charactersWorldDirection);
-
-          // Get facing angle (character's forward direction)
-          // Apply same compensation as mouse aim calculation
-          const facingAngle =
-            Math.atan2(charactersWorldDirection.x, charactersWorldDirection.z) -
-            Math.PI / 2;
-
-          // Get movement angle (world space WASD direction)
-          const movementAngle = Math.atan2(movementDirection.x, movementDirection.z);
-
-          // Calculate relative angle between movement and facing direction
-          let relativeAngle = movementAngle - facingAngle;
-          // Normalize to -PI to PI range
-          while (relativeAngle > Math.PI) relativeAngle -= Math.PI * 2;
-          while (relativeAngle < -Math.PI) relativeAngle += Math.PI * 2;
-
-          // Choose animation based on relative angle
-          const absAngle = Math.abs(relativeAngle);
-          if (absAngle < Math.PI / 4) {
-            // Moving forward (±45°)
-            unitManager.playAnimation(character, 'jogBackward');
-          } else if (absAngle > (Math.PI * 3) / 4) {
-            // Moving backward (±135° to ±180°)
-            unitManager.playAnimation(character, 'jogForward');
-          } else if (relativeAngle > 0) {
-            // Moving right (45° to 135°)
-            unitManager.playAnimation(character, 'jogStrafeRight');
-          } else {
-            // Moving left (-45° to -135°)
-            unitManager.playAnimation(character, 'jogStrafeLeft');
-          }
+          // Moving left (-45° to -135°)
+          unitManager.playAnimation(character, 'jogStrafeLeft');
         }
       } else if (isRunning) {
         unitManager.playAnimation(character, 'run');
