@@ -14,6 +14,7 @@ export const humanUnitDefinition: UnitDefinition = {
       walk: 'walk',
       run: 'run',
       roll: 'roll',
+      jump: 'jump',
       lightAttack: 'light-attack',
       heavyAttack: 'heavy-attack',
       hitToBody: 'hit-to-body',

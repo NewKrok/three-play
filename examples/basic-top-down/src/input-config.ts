@@ -12,7 +12,19 @@ const inputConfig: InputManagerConfig = {
       bindings: [
         {
           type: 'keyboard',
-          key: 'KeyR',
+          key: 'Space',
+        },
+      ],
+    },
+    dash: {
+      action: {
+        type: 'trigger',
+        valueType: 'boolean',
+      },
+      bindings: [
+        {
+          type: 'keyboard',
+          key: 'Digit1',
         },
       ],
     },
@@ -113,18 +125,6 @@ const inputConfig: InputManagerConfig = {
         {
           type: 'keyboard',
           key: 'KeyT',
-        },
-      ],
-    },
-    throwApple: {
-      action: {
-        type: 'trigger',
-        valueType: 'boolean',
-      },
-      bindings: [
-        {
-          type: 'keyboard',
-          key: 'Space',
         },
       ],
     },

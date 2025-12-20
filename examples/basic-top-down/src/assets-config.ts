@@ -86,6 +86,9 @@ const assetConfig: AssetsConfig = {
     roll: {
       url: 'assets/models/extra-low-poly-animations/roll.fbx',
     },
+    jump: {
+      url: 'assets/models/extra-low-poly-animations/jump.fbx',
+    },
     'zombie-walk': {
       url: 'assets/models/extra-low-poly-animations/zombie-walk.fbx',
     },

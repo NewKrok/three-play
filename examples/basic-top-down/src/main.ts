@@ -34,6 +34,7 @@ const {
   AIM_WALK_SPEED,
   ROLL_SPEED,
   FAST_ROLL_SPEED,
+  DASH_SPEED,
   WATER_SPEED_MULTIPLIER,
   WATER_SPEED_LEVEL,
   DISTANCE_FROM_CAMERA,
@@ -90,8 +91,10 @@ let nearbyCreateOutlines = new Map();
 let crateProxyMeshes = new Map(); // Individual meshes for outlined crates
 let lastThrowTime = 0;
 let lastRollTime = 0;
+let lastDashTime = 0;
 let isMousePressed = false;
 let isThrowing = false;
+let isDashing = false;
 let rightHandBone: THREE.Bone | null = null;
 
 // Unit and Projectile systems
@@ -110,6 +113,8 @@ let smoothedAngularVelocity = 0;
 let isTurning = false;
 const throwCooldown = 250;
 const rollCooldown = 500;
+const dashCooldown = 800;
+const dashDuration = 200;
 const throwStrength = 18;
 const throwSpread = 0.02;
 const charactersWorldDirection = new THREE.Vector3();
@@ -963,7 +968,7 @@ worldInstance.onReady((assets) => {
     if (moveRight && moveDown) direction = Math.PI + (Math.PI / 4) * 3;
 
     // Handle rotation based on mode
-    if (!isRolling && !isAttacking) {
+    if (!isRolling && !isAttacking && !isDashing) {
       if (isAiming) {
         // Aim mode: rotate toward mouse position with smooth, slower rotation
         raycasterMouse.setFromCamera(mousePosition, camera);
@@ -1049,7 +1054,8 @@ worldInstance.onReady((assets) => {
       !isRolling &&
       !isAttacking &&
       !isAiming &&
-      !isThrowing
+      !isThrowing &&
+      !isDashing
     ) {
       if (gameState.stamina > 0) {
         isRunning = true;
@@ -1061,7 +1067,7 @@ worldInstance.onReady((assets) => {
       gameState.stamina = Math.min(gameState.stamina, MAX_STAMINA);
     }
 
-    if (isMoving && !isRolling && !isAttacking && !isThrowing) {
+    if (isMoving && !isRolling && !isAttacking && !isThrowing && !isDashing) {
       character.userData.oldPos = character.model.position.clone();
 
       // Use different speed for aim mode
@@ -1154,7 +1160,7 @@ worldInstance.onReady((assets) => {
       if (terrainHeight < WATER_LEVEL - 0.5) {
         character.model.position.copy(character.userData.oldPos);
       }
-    } else if (!isRolling && !isAttacking && !isThrowing) {
+    } else if (!isRolling && !isAttacking && !isThrowing && !isDashing) {
       // Use aim idle animation when in aim mode and not moving
       if (isAiming) {
         // Use same hysteresis logic as movement for consistent behavior
@@ -1188,6 +1194,7 @@ worldInstance.onReady((assets) => {
     // Handle combat
     handleCombatInput();
     handleRollInput();
+    handleDashInput();
     handleThrowInput();
   };
 
@@ -1201,6 +1208,7 @@ worldInstance.onReady((assets) => {
       inputManager.isActionActive('lightAttack') &&
       !isRolling &&
       !isAttacking &&
+      !isDashing &&
       lastLightAttackTime + LIGHT_ATTACK_COOLDOWN < now &&
       gameState.stamina >= STAMINA_FOR_LIGHT_ATTACK
     ) {
@@ -1224,6 +1232,7 @@ worldInstance.onReady((assets) => {
       inputManager.isActionActive('heavyAttack') &&
       !isRolling &&
       !isAttacking &&
+      !isDashing &&
       lastHeavyAttackTime + HEAVY_ATTACK_COOLDOWN < now &&
       gameState.stamina >= STAMINA_FOR_HEAVY_ATTACK
     ) {
@@ -1269,6 +1278,43 @@ worldInstance.onReady((assets) => {
           forward,
           (inputManager.isActionActive('run') ? FAST_ROLL_SPEED : ROLL_SPEED) *
             cycleData.delta,
+        );
+
+        // Handle terrain height
+        const terrainHeight = heightmapUtils.getHeightFromPosition(
+          character.model.position,
+        );
+        if (terrainHeight < WATER_LEVEL - 0.5) {
+          character.model.position.copy(character.userData.oldPos);
+        }
+      }
+    }
+  };
+
+  const handleDashInput = () => {
+    if (!character) return;
+
+    const now = performance.now();
+    const dashActive = inputManager.isActionActive('dash');
+
+    if (dashActive && !isDashing && !isRolling) {
+      if (now - lastDashTime > dashCooldown) {
+        isDashing = true;
+        unitManager.playAnimation(character, 'jump');
+        lastDashTime = now;
+      }
+    } else if (isDashing) {
+      // Handle dash movement and end
+      if (lastDashTime + dashDuration <= now) {
+        isDashing = false;
+        unitManager.playAnimation(character, 'idle');
+      } else {
+        const forward = new THREE.Vector3(1, 0, 0);
+        forward.applyQuaternion(character.model.quaternion);
+        character.userData.oldPos = character.model.position.clone();
+        character.model.position.addScaledVector(
+          forward,
+          DASH_SPEED * cycleData.delta,
         );
 
         // Handle terrain height
