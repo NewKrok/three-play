@@ -35,6 +35,7 @@ const {
   ROLL_SPEED,
   FAST_ROLL_SPEED,
   DASH_SPEED,
+  BACKWARD_SPEED_MULTIPLIER,
   WATER_SPEED_MULTIPLIER,
   WATER_SPEED_LEVEL,
   DISTANCE_FROM_CAMERA,
@@ -1075,6 +1076,10 @@ worldInstance.onReady((assets) => {
     if (isMoving && !isRolling && !isAttacking && !isThrowing && !isDashing) {
       character.userData.oldPos = character.model.position.clone();
 
+      // Determine movement type based on input keys
+      const isForward = moveUp && !moveDown;
+      const isBackward = moveDown && !moveUp;
+
       // Use different speed for aim mode
       const moveSpeed = isAiming
         ? AIM_WALK_SPEED
@@ -1082,19 +1087,19 @@ worldInstance.onReady((assets) => {
           ? RUN_SPEED
           : WALK_SPEED;
 
+      // Apply backward speed multiplier if moving backward
+      const speedMultiplier = isBackward ? BACKWARD_SPEED_MULTIPLIER : 1;
+
       // Always use world space movement direction (same as aim mode)
       character.model.position.addScaledVector(
         movementDirection,
         moveSpeed *
+          speedMultiplier *
           (character.model.position.y < WATER_SPEED_LEVEL
             ? WATER_SPEED_MULTIPLIER
             : 1) *
           cycleData.delta,
       );
-
-      // Determine movement type based on input keys
-      const isForward = moveUp && !moveDown;
-      const isBackward = moveDown && !moveUp;
       const isStrafeLeft = moveLeft && !moveRight;
       const isStrafeRight = moveRight && !moveLeft;
 
