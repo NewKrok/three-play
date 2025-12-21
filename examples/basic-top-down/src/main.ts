@@ -116,7 +116,6 @@ const dashCooldown = 800;
 const dashDuration = 200;
 const throwStrength = 18;
 const throwSpread = 0.02;
-const charactersWorldDirection = new THREE.Vector3();
 const rotationTargetQuaternion = new THREE.Quaternion();
 const dummy = new THREE.Object3D();
 const mousePosition = new THREE.Vector2();
@@ -943,13 +942,44 @@ worldInstance.onReady((assets) => {
     const moveDown = inputManager.isActionActive('moveDown');
     const isRunningKey = inputManager.isActionActive('run') && !isAiming;
 
-    // Calculate movement direction (world space)
+    // Calculate movement direction relative to mouse position
     let movementDirection = new THREE.Vector3(0, 0, 0);
 
-    if (moveLeft) movementDirection.x -= 1;
-    if (moveRight) movementDirection.x += 1;
-    if (moveUp) movementDirection.z -= 1;
-    if (moveDown) movementDirection.z += 1;
+    // Get direction from character to mouse
+    const toMouse = new THREE.Vector3(
+      mouseWorldPosition.x - character.model.position.x,
+      0,
+      mouseWorldPosition.z - character.model.position.z,
+    );
+
+    if (toMouse.lengthSq() > 0) {
+      toMouse.normalize();
+
+      // Calculate right vector (perpendicular to forward)
+      const rightVector = new THREE.Vector3(-toMouse.z, 0, toMouse.x);
+
+      if (isAiming) {
+        // Aim mode: allow full 8-directional movement
+        // W: forward (toward mouse), S: backward (away from mouse)
+        if (moveUp) movementDirection.add(toMouse);
+        if (moveDown) movementDirection.sub(toMouse);
+
+        // A: strafe left, D: strafe right (perpendicular to mouse direction)
+        if (moveLeft) movementDirection.sub(rightVector);
+        if (moveRight) movementDirection.add(rightVector);
+      } else {
+        // Normal mode: prioritize forward/backward over strafing
+        if (moveUp || moveDown) {
+          // If moving forward or backward, ignore strafe input
+          if (moveUp) movementDirection.add(toMouse);
+          if (moveDown) movementDirection.sub(toMouse);
+        } else {
+          // Only strafe if not moving forward/backward
+          if (moveLeft) movementDirection.sub(rightVector);
+          if (moveRight) movementDirection.add(rightVector);
+        }
+      }
+    }
 
     if (movementDirection.lengthSq() > 0) {
       movementDirection.normalize();
@@ -1062,73 +1092,60 @@ worldInstance.onReady((assets) => {
           cycleData.delta,
       );
 
-      // Choose animation based on movement direction relative to facing
-      character.model.getWorldDirection(charactersWorldDirection);
+      // Determine movement type based on input keys
+      const isForward = moveUp && !moveDown;
+      const isBackward = moveDown && !moveUp;
+      const isStrafeLeft = moveLeft && !moveRight;
+      const isStrafeRight = moveRight && !moveLeft;
 
-      // Get facing angle (character's forward direction)
-      // Apply same compensation as mouse aim calculation
-      const facingAngle =
-        Math.atan2(charactersWorldDirection.x, charactersWorldDirection.z) -
-        Math.PI / 2;
-
-      // Get movement angle (world space WASD direction)
-      const movementAngle = Math.atan2(
-        movementDirection.x,
-        movementDirection.z,
-      );
-
-      // Calculate relative angle between movement and facing direction
-      let relativeAngle = movementAngle - facingAngle;
-      // Normalize to -PI to PI range
-      while (relativeAngle > Math.PI) relativeAngle -= Math.PI * 2;
-      while (relativeAngle < -Math.PI) relativeAngle += Math.PI * 2;
-
-      // Choose animation based on relative angle and mode
-      const absAngle = Math.abs(relativeAngle);
+      // Choose animation based on input combination
       if (isAiming) {
-        // Aim mode: use jog animations
-        if (absAngle < Math.PI / 4) {
-          // Moving forward (±45°)
-          unitManager.playAnimation(character, 'jogBackward');
-        } else if (absAngle > (Math.PI * 3) / 4) {
-          // Moving backward (±135° to ±180°)
+        // Aim mode: use jog animations with full 8-directional support
+        if (isForward && !isStrafeLeft && !isStrafeRight) {
+          // Pure forward (W only) - toward mouse
           unitManager.playAnimation(character, 'jogForward');
-        } else if (relativeAngle > 0) {
-          // Moving right (45° to 135°)
+        } else if (isBackward && !isStrafeLeft && !isStrafeRight) {
+          // Pure backward (S only) - away from mouse
+          unitManager.playAnimation(character, 'jogBackward');
+        } else if (isStrafeRight) {
+          // Strafe right (D key is pressed)
           unitManager.playAnimation(character, 'jogStrafeRight');
-        } else {
-          // Moving left (-45° to -135°)
+        } else if (isStrafeLeft) {
+          // Strafe left (A key is pressed)
           unitManager.playAnimation(character, 'jogStrafeLeft');
+        } else {
+          // Default to forward for diagonal movement
+          unitManager.playAnimation(character, 'jogForward');
         }
       } else {
-        // Normal mode: use walk/run animations based on speed and direction
+        // Normal mode: forward/backward has priority over strafing
         if (isRunning) {
-          if (absAngle < Math.PI / 4) {
-            // Moving forward (±45°)
-            unitManager.playAnimation(character, 'runningBackward');
-          } else if (absAngle > (Math.PI * 3) / 4) {
-            // Moving backward (±135° to ±180°)
+          if (isForward) {
+            // Forward movement (W) - ignore A/D in normal mode
             unitManager.playAnimation(character, 'run');
-          } else if (relativeAngle > 0) {
-            // Moving right (45° to 135°)
+          } else if (isBackward) {
+            // Backward movement (S) - ignore A/D in normal mode
+            unitManager.playAnimation(character, 'runningBackward');
+          } else if (isStrafeRight) {
+            // Strafe right only if no forward/backward
             unitManager.playAnimation(character, 'rightStrafe');
-          } else {
-            // Moving left (-45° to -135°)
+          } else if (isStrafeLeft) {
+            // Strafe left only if no forward/backward
             unitManager.playAnimation(character, 'leftStrafe');
           }
         } else {
-          // Walking - use directional animations (same as aim mode jog animations)
-          if (absAngle < Math.PI / 4) {
-            // Moving forward (±45°)
+          // Walking
+          if (isForward) {
+            // Forward movement (W) - ignore A/D in normal mode
             unitManager.playAnimation(character, 'walk');
-          } else if (absAngle > (Math.PI * 3) / 4) {
-            // Moving backward (±135° to ±180°)
+          } else if (isBackward) {
+            // Backward movement (S) - ignore A/D in normal mode
             unitManager.playAnimation(character, 'jogBackward');
-          } else if (relativeAngle > 0) {
-            // Moving right (45° to 135°)
+          } else if (isStrafeRight) {
+            // Strafe right only if no forward/backward
             unitManager.playAnimation(character, 'jogStrafeRight');
-          } else {
-            // Moving left (-45° to -135°)
+          } else if (isStrafeLeft) {
+            // Strafe left only if no forward/backward
             unitManager.playAnimation(character, 'jogStrafeLeft');
           }
         }
