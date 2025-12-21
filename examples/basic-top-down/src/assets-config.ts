@@ -140,6 +140,15 @@ const assetConfig: AssetsConfig = {
     'running-backward': {
       url: 'assets/models/extra-low-poly-animations/running-backward.fbx',
     },
+    'death-1': {
+      url: 'assets/models/extra-low-poly-animations/death-1.fbx',
+    },
+    'death-2': {
+      url: 'assets/models/extra-low-poly-animations/death-2.fbx',
+    },
+    'death-3': {
+      url: 'assets/models/extra-low-poly-animations/death-3.fbx',
+    },
     'low-poly-tree': {
       url: 'assets/models/environments/low-poly-tree-1.glb',
     },

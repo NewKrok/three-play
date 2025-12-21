@@ -507,6 +507,10 @@ worldInstance.onReady((assets) => {
       );
 
       if (enemy) {
+        // Initialize health tracking (3 hits to kill)
+        enemy.userData.health = 3;
+        enemy.userData.isDead = false;
+
         // Initialize AI behavior for enemy
         unitManager.initializeAIBehavior(enemy, position);
         logger.info(`Created enemy ${i + 1}/${count}`);
@@ -651,7 +655,10 @@ worldInstance.onReady((assets) => {
         const allUnits = unitManager.getAllUnits();
         const hitUnit = allUnits.find((unit) => unit.model === target);
 
-        if (hitUnit && hitUnit !== character) {
+        if (hitUnit && hitUnit !== character && !hitUnit.userData.isDead) {
+          // Reduce health
+          hitUnit.userData.health -= 1;
+
           // Apply knockback using unit physics
           const away = hitUnit.model.position.clone().sub(position).normalize();
           const knockback = away.multiplyScalar(APPLE_PUSH_FORCE);
@@ -661,11 +668,48 @@ worldInstance.onReady((assets) => {
             hitUnit.userData.knockbackVelocity = new THREE.Vector3();
           hitUnit.userData.knockbackVelocity.add(knockback);
 
-          // Show floating text
-          showFloatingLabel({
-            text: getSplashText(),
-            position: hitUnit.model.position,
-          });
+          // Check if unit died
+          if (hitUnit.userData.health <= 0) {
+            hitUnit.userData.isDead = true;
+
+            // Disable AI behavior by clearing the behavior data
+            if (hitUnit.userData.aiBehavior) {
+              hitUnit.userData.aiBehavior = null;
+            }
+
+            // Choose random death animation (1, 2, or 3)
+            const deathAnimationIndex = Math.floor(Math.random() * 3) + 1;
+            const deathAnimationName = `death${deathAnimationIndex}`;
+
+            // Play death animation
+            unitManager.playAnimation(hitUnit, deathAnimationName);
+
+            // Make the death animation non-looping and clamp at end
+            if (hitUnit.actions && hitUnit.actions[deathAnimationName]) {
+              hitUnit.actions[deathAnimationName].setLoop(
+                THREE.LoopOnce as any,
+                1,
+              );
+              hitUnit.actions[deathAnimationName].clampWhenFinished = true;
+            }
+
+            // Show death text
+            showFloatingLabel({
+              text: 'Dead!',
+              position: hitUnit.model.position,
+            });
+
+            // Remove unit after animation completes (approximately 2 seconds)
+            setTimeout(() => {
+              unitManager.removeUnit(hitUnit.id);
+            }, 2000);
+          } else {
+            // Show hit text
+            showFloatingLabel({
+              text: getSplashText(),
+              position: hitUnit.model.position,
+            });
+          }
 
           // Update score
           gameState.score++;
@@ -1460,6 +1504,8 @@ worldInstance.onReady((assets) => {
     const allUnits = unitManager.getAllUnits();
 
     for (const unit of allUnits) {
+      // Skip dead units
+      if (unit.userData.isDead) continue;
       // Handle tree collisions and apple collection
       for (const tree of trees) {
         const { position, appleIndices, isActive } = tree;

@@ -56,6 +56,9 @@ export const zombieUnitDefinition: UnitDefinition = {
       run: 'zombie-run',
       attack: 'zombie-attack',
       hitToBody: 'hit-to-body',
+      death1: 'death-1',
+      death2: 'death-2',
+      death3: 'death-3',
     },
   },
   stats: {
