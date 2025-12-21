@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import type { UnitDefinition } from '@newkrok/three-play';
 
 /**
@@ -68,25 +67,6 @@ export const zombieUnitDefinition: UnitDefinition = {
   appearance: {
     scale: 1.0,
     rotation: Math.PI / 2,
-    materialModifier: (model: THREE.Object3D) => {
-      // Color zombies green
-      model.traverse((child) => {
-        if ((child as any).isMesh) {
-          const mesh = child as THREE.Mesh;
-          if (mesh.material) {
-            if (Array.isArray(mesh.material)) {
-              mesh.material.forEach((mat) => {
-                if (mat instanceof THREE.MeshStandardMaterial) {
-                  mat.color.setHex(0x4caf50);
-                }
-              });
-            } else if (mesh.material instanceof THREE.MeshStandardMaterial) {
-              mesh.material.color.setHex(0x4caf50);
-            }
-          }
-        }
-      });
-    },
   },
 
   ai: {

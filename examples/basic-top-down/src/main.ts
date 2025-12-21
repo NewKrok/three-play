@@ -13,6 +13,7 @@ import {
   humanUnitDefinition,
   zombieUnitDefinition,
 } from './unit-definitions.js';
+import { decorateUnit, COLOR_THEMES } from './unit-decorators.js';
 
 import * as THREE from 'three';
 import {
@@ -416,10 +417,13 @@ worldInstance.onReady((assets) => {
   };
 
   // Create player character using unit manager
-  character = unitManager.createUnit({
-    definitionId: 'human-player',
-    position: startingPosition,
-  });
+  character = decorateUnit(
+    unitManager.createUnit({
+      definitionId: 'human-player',
+      position: startingPosition,
+    }),
+    COLOR_THEMES.default,
+  );
 
   if (character) {
     // Add particle effects to character
@@ -494,10 +498,13 @@ worldInstance.onReady((assets) => {
       position.z += -10 + Math.floor(i / 5) * 2;
       position.y = heightmapUtils.getHeightFromPosition(position);
 
-      const enemy = unitManager.createUnit({
-        definitionId: 'zombie-enemy',
-        position,
-      });
+      const enemy = decorateUnit(
+        unitManager.createUnit({
+          definitionId: 'zombie-enemy',
+          position,
+        }),
+        COLOR_THEMES.zombie,
+      );
 
       if (enemy) {
         logger.info(`Created enemy ${i + 1}/${count}`);
