@@ -81,7 +81,6 @@ const crateEffects = [
   { damageBonus: { min: 1.5, max: 3.0 } },
 ];
 
-let direction = 0;
 let trees = [];
 let largeRocks = [];
 let character: Unit | null = null;
@@ -118,7 +117,6 @@ const dashDuration = 200;
 const throwStrength = 18;
 const throwSpread = 0.02;
 const charactersWorldDirection = new THREE.Vector3();
-const correctedDir = new THREE.Vector3();
 const rotationTargetQuaternion = new THREE.Quaternion();
 const dummy = new THREE.Object3D();
 const mousePosition = new THREE.Vector2();
@@ -945,7 +943,7 @@ worldInstance.onReady((assets) => {
     const moveDown = inputManager.isActionActive('moveDown');
     const isRunningKey = inputManager.isActionActive('run') && !isAiming;
 
-    // Calculate movement direction (world space, not relative to character)
+    // Calculate movement direction (world space)
     let movementDirection = new THREE.Vector3(0, 0, 0);
 
     if (moveLeft) movementDirection.x -= 1;
@@ -957,90 +955,67 @@ worldInstance.onReady((assets) => {
       movementDirection.normalize();
     }
 
-    // Calculate direction for normal mode rotation
-    if (moveLeft) direction = Math.PI;
-    if (moveRight) direction = 0;
-    if (moveUp) direction = Math.PI / 2;
-    if (moveDown) direction = -Math.PI / 2;
-    if (moveLeft && moveUp) direction = Math.PI - Math.PI / 4;
-    if (moveLeft && moveDown) direction = Math.PI + Math.PI / 4;
-    if (moveRight && moveUp) direction = Math.PI / 4;
-    if (moveRight && moveDown) direction = Math.PI + (Math.PI / 4) * 3;
-
-    // Handle rotation based on mode
+    // Handle rotation - always rotate toward mouse position in both modes
     if (!isRolling && !isAttacking && !isDashing) {
-      if (isAiming) {
-        // Aim mode: rotate toward mouse position with smooth, slower rotation
-        raycasterMouse.setFromCamera(mousePosition, camera);
+      raycasterMouse.setFromCamera(mousePosition, camera);
 
-        // Create ground plane at character's current height
-        const characterGroundPlane = new THREE.Plane(
-          new THREE.Vector3(0, 1, 0),
-          -character.model.position.y,
+      // Create ground plane at character's current height
+      const characterGroundPlane = new THREE.Plane(
+        new THREE.Vector3(0, 1, 0),
+        -character.model.position.y,
+      );
+
+      const intersectPoint = new THREE.Vector3();
+      raycasterMouse.ray.intersectPlane(characterGroundPlane, intersectPoint);
+
+      if (intersectPoint) {
+        mouseWorldPosition.copy(intersectPoint);
+        const lookDirection = new THREE.Vector2(
+          mouseWorldPosition.x - character.model.position.x,
+          mouseWorldPosition.z - character.model.position.z,
+        );
+        // Adjust angle by -90 degrees to compensate for model orientation
+        const angleToMouse =
+          Math.atan2(lookDirection.x, lookDirection.y) - Math.PI / 2;
+
+        // Get current rotation angle for angular velocity calculation
+        const currentRotation = Math.atan2(
+          2 *
+            (character.model.quaternion.w * character.model.quaternion.y +
+              character.model.quaternion.x * character.model.quaternion.z),
+          1 -
+            2 *
+              (character.model.quaternion.y * character.model.quaternion.y +
+                character.model.quaternion.z * character.model.quaternion.z),
         );
 
-        const intersectPoint = new THREE.Vector3();
-        raycasterMouse.ray.intersectPlane(characterGroundPlane, intersectPoint);
-
-        if (intersectPoint) {
-          mouseWorldPosition.copy(intersectPoint);
-          const lookDirection = new THREE.Vector2(
-            mouseWorldPosition.x - character.model.position.x,
-            mouseWorldPosition.z - character.model.position.z,
-          );
-          // Adjust angle by -90 degrees to compensate for model orientation
-          const angleToMouse =
-            Math.atan2(lookDirection.x, lookDirection.y) - Math.PI / 2;
-
-          // Get current rotation angle for angular velocity calculation
-          const currentRotation = Math.atan2(
-            2 *
-              (character.model.quaternion.w * character.model.quaternion.y +
-                character.model.quaternion.x * character.model.quaternion.z),
-            1 -
-              2 *
-                (character.model.quaternion.y * character.model.quaternion.y +
-                  character.model.quaternion.z * character.model.quaternion.z),
-          );
-
-          rotationTargetQuaternion.setFromAxisAngle(
-            new THREE.Vector3(0, 1, 0),
-            angleToMouse,
-          );
-
-          // Slower rotation speed in aim mode (reduced from 15 to 5)
-          character.model.quaternion.slerp(
-            rotationTargetQuaternion,
-            cycleData.delta * 5,
-          );
-
-          // Calculate angular velocity (change in rotation per second)
-          let rotationDelta = currentRotation - previousRotation;
-          // Normalize to -PI to PI range
-          while (rotationDelta > Math.PI) rotationDelta -= Math.PI * 2;
-          while (rotationDelta < -Math.PI) rotationDelta += Math.PI * 2;
-
-          currentAngularVelocity = rotationDelta / cycleData.delta;
-
-          // Smooth the angular velocity using exponential moving average
-          // This reduces jittering from frame-to-frame velocity changes
-          const smoothingFactor = 0.3; // Lower = smoother, higher = more responsive
-          smoothedAngularVelocity =
-            smoothedAngularVelocity * (1 - smoothingFactor) +
-            currentAngularVelocity * smoothingFactor;
-
-          previousRotation = currentRotation;
-        }
-      } else {
-        // Normal mode: rotate toward movement direction
         rotationTargetQuaternion.setFromAxisAngle(
           new THREE.Vector3(0, 1, 0),
-          direction,
+          angleToMouse,
         );
+
+        // Use slower rotation speed in aim mode, faster in normal mode
+        const rotationSpeed = isAiming ? 5 : 10;
         character.model.quaternion.slerp(
           rotationTargetQuaternion,
-          cycleData.delta * 10,
+          cycleData.delta * rotationSpeed,
         );
+
+        // Calculate angular velocity (change in rotation per second)
+        let rotationDelta = currentRotation - previousRotation;
+        // Normalize to -PI to PI range
+        while (rotationDelta > Math.PI) rotationDelta -= Math.PI * 2;
+        while (rotationDelta < -Math.PI) rotationDelta += Math.PI * 2;
+
+        currentAngularVelocity = rotationDelta / cycleData.delta;
+
+        // Smooth the angular velocity using exponential moving average
+        const smoothingFactor = 0.3;
+        smoothedAngularVelocity =
+          smoothedAngularVelocity * (1 - smoothingFactor) +
+          currentAngularVelocity * smoothingFactor;
+
+        previousRotation = currentRotation;
       }
     }
 
@@ -1077,59 +1052,41 @@ worldInstance.onReady((assets) => {
           ? RUN_SPEED
           : WALK_SPEED;
 
+      // Always use world space movement direction (same as aim mode)
+      character.model.position.addScaledVector(
+        movementDirection,
+        moveSpeed *
+          (character.model.position.y < WATER_SPEED_LEVEL
+            ? WATER_SPEED_MULTIPLIER
+            : 1) *
+          cycleData.delta,
+      );
+
+      // Choose animation based on movement direction relative to facing
+      character.model.getWorldDirection(charactersWorldDirection);
+
+      // Get facing angle (character's forward direction)
+      // Apply same compensation as mouse aim calculation
+      const facingAngle =
+        Math.atan2(charactersWorldDirection.x, charactersWorldDirection.z) -
+        Math.PI / 2;
+
+      // Get movement angle (world space WASD direction)
+      const movementAngle = Math.atan2(
+        movementDirection.x,
+        movementDirection.z,
+      );
+
+      // Calculate relative angle between movement and facing direction
+      let relativeAngle = movementAngle - facingAngle;
+      // Normalize to -PI to PI range
+      while (relativeAngle > Math.PI) relativeAngle -= Math.PI * 2;
+      while (relativeAngle < -Math.PI) relativeAngle += Math.PI * 2;
+
+      // Choose animation based on relative angle and mode
+      const absAngle = Math.abs(relativeAngle);
       if (isAiming) {
-        // In aim mode, use world space movement direction
-        character.model.position.addScaledVector(
-          movementDirection,
-          moveSpeed *
-            (character.model.position.y < WATER_SPEED_LEVEL
-              ? WATER_SPEED_MULTIPLIER
-              : 1) *
-            cycleData.delta,
-        );
-      } else {
-        // In normal mode, use character's forward direction
-        character.model.getWorldDirection(charactersWorldDirection);
-        correctedDir.set(
-          charactersWorldDirection.z,
-          0,
-          -charactersWorldDirection.x,
-        );
-        character.model.position.addScaledVector(
-          correctedDir,
-          moveSpeed *
-            (character.model.position.y < WATER_SPEED_LEVEL
-              ? WATER_SPEED_MULTIPLIER
-              : 1) *
-            cycleData.delta,
-        );
-      }
-
-      // Use unit manager for animation
-      if (isAiming) {
-        // Choose animation based on movement direction relative to facing
-        character.model.getWorldDirection(charactersWorldDirection);
-
-        // Get facing angle (character's forward direction)
-        // Apply same compensation as mouse aim calculation
-        const facingAngle =
-          Math.atan2(charactersWorldDirection.x, charactersWorldDirection.z) -
-          Math.PI / 2;
-
-        // Get movement angle (world space WASD direction)
-        const movementAngle = Math.atan2(
-          movementDirection.x,
-          movementDirection.z,
-        );
-
-        // Calculate relative angle between movement and facing direction
-        let relativeAngle = movementAngle - facingAngle;
-        // Normalize to -PI to PI range
-        while (relativeAngle > Math.PI) relativeAngle -= Math.PI * 2;
-        while (relativeAngle < -Math.PI) relativeAngle += Math.PI * 2;
-
-        // Choose animation based on relative angle
-        const absAngle = Math.abs(relativeAngle);
+        // Aim mode: use jog animations
         if (absAngle < Math.PI / 4) {
           // Moving forward (±45°)
           unitManager.playAnimation(character, 'jogBackward');
@@ -1143,10 +1100,38 @@ worldInstance.onReady((assets) => {
           // Moving left (-45° to -135°)
           unitManager.playAnimation(character, 'jogStrafeLeft');
         }
-      } else if (isRunning) {
-        unitManager.playAnimation(character, 'run');
       } else {
-        unitManager.playAnimation(character, 'walk');
+        // Normal mode: use walk/run animations based on speed and direction
+        if (isRunning) {
+          if (absAngle < Math.PI / 4) {
+            // Moving forward (±45°)
+            unitManager.playAnimation(character, 'runningBackward');
+          } else if (absAngle > (Math.PI * 3) / 4) {
+            // Moving backward (±135° to ±180°)
+            unitManager.playAnimation(character, 'run');
+          } else if (relativeAngle > 0) {
+            // Moving right (45° to 135°)
+            unitManager.playAnimation(character, 'rightStrafe');
+          } else {
+            // Moving left (-45° to -135°)
+            unitManager.playAnimation(character, 'leftStrafe');
+          }
+        } else {
+          // Walking - use directional animations (same as aim mode jog animations)
+          if (absAngle < Math.PI / 4) {
+            // Moving forward (±45°)
+            unitManager.playAnimation(character, 'walk');
+          } else if (absAngle > (Math.PI * 3) / 4) {
+            // Moving backward (±135° to ±180°)
+            unitManager.playAnimation(character, 'jogBackward');
+          } else if (relativeAngle > 0) {
+            // Moving right (45° to 135°)
+            unitManager.playAnimation(character, 'jogStrafeRight');
+          } else {
+            // Moving left (-45° to -135°)
+            unitManager.playAnimation(character, 'jogStrafeLeft');
+          }
+        }
       }
 
       // Handle terrain height
@@ -1161,33 +1146,33 @@ worldInstance.onReady((assets) => {
         character.model.position.copy(character.userData.oldPos);
       }
     } else if (!isRolling && !isAttacking && !isThrowing && !isDashing) {
-      // Use aim idle animation when in aim mode and not moving
-      if (isAiming) {
-        // Use same hysteresis logic as movement for consistent behavior
-        const turnOnThreshold = 1.5;
-        const turnOffThreshold = 0.8;
+      // Handle idle state with turn animations
+      const turnOnThreshold = 1.5;
+      const turnOffThreshold = 0.8;
 
-        if (!isTurning && Math.abs(smoothedAngularVelocity) > turnOnThreshold) {
-          isTurning = true;
-        } else if (
-          isTurning &&
-          Math.abs(smoothedAngularVelocity) < turnOffThreshold
-        ) {
-          isTurning = false;
-        }
+      if (!isTurning && Math.abs(smoothedAngularVelocity) > turnOnThreshold) {
+        isTurning = true;
+      } else if (
+        isTurning &&
+        Math.abs(smoothedAngularVelocity) < turnOffThreshold
+      ) {
+        isTurning = false;
+      }
 
-        if (isTurning) {
-          // Play turn animation based on direction
-          if (smoothedAngularVelocity > 0) {
-            unitManager.playAnimation(character, 'leftTurn');
-          } else {
-            unitManager.playAnimation(character, 'rightTurn');
-          }
+      if (isTurning) {
+        // Play turn animation based on direction
+        if (smoothedAngularVelocity > 0) {
+          unitManager.playAnimation(character, 'leftTurn');
         } else {
-          unitManager.playAnimation(character, 'aimIdle');
+          unitManager.playAnimation(character, 'rightTurn');
         }
       } else {
-        unitManager.playAnimation(character, 'idle');
+        // Use different idle animation based on mode
+        if (isAiming) {
+          unitManager.playAnimation(character, 'aimIdle');
+        } else {
+          unitManager.playAnimation(character, 'idle');
+        }
       }
     }
 

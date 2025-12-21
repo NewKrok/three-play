@@ -131,6 +131,15 @@ const assetConfig: AssetsConfig = {
     'throw': {
       url: 'assets/models/extra-low-poly-animations/throw.fbx',
     },
+    'left-strafe': {
+      url: 'assets/models/extra-low-poly-animations/left-strafe.fbx',
+    },
+    'right-strafe': {
+      url: 'assets/models/extra-low-poly-animations/right-strafe.fbx',
+    },
+    'running-backward': {
+      url: 'assets/models/extra-low-poly-animations/running-backward.fbx',
+    },
     'low-poly-tree': {
       url: 'assets/models/environments/low-poly-tree-1.glb',
     },

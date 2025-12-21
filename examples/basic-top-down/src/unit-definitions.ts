@@ -26,6 +26,9 @@ export const humanUnitDefinition: UnitDefinition = {
       leftTurn: 'left-turn',
       rightTurn: 'right-turn',
       throw: 'throw',
+      leftStrafe: 'left-strafe',
+      rightStrafe: 'right-strafe',
+      runningBackward: 'running-backward',
     },
   },
   stats: {
