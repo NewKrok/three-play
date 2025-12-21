@@ -396,7 +396,7 @@ const createWorld = (config: WorldConfig): WorldInstance => {
 
     // Update unit manager if available
     if (unitManager) {
-      unitManager.update(deltaTime);
+      unitManager.update(deltaTime, elapsedTime);
     }
 
     // Call all update callbacks

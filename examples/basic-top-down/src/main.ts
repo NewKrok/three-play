@@ -507,6 +507,8 @@ worldInstance.onReady((assets) => {
       );
 
       if (enemy) {
+        // Initialize AI behavior for enemy
+        unitManager.initializeAIBehavior(enemy, position);
         logger.info(`Created enemy ${i + 1}/${count}`);
       }
     }
