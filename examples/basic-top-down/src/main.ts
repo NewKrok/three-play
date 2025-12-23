@@ -360,6 +360,27 @@ worldInstance.onReady((assets) => {
 
   logger.info('UI Manager initialized');
 
+  // Initialize debug display
+  const debugDisplay = document.getElementById('debug-display');
+  const updateDebugDisplay = () => {
+    if (!character || !debugDisplay) return;
+
+    debugDisplay.innerHTML = `
+      <div class="debug-row">
+        <span class="debug-label">X:</span>
+        <span class="debug-value">${character.model.position.x.toFixed(2)}</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Y:</span>
+        <span class="debug-value">${character.model.position.y.toFixed(2)}</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Z:</span>
+        <span class="debug-value">${character.model.position.z.toFixed(2)}</span>
+      </div>
+    `;
+  };
+
   // Append renderer to DOM
   document.querySelector('#demo').appendChild(renderer.domElement);
 
@@ -1925,6 +1946,9 @@ worldInstance.onReady((assets) => {
     // Update UI displays
     uiManager.updateHealth(gameState.health);
     uiManager.updateStamina(gameState.stamina);
+
+    // Update debug display
+    updateDebugDisplay();
 
     cinamaticCameraController.update(cycleData.delta);
 
