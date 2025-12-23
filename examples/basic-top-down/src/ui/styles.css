@@ -212,51 +212,64 @@
   background: linear-gradient(135deg, rgba(20, 20, 25, 0.95), rgba(40, 35, 30, 0.95));
   border: 3px solid #6b5d52;
   border-radius: 8px;
-  padding: 16px;
+  padding: 8px;
   box-shadow:
     0 6px 20px rgba(0, 0, 0, 0.7),
     inset 0 2px 4px rgba(0, 0, 0, 0.3);
   pointer-events: auto;
 }
 
-.inventory-title {
-  font-family: Arial, sans-serif;
-  font-size: 16px;
-  font-weight: bold;
-  color: #d4af37;
-  text-align: center;
-  margin-bottom: 12px;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-  user-select: none;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
-.inventory-title:hover {
-  background-color: rgba(212, 175, 55, 0.2);
-}
-
 .inventory-grid {
   display: grid;
   gap: 4px;
   padding: 4px;
-  max-height: 1000px;
+  grid-template-columns: repeat(9, 1fr);
+  height: 54px;
   overflow: hidden;
-  transition: max-height 0.4s ease-in-out;
-}
-
-.inventory-grid.collapsed {
-  max-height: 58px;
 }
 
 .inventory-grid.expanded {
-  max-height: 1000px;
+  animation: inventoryExpand 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
 }
 
-.inventory-grid.collapsed .inventory-slot[data-row-index]:not([data-row-index="0"]) {
-  display: none;
+.inventory-grid.collapsing {
+  animation: inventoryCollapse 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+@keyframes inventoryExpand {
+  0% {
+    height: 54px;
+  }
+  15% {
+    height: 48px;
+  }
+  65% {
+    height: 245px;
+  }
+  85% {
+    height: 220px;
+  }
+  100% {
+    height: 232px;
+  }
+}
+
+@keyframes inventoryCollapse {
+  0% {
+    height: 232px;
+  }
+  15% {
+    height: 242px;
+  }
+  50% {
+    height: 42px;
+  }
+  75% {
+    height: 58px;
+  }
+  100% {
+    height: 54px;
+  }
 }
 
 .inventory-slot {

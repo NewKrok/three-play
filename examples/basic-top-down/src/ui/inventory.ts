@@ -47,8 +47,7 @@ export const createInventory = (
 
   // Create inventory grid
   const grid = document.createElement('div');
-  grid.className = 'inventory-grid collapsed';
-  grid.style.gridTemplateColumns = `repeat(${gridSize.width}, 1fr)`;
+  grid.className = 'inventory-grid';
 
   const totalSlots = gridSize.width * gridSize.height;
   const slots: InventorySlot[] = [];
@@ -85,14 +84,15 @@ export const createInventory = (
 
   container.appendChild(grid);
 
-  // Add click handler to toggle expansion
-  container.addEventListener('click', (e) => {
-    const target = e.target as HTMLElement;
-    // Only toggle if clicking on container or grid, not on slots
-    if (target === container || target === grid || target.closest('.inventory-title')) {
+  // Add keyboard handler to toggle with Tab key
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Tab') {
+      e.preventDefault(); // Prevent default tab behavior
       toggleExpanded();
     }
-  });
+  };
+
+  document.addEventListener('keydown', handleKeyDown);
 
   /**
    * Finds the first slot containing the specified item
@@ -238,12 +238,13 @@ export const createInventory = (
    */
   const toggleExpanded = (): void => {
     isExpanded = !isExpanded;
+
     if (isExpanded) {
-      grid.classList.remove('collapsed');
+      grid.classList.remove('collapsing');
       grid.classList.add('expanded');
     } else {
       grid.classList.remove('expanded');
-      grid.classList.add('collapsed');
+      grid.classList.add('collapsing');
     }
   };
 
@@ -251,6 +252,7 @@ export const createInventory = (
    * Destroys the inventory
    */
   const destroy = (): void => {
+    document.removeEventListener('keydown', handleKeyDown);
     container.innerHTML = '';
   };
 
