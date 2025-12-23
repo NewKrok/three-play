@@ -355,7 +355,7 @@ worldInstance.onReady((assets) => {
   uiManager = createUIManager({
     maxHealth: MAX_HEALTH,
     maxStamina: MAX_STAMINA,
-    inventorySize: { width: 10, height: 4 },
+    inventorySize: { width: 9, height: 4 },
   });
 
   logger.info('UI Manager initialized');

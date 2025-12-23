@@ -46,20 +46,18 @@ export const createTimeDisplay = (containerId: string): TimeDisplay => {
   const update = (timeInfo: TimeDisplayInfo): void => {
     timeText.textContent = timeInfo.formattedTime;
 
-    // Update icon based on time of day
+    // Update icon and background based on time of day
     // Night: 20:00 - 06:00, Day: 06:00 - 20:00
-    if (timeInfo.hours >= 20 || timeInfo.hours < 6) {
+    const isNight = timeInfo.hours >= 20 || timeInfo.hours < 6;
+
+    if (isNight) {
       icon.innerHTML = '🌙';
       icon.className = 'time-icon night';
-    } else if (timeInfo.hours >= 6 && timeInfo.hours < 12) {
-      icon.innerHTML = '🌅';
-      icon.className = 'time-icon dawn';
-    } else if (timeInfo.hours >= 12 && timeInfo.hours < 18) {
+      timeWrapper.className = 'time-display-wrapper night';
+    } else {
       icon.innerHTML = '☀️';
       icon.className = 'time-icon day';
-    } else {
-      icon.innerHTML = '🌆';
-      icon.className = 'time-icon dusk';
+      timeWrapper.className = 'time-display-wrapper day';
     }
   };
 

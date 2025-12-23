@@ -54,7 +54,7 @@
   transform: rotate(-90deg);
   transform-origin: 50% 50%;
   transition: stroke-dashoffset 0.3s ease;
-  filter: drop-shadow(0 0 8px currentColor);
+  filter: drop-shadow(0 0 1px currentColor);
 }
 
 .radial-label {
@@ -77,7 +77,7 @@
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 }
 
-/* ==================== TIME DISPLAY (Warcraft 3 style) ==================== */
+/* ==================== TIME DISPLAY (Circular Day/Night) ==================== */
 
 .time-container {
   position: absolute;
@@ -87,44 +87,43 @@
 }
 
 .time-display-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: linear-gradient(135deg, rgba(40, 30, 20, 0.95), rgba(60, 50, 40, 0.95));
-  border: 3px solid #8b7355;
-  border-radius: 12px;
-  padding: 12px 24px;
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid rgba(139, 115, 85, 0.8);
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.6),
-    inset 0 2px 4px rgba(255, 255, 255, 0.1),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.3);
-  position: relative;
+    inset 0 2px 4px rgba(255, 255, 255, 0.1);
+  transition: all 0.5s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
 }
 
-.time-display-wrapper::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background: linear-gradient(135deg, #d4af37, #8b7355);
-  border-radius: 12px;
-  z-index: -1;
+.time-display-wrapper.day {
+  background: linear-gradient(135deg, rgba(135, 206, 235, 0.9), rgba(176, 224, 230, 0.9));
+}
+
+.time-display-wrapper.night {
+  background: linear-gradient(135deg, rgba(25, 25, 112, 0.9), rgba(72, 61, 139, 0.9));
 }
 
 .time-icon {
-  font-size: 28px;
+  font-size: 36px;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
   transition: transform 0.3s ease;
+  z-index: 1;
 }
 
 .time-icon.night {
-  animation: pulse 2s ease-in-out infinite;
+  animation: pulse 3s ease-in-out infinite;
 }
 
 .time-icon.day {
-  animation: rotate 20s linear infinite;
+  animation: rotate 30s linear infinite;
 }
 
 @keyframes pulse {
@@ -146,16 +145,36 @@
 }
 
 .time-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   font-family: 'Arial', sans-serif;
-  font-size: 24px;
+  font-size: 16px;
   font-weight: bold;
   color: #f4e4c1;
   text-shadow:
-    2px 2px 0 #3a2a1a,
-    -1px -1px 0 #3a2a1a,
-    1px -1px 0 #3a2a1a,
-    -1px 1px 0 #3a2a1a;
-  letter-spacing: 2px;
+    1px 1px 2px #000,
+    -1px -1px 2px #000,
+    1px -1px 2px #000,
+    -1px 1px 2px #000;
+  letter-spacing: 1px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.time-display-wrapper:hover .time-text {
+  opacity: 1;
+}
+
+.time-display-wrapper:hover .time-icon {
+  opacity: 0;
 }
 
 /* ==================== INVENTORY SYSTEM ==================== */
@@ -172,6 +191,8 @@
   box-shadow:
     0 6px 20px rgba(0, 0, 0, 0.7),
     inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .inventory-title {
@@ -182,12 +203,28 @@
   text-align: center;
   margin-bottom: 12px;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  user-select: none;
 }
 
 .inventory-grid {
   display: grid;
   gap: 4px;
   padding: 4px;
+  max-height: 1000px;
+  overflow: hidden;
+  transition: max-height 0.4s ease-in-out;
+}
+
+.inventory-grid.collapsed {
+  max-height: 58px;
+}
+
+.inventory-grid.expanded {
+  max-height: 1000px;
+}
+
+.inventory-grid.collapsed .inventory-slot[data-row-index]:not([data-row-index="0"]) {
+  display: none;
 }
 
 .inventory-slot {
@@ -227,6 +264,23 @@
   transform: translate(-50%, -50%);
   font-size: 32px;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+}
+
+.slot-hotkey {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  color: #d4af37;
+  text-shadow:
+    1px 1px 0 black,
+    -1px -1px 0 black,
+    1px -1px 0 black,
+    -1px 1px 0 black,
+    0 0 3px black;
+  z-index: 3;
 }
 
 .slot-stack-count {

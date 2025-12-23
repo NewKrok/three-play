@@ -8,6 +8,7 @@ export type Inventory = {
   removeItem: (itemId: string, count?: number) => boolean;
   getItemCount: (itemId: string) => number;
   update: () => void;
+  toggleExpanded: () => void;
   destroy: () => void;
 };
 
@@ -42,9 +43,11 @@ export const createInventory = (
   // Clear container
   container.innerHTML = '';
 
+  let isExpanded = false;
+
   // Create inventory grid
   const grid = document.createElement('div');
-  grid.className = 'inventory-grid';
+  grid.className = 'inventory-grid collapsed';
   grid.style.gridTemplateColumns = `repeat(${gridSize.width}, 1fr)`;
 
   const totalSlots = gridSize.width * gridSize.height;
@@ -57,6 +60,15 @@ export const createInventory = (
     const slotElement = document.createElement('div');
     slotElement.className = 'inventory-slot';
     slotElement.dataset.slotIndex = i.toString();
+    slotElement.dataset.rowIndex = Math.floor(i / gridSize.width).toString();
+
+    // Hotkey number for first row
+    if (i < gridSize.width) {
+      const hotkeyNumber = document.createElement('div');
+      hotkeyNumber.className = 'slot-hotkey';
+      hotkeyNumber.textContent = (i + 1).toString();
+      slotElement.appendChild(hotkeyNumber);
+    }
 
     // Icon container
     const iconContainer = document.createElement('div');
@@ -72,6 +84,15 @@ export const createInventory = (
   }
 
   container.appendChild(grid);
+
+  // Add click handler to toggle expansion
+  container.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    // Only toggle if clicking on container or grid, not on slots
+    if (target === container || target === grid || target.closest('.inventory-title')) {
+      toggleExpanded();
+    }
+  });
 
   /**
    * Finds the first slot containing the specified item
@@ -213,6 +234,20 @@ export const createInventory = (
   };
 
   /**
+   * Toggles inventory expansion
+   */
+  const toggleExpanded = (): void => {
+    isExpanded = !isExpanded;
+    if (isExpanded) {
+      grid.classList.remove('collapsed');
+      grid.classList.add('expanded');
+    } else {
+      grid.classList.remove('expanded');
+      grid.classList.add('collapsed');
+    }
+  };
+
+  /**
    * Destroys the inventory
    */
   const destroy = (): void => {
@@ -224,6 +259,7 @@ export const createInventory = (
     removeItem,
     getItemCount,
     update,
+    toggleExpanded,
     destroy,
   };
 };
