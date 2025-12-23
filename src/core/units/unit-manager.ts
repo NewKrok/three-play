@@ -486,8 +486,8 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
       for (const unit of aiUnits) {
         const behaviorData = aiBehaviorController.getBehaviorData(unit);
         if (behaviorData) {
-          const animationName = AIBehaviorUtils.getAnimationForState(
-            behaviorData.state,
+          const animationName = AIBehaviorUtils.getAnimationForBehavior(
+            behaviorData,
           );
           animationController.playAnimation(unit, animationName);
         }

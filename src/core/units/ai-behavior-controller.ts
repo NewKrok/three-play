@@ -42,6 +42,8 @@ export type AIBehaviorData = {
   homePosition: THREE.Vector3;
   /** Whether unit is currently attacking */
   isAttacking: boolean;
+  /** Whether unit is currently moving (false when in pause period) */
+  isMoving: boolean;
 };
 
 /**
@@ -109,6 +111,7 @@ export const createAIBehaviorController = (
         ? homePosition.clone()
         : unit.model.position.clone(),
       isAttacking: false,
+      isMoving: false,
     };
 
     // Store behavior data in unit's userData
@@ -207,16 +210,19 @@ export const createAIBehaviorController = (
 
       // Skip movement if in pause period
       if (elapsedTime < behaviorData.resumeTime) {
+        behaviorData.isMoving = false;
         continue;
       }
 
       switch (behaviorData.state) {
         case 'idle': {
+          behaviorData.isMoving = false;
           // Wait for next target update
           break;
         }
 
         case 'patrol': {
+          behaviorData.isMoving = true;
           updateUnitMovement(unit, behaviorData.targetPosition, deltaTime);
 
           // Check if reached patrol target
@@ -224,6 +230,7 @@ export const createAIBehaviorController = (
             unit.model.position.distanceTo(behaviorData.targetPosition) < 1.5
           ) {
             behaviorData.state = 'idle';
+            behaviorData.isMoving = false;
             behaviorData.resumeTime =
               elapsedTime + Math.random() * pauseDurationMax;
           }
@@ -232,6 +239,7 @@ export const createAIBehaviorController = (
 
         case 'chase': {
           if (behaviorData.targetUnit) {
+            behaviorData.isMoving = true;
             tempTargetPosition.copy(behaviorData.targetUnit.model.position);
             updateUnitMovement(unit, tempTargetPosition, deltaTime);
 
@@ -242,6 +250,7 @@ export const createAIBehaviorController = (
             if (distanceToTarget <= attackRange) {
               behaviorData.state = 'attack';
               behaviorData.isAttacking = true;
+              behaviorData.isMoving = false;
               behaviorData.resumeTime = elapsedTime + Math.random() * 3;
             }
           } else {
@@ -252,6 +261,7 @@ export const createAIBehaviorController = (
         }
 
         case 'attack': {
+          behaviorData.isMoving = false;
           if (behaviorData.targetUnit) {
             const distanceToTarget = unit.model.position.distanceTo(
               behaviorData.targetUnit.model.position,
@@ -270,13 +280,16 @@ export const createAIBehaviorController = (
         }
 
         case 'return': {
+          behaviorData.isMoving = true;
           updateUnitMovement(unit, behaviorData.homePosition, deltaTime);
 
           // Check if returned home
           if (unit.model.position.distanceTo(behaviorData.homePosition) < 2.0) {
             behaviorData.state = 'idle';
+            behaviorData.isMoving = false;
             behaviorData.resumeTime =
               elapsedTime + Math.random() * pauseDurationMax;
+            behaviorData.isAttacking = false;
           }
           break;
         }
@@ -329,20 +342,29 @@ export const AIBehaviorUtils = {
     }),
 
   /**
-   * Get animation name for AI state
+   * Get animation name for AI behavior data (considers isMoving flag)
    */
-  getAnimationForState: (state: AIBehaviorState): AnimationState => {
-    switch (state) {
+  getAnimationForBehavior: (behaviorData: AIBehaviorData): AnimationState => {
+    // Attack state always returns attack animation regardless of isMoving
+    if (behaviorData.state === 'attack') {
+      return 'attack';
+    }
+
+    // If unit is not moving (paused or idle), return idle animation
+    if (!behaviorData.isMoving) {
+      return 'idle';
+    }
+
+    // Otherwise, return animation based on state
+    switch (behaviorData.state) {
       case 'idle':
         return 'idle';
       case 'patrol':
         return 'walk';
       case 'chase':
         return 'run';
-      case 'attack':
-        return 'attack';
       case 'return':
-        return 'walk';
+        return 'run';
       default:
         return 'idle';
     }
