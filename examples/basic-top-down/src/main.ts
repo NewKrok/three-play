@@ -14,6 +14,8 @@ import {
   zombieUnitDefinition,
 } from './unit-definitions.js';
 import { decorateUnit, COLOR_THEMES } from './unit-decorators.js';
+import { createUIManager } from './ui/index.js';
+import type { UIManager } from './ui/index.js';
 
 import * as THREE from 'three';
 import {
@@ -101,6 +103,7 @@ let rightHandBone: THREE.Bone | null = null;
 // Unit and Projectile systems
 let unitManager: UnitManagerType;
 let projectileManager: ProjectileManager;
+let uiManager: UIManager;
 let lastLightAttackTime = 0;
 let lastHeavyAttackTime = 0;
 let isRolling = false;
@@ -127,8 +130,10 @@ const mouseWorldPosition = new THREE.Vector3();
 const gameState = {
   collectedApples: 0,
   score: 0,
-  health: MAX_HEALTH / 2,
+  health: MAX_HEALTH,
+  maxHealth: MAX_HEALTH,
   stamina: MAX_STAMINA,
+  maxStamina: MAX_STAMINA,
 };
 
 const labelRenderer = new CSS2DRenderer();
@@ -345,6 +350,15 @@ worldInstance.onReady((assets) => {
     logger.error('Unit manager not available - check world config');
     return;
   }
+
+  // Initialize UI Manager
+  uiManager = createUIManager({
+    maxHealth: MAX_HEALTH,
+    maxStamina: MAX_STAMINA,
+    inventorySize: { width: 10, height: 4 },
+  });
+
+  logger.info('UI Manager initialized');
 
   // Append renderer to DOM
   document.querySelector('#demo').appendChild(renderer.domElement);
@@ -1394,11 +1408,13 @@ worldInstance.onReady((assets) => {
     // Check for mouse press and aim mode
     if (isMousePressed && isAiming && !isThrowing) {
       const now = performance.now();
+      const appleCount = uiManager.getItemCount('apple');
       if (
         now - lastThrowTime > throwCooldown &&
-        gameState.collectedApples > 0
+        appleCount > 0
       ) {
         gameState.collectedApples--;
+        uiManager.removeItem('apple', 1);
         isThrowing = true;
 
         // Play throw animation (non-looping)
@@ -1527,6 +1543,9 @@ worldInstance.onReady((assets) => {
             });
             gameState.collectedApples += appleIndices.length;
 
+            // Add apples to inventory
+            uiManager.addItem('apple', appleIndices.length);
+
             const effect =
               appleEffects[Math.floor(Math.random() * appleEffects.length)];
             if (effect.stamina) {
@@ -1540,6 +1559,7 @@ worldInstance.onReady((assets) => {
                 Math.floor(
                   Math.random() * (effect.health.max - effect.health.min + 1),
                 ) + effect.health.min;
+              gameState.health = Math.min(gameState.health, MAX_HEALTH);
             }
 
             tree.appleIndices = null;
@@ -1642,6 +1662,7 @@ worldInstance.onReady((assets) => {
 
             // Add 30 apples when collecting a crate
             gameState.collectedApples += 30;
+            uiManager.addItem('apple', 30);
             showFloatingLabel({
               text: '+30 apples',
               position: character.model.position,
@@ -1836,8 +1857,7 @@ worldInstance.onReady((assets) => {
     const dayNightManager = worldInstance.getDayNightManager();
     if (dayNightManager) {
       const timeInfo = dayNightManager.getTimeInfo();
-      const clockEl = document.getElementById('clock-text');
-      if (clockEl) clockEl.textContent = timeInfo.formattedTime;
+      uiManager.updateTime(timeInfo);
     }
   };
 
@@ -1901,6 +1921,11 @@ worldInstance.onReady((assets) => {
     // No need for manual updateUnits() as the UnitManager is called in worldInstance.onUpdate()
 
     updateTimeDisplay();
+
+    // Update UI displays
+    uiManager.updateHealth(gameState.health);
+    uiManager.updateStamina(gameState.stamina);
+
     cinamaticCameraController.update(cycleData.delta);
 
     // Render CSS2D labels

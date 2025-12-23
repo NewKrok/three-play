@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Basic Top-Down Game - THREE Play Example</title>
+    <link rel="stylesheet" href="./src/ui/styles.css" />
     <style>
       body {
         margin: 0;
@@ -69,24 +70,27 @@
         style="width: 100%; height: 100%"
       />
     </div>
-    <div class="ui">
-      <div class="apples">
-        <span id="apple-count">0</span>
-      </div>
-      <div class="score-wrapper">
-        <span id="score">0</span>
-      </div>
-
-      <div id="stamina-ui">
-        <div id="stamina-container">
-          <div id="stamina-bar-wrapper">
-            <div id="stamina-bar"></div>
-          </div>
-        </div>
+    <!-- New Game UI -->
+    <div class="game-ui">
+      <!-- Health Display (bottom left) -->
+      <div class="radial-container health">
+        <div id="health-display"></div>
       </div>
 
-      <div id="game-clock">
-        <span id="clock-text">06:00</span>
+      <!-- Stamina Display (bottom right) -->
+      <div class="radial-container stamina">
+        <div id="stamina-display"></div>
+      </div>
+
+      <!-- Time Display (top center) -->
+      <div class="time-container">
+        <div id="time-display"></div>
+      </div>
+
+      <!-- Inventory (bottom center) -->
+      <div class="inventory-container">
+        <div class="inventory-title">Inventory</div>
+        <div id="inventory-display"></div>
       </div>
     </div>
 

@@ -1,0 +1,293 @@
+/**
+ * UI Styles for Game Interface
+ */
+
+/* Main game UI container */
+.game-ui {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* Enable pointer events only for interactive elements */
+.game-ui .inventory-slot {
+  pointer-events: auto;
+}
+
+/* ==================== RADIAL DISPLAYS (HP/Stamina) ==================== */
+
+.radial-container {
+  position: absolute;
+  bottom: 40px;
+  width: 140px;
+  height: 140px;
+}
+
+.radial-container.health {
+  left: 40px;
+}
+
+.radial-container.stamina {
+  right: 40px;
+}
+
+.radial-display {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+
+.radial-bg {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 12;
+}
+
+.radial-progress {
+  fill: none;
+  stroke-width: 12;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: stroke-dashoffset 0.3s ease;
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+.radial-label {
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  fill: white;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.radial-value {
+  font-family: Arial, sans-serif;
+  font-size: 24px;
+  font-weight: bold;
+  fill: white;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* ==================== TIME DISPLAY (Warcraft 3 style) ==================== */
+
+.time-container {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.time-display-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(40, 30, 20, 0.95), rgba(60, 50, 40, 0.95));
+  border: 3px solid #8b7355;
+  border-radius: 12px;
+  padding: 12px 24px;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.6),
+    inset 0 2px 4px rgba(255, 255, 255, 0.1),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.time-display-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(135deg, #d4af37, #8b7355);
+  border-radius: 12px;
+  z-index: -1;
+}
+
+.time-icon {
+  font-size: 28px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  transition: transform 0.3s ease;
+}
+
+.time-icon.night {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.time-icon.day {
+  animation: rotate 20s linear infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.time-text {
+  font-family: 'Arial', sans-serif;
+  font-size: 24px;
+  font-weight: bold;
+  color: #f4e4c1;
+  text-shadow:
+    2px 2px 0 #3a2a1a,
+    -1px -1px 0 #3a2a1a,
+    1px -1px 0 #3a2a1a,
+    -1px 1px 0 #3a2a1a;
+  letter-spacing: 2px;
+}
+
+/* ==================== INVENTORY SYSTEM ==================== */
+
+.inventory-container {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(20, 20, 25, 0.95), rgba(40, 35, 30, 0.95));
+  border: 3px solid #6b5d52;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.7),
+    inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.inventory-title {
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  font-weight: bold;
+  color: #d4af37;
+  text-align: center;
+  margin-bottom: 12px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.inventory-grid {
+  display: grid;
+  gap: 4px;
+  padding: 4px;
+}
+
+.inventory-slot {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, rgba(50, 45, 40, 0.8), rgba(30, 28, 25, 0.8));
+  border: 2px solid #4a4238;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.inventory-slot:hover {
+  background: linear-gradient(135deg, rgba(60, 55, 50, 0.9), rgba(40, 38, 35, 0.9));
+  border-color: #6b5d52;
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.inventory-slot.filled {
+  background: linear-gradient(135deg, rgba(70, 60, 50, 0.9), rgba(50, 45, 40, 0.9));
+  border-color: #8b7355;
+}
+
+.inventory-slot.filled:hover {
+  border-color: #d4af37;
+}
+
+.slot-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 32px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+}
+
+.slot-stack-count {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+  text-shadow:
+    1px 1px 0 black,
+    -1px -1px 0 black,
+    1px -1px 0 black,
+    -1px 1px 0 black,
+    0 0 4px black;
+}
+
+/* ==================== RESPONSIVE ADJUSTMENTS ==================== */
+
+@media (max-width: 1024px) {
+  .radial-container {
+    width: 100px;
+    height: 100px;
+  }
+
+  .radial-container.health {
+    left: 20px;
+    bottom: 20px;
+  }
+
+  .radial-container.stamina {
+    right: 20px;
+    bottom: 20px;
+  }
+
+  .inventory-slot {
+    width: 40px;
+    height: 40px;
+  }
+
+  .slot-icon {
+    font-size: 24px;
+  }
+}
+
+/* ==================== UTILITY CLASSES ==================== */
+
+.hidden {
+  display: none !important;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
