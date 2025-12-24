@@ -159,21 +159,23 @@ describe('AIBehaviorController', () => {
 
     it('should update behaviors with player unit', () => {
       const units = [mockUnit];
+      const allUnits = [mockUnit, playerUnit];
       const deltaTime = 0.016;
       const elapsedTime = 1.0;
 
       expect(() => {
-        aiController.updateBehaviors(units, playerUnit, deltaTime, elapsedTime);
+        aiController.updateBehaviors(units, allUnits, deltaTime, elapsedTime);
       }).not.toThrow();
     });
 
     it('should update behaviors without player unit', () => {
       const units = [mockUnit];
+      const allUnits = [mockUnit];
       const deltaTime = 0.016;
       const elapsedTime = 1.0;
 
       expect(() => {
-        aiController.updateBehaviors(units, null, deltaTime, elapsedTime);
+        aiController.updateBehaviors(units, allUnits, deltaTime, elapsedTime);
       }).not.toThrow();
     });
 
@@ -182,18 +184,19 @@ describe('AIBehaviorController', () => {
       const elapsedTime = 1.0;
 
       expect(() => {
-        aiController.updateBehaviors([], playerUnit, deltaTime, elapsedTime);
+        aiController.updateBehaviors([], [], deltaTime, elapsedTime);
       }).not.toThrow();
     });
 
     it('should handle units without behavior', () => {
       const uninitializedUnit = { ...mockUnit, id: 'uninitialized' };
       const units = [uninitializedUnit];
+      const allUnits = [uninitializedUnit, playerUnit];
       const deltaTime = 0.016;
       const elapsedTime = 1.0;
 
       expect(() => {
-        aiController.updateBehaviors(units, playerUnit, deltaTime, elapsedTime);
+        aiController.updateBehaviors(units, allUnits, deltaTime, elapsedTime);
       }).not.toThrow();
     });
   });
@@ -205,17 +208,19 @@ describe('AIBehaviorController', () => {
 
     it('should update target with player unit', () => {
       const elapsedTime = 1.0;
+      const allUnits = [mockUnit, playerUnit];
 
       expect(() => {
-        aiController.updateTarget(mockUnit, playerUnit, elapsedTime);
+        aiController.updateTarget(mockUnit, allUnits, elapsedTime);
       }).not.toThrow();
     });
 
     it('should update target without player unit', () => {
       const elapsedTime = 1.0;
+      const allUnits = [mockUnit];
 
       expect(() => {
-        aiController.updateTarget(mockUnit, null, elapsedTime);
+        aiController.updateTarget(mockUnit, allUnits, elapsedTime);
       }).not.toThrow();
     });
   });
@@ -230,11 +235,12 @@ describe('AIBehaviorController', () => {
       playerUnit.model.position.set(20, 0, 20);
 
       const units = [mockUnit];
+      const allUnits = [mockUnit, playerUnit];
       aiController.setBehaviorState(mockUnit, 'idle');
 
       // Update multiple times
       for (let i = 0; i < 5; i++) {
-        aiController.updateBehaviors(units, playerUnit, 0.016, i * 0.016);
+        aiController.updateBehaviors(units, allUnits, 0.016, i * 0.016);
       }
 
       const behaviorData = aiController.getBehaviorData(mockUnit);
@@ -246,11 +252,12 @@ describe('AIBehaviorController', () => {
       playerUnit.model.position.set(3, 0, 0);
 
       const units = [mockUnit];
+      const allUnits = [mockUnit, playerUnit];
       aiController.setBehaviorState(mockUnit, 'patrol');
 
       // Update multiple times to allow detection
       for (let i = 0; i < 10; i++) {
-        aiController.updateBehaviors(units, playerUnit, 0.1, i * 0.1);
+        aiController.updateBehaviors(units, allUnits, 0.1, i * 0.1);
       }
 
       const behaviorData = aiController.getBehaviorData(mockUnit);

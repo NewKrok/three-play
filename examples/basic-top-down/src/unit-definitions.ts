@@ -6,6 +6,8 @@ import type { UnitDefinition } from '@newkrok/three-play';
 export const humanUnitDefinition: UnitDefinition = {
   id: 'human-player',
   type: 'player',
+  team: 'player',
+  enemyTeams: ['zombies'],
   modelAssets: {
     baseModel: 'human-idle',
     animations: {
@@ -48,6 +50,8 @@ export const humanUnitDefinition: UnitDefinition = {
 export const zombieUnitDefinition: UnitDefinition = {
   id: 'zombie-enemy',
   type: 'enemy',
+  team: 'zombies',
+  enemyTeams: ['player', 'soldiers'],
   modelAssets: {
     baseModel: 'zombie-idle',
     animations: {
@@ -91,6 +95,8 @@ export const zombieUnitDefinition: UnitDefinition = {
 export const soldierUnitDefinition: UnitDefinition = {
   id: 'soldier-ally',
   type: 'npc',
+  team: 'soldiers',
+  enemyTeams: ['zombies'],
   modelAssets: {
     baseModel: 'human-idle',
     animations: {

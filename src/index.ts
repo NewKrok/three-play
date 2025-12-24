@@ -65,6 +65,9 @@ export {
 // Object Pool utilities
 export { ObjectPoolUtils, createObjectPool } from './core/utils/index.js';
 
+// Team utilities
+export { TeamUtils } from './core/utils/index.js';
+
 // Unit management utilities
 export {
   CharacterAssetUtils,
@@ -189,3 +192,9 @@ export type {
   UnitManager as UnitManagerType,
   CharacterAssetUtils as CharacterAssetUtilsType,
 } from './types/units.js';
+export type {
+  TeamId,
+  TeamConfig,
+  TeamManagerConfig,
+  TeamUtils as TeamUtilsType,
+} from './types/team.js';

@@ -102,6 +102,7 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
       const unit: Unit = {
         id: unitId,
         definition,
+        team: definition.team, // Assign team from definition
         model: characterData.model,
         mixer: characterData.mixer,
         actions: characterData.actions,
@@ -475,9 +476,10 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
     );
 
     if (aiUnits.length > 0) {
+      // Pass ALL units to updateBehaviors so AI can find targets from all units
       aiBehaviorController.updateBehaviors(
         aiUnits,
-        playerUnit,
+        allUnits,
         deltaTime,
         elapsedTime,
       );
@@ -732,6 +734,9 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
     getOutlinedUnits: null as any,
     removeAllUnitOutlines: null as any,
   };
+
+  // Store config reference in unitManager for team system
+  (unitManager as any).config = config;
 
   // Now create combat controller with unit manager reference
   combatController = createCombatController({ logger }, unitManager);

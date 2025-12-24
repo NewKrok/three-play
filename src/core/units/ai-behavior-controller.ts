@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Unit, AnimationState } from '../../types/units';
+import { TeamUtils } from '../utils/team-utils.js';
 
 /**
  * AI Behavior states
@@ -54,8 +55,8 @@ export type AIBehaviorController = {
   initializeBehavior: (unit: Unit, homePosition?: THREE.Vector3) => void;
   /** Update AI behavior for all units */
   updateBehaviors: (
-    units: Unit[],
-    playerUnit: Unit | null,
+    aiUnits: Unit[],
+    allUnits: Unit[],
     deltaTime: number,
     elapsedTime: number,
   ) => void;
@@ -66,7 +67,7 @@ export type AIBehaviorController = {
   /** Force target selection for a unit */
   updateTarget: (
     unit: Unit,
-    playerUnit: Unit | null,
+    allUnits: Unit[],
     elapsedTime: number,
   ) => void;
 };
@@ -134,26 +135,29 @@ export const createAIBehaviorController = (
 
   const updateTarget = (
     unit: Unit,
-    playerUnit: Unit | null,
+    allUnits: Unit[],
     elapsedTime: number,
   ): void => {
     const behaviorData = getBehaviorData(unit);
-    if (!behaviorData || !playerUnit) return;
+    if (!behaviorData) return;
 
     behaviorData.nextTargetUpdateTime =
       elapsedTime + Math.random() * targetUpdateInterval;
 
-    const distanceToPlayer = unit.model.position.distanceTo(
-      playerUnit.model.position,
+    // Find nearest enemy using team system
+    const nearestEnemy = TeamUtils.findNearestEnemy(
+      unit,
+      allUnits,
+      detectionRange,
     );
 
-    if (distanceToPlayer <= detectionRange) {
-      // Player detected - switch to chase
-      behaviorData.targetUnit = playerUnit;
+    if (nearestEnemy) {
+      // Enemy detected - switch to chase
+      behaviorData.targetUnit = nearestEnemy;
       behaviorData.state = 'chase';
       behaviorData.isAttacking = false;
     } else {
-      // Player not in range - patrol or return home
+      // No enemy in range - patrol or return home
       behaviorData.targetUnit = null;
       if (behaviorData.state === 'chase' || behaviorData.state === 'attack') {
         behaviorData.state = 'return';
@@ -194,18 +198,18 @@ export const createAIBehaviorController = (
   };
 
   const updateBehaviors = (
-    units: Unit[],
-    playerUnit: Unit | null,
+    aiUnits: Unit[],
+    allUnits: Unit[],
     deltaTime: number,
     elapsedTime: number,
   ): void => {
-    for (const unit of units) {
+    for (const unit of aiUnits) {
       const behaviorData = getBehaviorData(unit);
       if (!behaviorData) continue;
 
       // Update target selection periodically
       if (elapsedTime >= behaviorData.nextTargetUpdateTime) {
-        updateTarget(unit, playerUnit, elapsedTime);
+        updateTarget(unit, allUnits, elapsedTime);
       }
 
       // Skip movement if in pause period

@@ -4,6 +4,7 @@ import type {
   AIBehaviorState,
   AIBehaviorData,
 } from '../core/units/ai-behavior-controller.js';
+import type { TeamId } from './team.js';
 
 /**
  * Unit type definitions
@@ -58,6 +59,10 @@ export type UnitDefinition = {
   id: string;
   /** Type of unit */
   type: UnitType;
+  /** Team identifier for faction system */
+  team?: TeamId;
+  /** List of enemy team IDs this unit will attack */
+  enemyTeams?: TeamId[];
   /** Asset references for models and animations */
   modelAssets: {
     /** Base model asset key */
@@ -132,6 +137,8 @@ export type Unit = {
   id: string;
   /** Unit definition reference */
   definition: UnitDefinition;
+  /** Team identifier for faction system */
+  team?: TeamId;
   /** THREE.js model group */
   model: THREE.Group;
   /** Animation mixer for handling animations */
@@ -246,6 +253,11 @@ export type UnitManagerConfig = {
   };
   /** Unit definitions to register */
   definitions?: UnitDefinition[];
+  /** Team system configuration */
+  teams?: {
+    /** Enable friendly fire (units can damage same team) */
+    enableFriendlyFire?: boolean;
+  };
 };
 
 /**

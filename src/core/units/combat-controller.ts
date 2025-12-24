@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Unit, AttackType, CombatConfig } from '../../types/units';
+import { TeamUtils } from '../utils/team-utils.js';
 
 /**
  * Combat attack result
@@ -121,10 +122,16 @@ export const createCombatController = (
     const attackConfig = attackType === 'light' ? lightAttack : heavyAttack;
     const range = attackConfig.range || 2.0;
 
-    return unitManager.getUnitsInRange(
+    const unitsInRange = unitManager.getUnitsInRange(
       attacker.model.position,
       range,
       attacker,
+    );
+
+    // Filter by team - only include units that can be attacked
+    const teamConfig = unitManager.config?.teams;
+    return unitsInRange.filter((unit: Unit) =>
+      TeamUtils.canAttack(attacker, unit, teamConfig),
     );
   };
 
