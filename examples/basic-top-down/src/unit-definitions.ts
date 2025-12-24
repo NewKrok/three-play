@@ -84,3 +84,45 @@ export const zombieUnitDefinition: UnitDefinition = {
     },
   },
 };
+
+/**
+ * Soldier unit definition - fights against zombies
+ */
+export const soldierUnitDefinition: UnitDefinition = {
+  id: 'soldier-ally',
+  type: 'npc',
+  modelAssets: {
+    baseModel: 'human-idle',
+    animations: {
+      idle: 'human-idle',
+      walk: 'walk',
+      run: 'run',
+      attack: 'light-attack', // AI uses this for attacking
+      lightAttack: 'light-attack',
+      heavyAttack: 'heavy-attack',
+      hitToBody: 'hit-to-body',
+    },
+  },
+  stats: {
+    speed: 1.0,
+    health: 100,
+    attackDamage: 30,
+    collisionRadius: 0.5,
+  },
+  appearance: {
+    scale: 1.0,
+    rotation: Math.PI / 2,
+  },
+
+  ai: {
+    type: 'chase',
+    targeting: {
+      preferredTargets: ['enemy'],
+      detectionRange: 15.0,
+      attackRange: 1.5,
+    },
+    movement: {
+      speed: 1.0,
+    },
+  },
+};

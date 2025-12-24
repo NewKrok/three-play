@@ -12,6 +12,7 @@ import { createAppleProjectileDefinition } from './projectiles-config.js';
 import {
   humanUnitDefinition,
   zombieUnitDefinition,
+  soldierUnitDefinition,
 } from './unit-definitions.js';
 import { decorateUnit, COLOR_THEMES } from './unit-decorators.js';
 import { createUIManager } from './ui/index.js';
@@ -53,6 +54,7 @@ const {
   MIN_APPLES_PER_TREE,
   MAX_APPLES_PER_TREE,
   ENEMY_COUNT,
+  SOLDIER_COUNT,
   APPLE_HIT_RADIUS,
   APPLE_PUSH_FORCE,
   MAX_STAMINA,
@@ -70,6 +72,12 @@ const startingPosition = new THREE.Vector3(
   Constants.startingPosition.x,
   Constants.startingPosition.y,
   Constants.startingPosition.z,
+);
+
+const soldierSpawnPosition = new THREE.Vector3(
+  Constants.soldierSpawnPosition.x,
+  Constants.soldierSpawnPosition.y,
+  Constants.soldierSpawnPosition.z,
 );
 
 const appleEffects = [
@@ -255,13 +263,13 @@ const createCinematicCameraController = (
 
 worldConfig.units = {
   enabled: true,
-  maxUnits: 50,
+  maxUnits: 100,
   enableCollision: true,
   collision: {
     minDistance: 1.0,
     pushStrength: 0.5,
   },
-  definitions: [humanUnitDefinition, zombieUnitDefinition],
+  definitions: [humanUnitDefinition, zombieUnitDefinition, soldierUnitDefinition],
 } as any;
 
 // Set up projectile collision detection callback
@@ -276,8 +284,9 @@ worldConfig.projectiles = {
     const allUnits = unitManagerInstance.getAllUnits();
 
     for (const unit of allUnits) {
-      // Don't hit the player
+      // Don't hit the player or soldiers (allies)
       if (character && unit === character) continue;
+      if (unit.definition?.type === 'npc') continue; // Skip soldiers
 
       // Check collision with unit's body using a capsule approximation
       // Check if projectile is within horizontal range
@@ -554,6 +563,36 @@ worldInstance.onReady((assets) => {
   };
 
   createEnemies(ENEMY_COUNT);
+
+  // Create soldiers using unit manager
+  const createSoldiers = async (count: number) => {
+    for (let i = 0; i < count; i++) {
+      const position = soldierSpawnPosition.clone();
+      position.x += (i % 5) * 2 - 4; // Spread in rows of 5
+      position.z += Math.floor(i / 5) * 2;
+      position.y = heightmapUtils.getHeightFromPosition(position);
+
+      const soldier = decorateUnit(
+        unitManager.createUnit({
+          definitionId: 'soldier-ally',
+          position,
+        }),
+        COLOR_THEMES.soldier,
+      );
+
+      if (soldier) {
+        // Initialize health tracking
+        soldier.userData.health = 5; // Soldiers are tougher than zombies
+        soldier.userData.isDead = false;
+
+        // Initialize AI behavior for soldier to chase zombies
+        unitManager.initializeAIBehavior(soldier, position);
+        logger.info(`Created soldier ${i + 1}/${count}`);
+      }
+    }
+  };
+
+  createSoldiers(SOLDIER_COUNT);
 
   // Initialize combat for player character
   if (character) {

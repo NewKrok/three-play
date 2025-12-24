@@ -26,6 +26,7 @@ export const LARGE_ROCK_COUNT = 100;
 export const TREE_COUNT = 1000;
 export const CRATE_COUNT = 100;
 export const ENEMY_COUNT = 20;
+export const SOLDIER_COUNT = 20;
 
 // Collision constants
 export const TREE_COLLISION_RADIUS = 1.5;
@@ -62,3 +63,4 @@ export const HEAVY_ATTACK_STUN_DURATION = 3000;
 
 // Misc constants
 export const startingPosition = { x: 88, y: 0, z: 132 };
+export const soldierSpawnPosition = { x: 120, y: 10, z: 144 };

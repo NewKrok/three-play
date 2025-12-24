@@ -41,6 +41,14 @@ export const COLOR_THEMES = {
     arms: 0x9e9e9e, // Medium grey (armor)
     legs: 0x616161, // Dark grey (armor)
   },
+  soldier: {
+    head: 0xffdbac, // Light skin tone
+    hands: 0xffdbac, // Light skin tone
+    feet: 0x1b5e20, // Dark green (military boots)
+    chest: 0x2e7d32, // Military green
+    arms: 0x388e3c, // Medium green
+    legs: 0x1b5e20, // Dark green (military pants)
+  },
 } as const;
 
 /**
@@ -118,12 +126,22 @@ export const decorateUnit = (
           ? mesh.material
           : [mesh.material];
 
-        materials.forEach((mat: any) => {
-          // Try to set color directly - most Three.js materials have a color property
-          if (mat && mat.color && typeof mat.color.setHex === 'function') {
-            mat.color.setHex(color);
+        // Clone materials to avoid sharing between units
+        const clonedMaterials = materials.map((mat: any) => {
+          if (mat && mat.clone) {
+            const clonedMat = mat.clone();
+            if (clonedMat.color && typeof clonedMat.color.setHex === 'function') {
+              clonedMat.color.setHex(color);
+            }
+            return clonedMat;
           }
+          return mat;
         });
+
+        // Assign the cloned material(s) back to the mesh
+        mesh.material = Array.isArray(mesh.material)
+          ? clonedMaterials
+          : clonedMaterials[0];
       }
     }
   });
