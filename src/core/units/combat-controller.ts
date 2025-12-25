@@ -59,7 +59,7 @@ export type CombatController = {
   /** Update combat states (cooldowns, stamina regeneration) */
   updateCombat: (units: Unit[], deltaTime: number, currentTime: number) => void;
   /** Initialize combat data for a unit */
-  initializeCombat: (unit: Unit, stamina?: number) => void;
+  initializeCombat: (unit: Unit, stamina?: number, config?: CombatConfig) => void;
   /** Set stamina for a unit */
   setStamina: (unit: Unit, stamina: number) => void;
   /** Get units in attack range */
@@ -98,7 +98,7 @@ export const createCombatController = (
     },
     rangedAttack = {
       actionDelay: 400,
-      enableAmmo: false,
+      enableAmmo: true,
     },
     ammo,
     enableDamage = true,
@@ -114,7 +114,7 @@ export const createCombatController = (
     healthBarManager = manager;
   };
 
-  const initializeCombat = (unit: Unit, stamina: number = 100): void => {
+  const initializeCombat = (unit: Unit, stamina: number = 100, unitConfig?: CombatConfig): void => {
     if (!unit.combat) {
       unit.combat = {};
     }
@@ -126,6 +126,11 @@ export const createCombatController = (
     unit.combat.isAiming = false;
     unit.combat.stamina = stamina;
     unit.combat.maxStamina = stamina;
+
+    // Store unit-specific combat config (including ammo callbacks)
+    if (unitConfig) {
+      unit.combat.config = unitConfig;
+    }
   };
 
   const canAttack = (
@@ -493,9 +498,13 @@ export const createCombatController = (
     const lastAttackTime = attacker.combat.lastRangedAttackTime || 0;
     if (currentTime < lastAttackTime + rangedConfig.cooldown) return false;
 
-    // Check ammo if enabled
-    if (rangedAttack.enableAmmo && rangedConfig.ammoType && ammo?.canUseAmmo) {
-      if (!ammo.canUseAmmo(attacker, rangedConfig.ammoType)) return false;
+    // Check ammo if enabled (check both global config and unit-specific config)
+    const unitConfig = attacker.combat?.config;
+    const isAmmoEnabled = (rangedAttack.enableAmmo || unitConfig?.rangedAttack?.enableAmmo) ?? false;
+    const ammoCallback = unitConfig?.ammo?.canUseAmmo || ammo?.canUseAmmo;
+
+    if (isAmmoEnabled && rangedConfig.ammoType && ammoCallback) {
+      if (!ammoCallback(attacker, rangedConfig.ammoType)) return false;
     }
 
     // Check range
@@ -574,9 +583,13 @@ export const createCombatController = (
       attacker.combat.stamina = (attacker.combat.stamina || 0) - rangedConfig.staminaCost;
       attacker.combat.stamina = Math.max(0, attacker.combat.stamina);
 
-      // Consume ammo if enabled
-      if (rangedAttack.enableAmmo && rangedConfig.ammoType && ammo?.consumeAmmo) {
-        ammo.consumeAmmo(attacker, rangedConfig.ammoType, 1);
+      // Consume ammo if enabled (check both global config and unit-specific config)
+      const unitConfig = attacker.combat?.config;
+      const isAmmoEnabled = (rangedAttack.enableAmmo || unitConfig?.rangedAttack?.enableAmmo) ?? false;
+      const consumeCallback = unitConfig?.ammo?.consumeAmmo || ammo?.consumeAmmo;
+
+      if (isAmmoEnabled && rangedConfig.ammoType && consumeCallback) {
+        consumeCallback(attacker, rangedConfig.ammoType, 1);
       }
     }
 

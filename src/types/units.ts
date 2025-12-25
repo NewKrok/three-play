@@ -278,6 +278,8 @@ export type Unit = {
     stamina?: number;
     /** Maximum stamina */
     maxStamina?: number;
+    /** Unit-specific combat configuration (including ammo callbacks) */
+    config?: CombatConfig;
   };
   /** Particle effects attached to this unit */
   effects?: {
