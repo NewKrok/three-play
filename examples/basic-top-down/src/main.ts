@@ -1,8 +1,14 @@
-import { createWorld } from '@newkrok/three-play';
+import {
+  createWorld,
+  createHealthBarManager,
+  createDamageNumbersManager,
+} from '@newkrok/three-play';
 import type {
   ProjectileManager,
   UnitManagerType,
   Unit,
+  HealthBarManager,
+  DamageNumbersManager,
 } from '@newkrok/three-play';
 import {
   updateParticleSystems,
@@ -369,6 +375,11 @@ worldInstance.onReady((assets) => {
 
   logger.info('UI Manager initialized');
 
+  // Initialize health bar and damage numbers managers
+  const healthBarManager = createHealthBarManager(scene);
+  const damageNumbersManager = createDamageNumbersManager(scene);
+  logger.info('Health bar and damage numbers managers initialized');
+
   // Initialize debug display
   const debugDisplay = document.getElementById('debug-display');
   const updateDebugDisplay = () => {
@@ -557,6 +568,16 @@ worldInstance.onReady((assets) => {
 
         // Initialize AI behavior for enemy
         unitManager.initializeAIBehavior(enemy, position);
+
+        // Initialize combat for enemy
+        unitManager.initializeCombat(enemy, 100);
+
+        // Add health bar to enemy
+        healthBarManager.createHealthBar(enemy, {
+          yOffset: 2.2,
+          alwaysShow: false,
+        });
+
         logger.info(`Created enemy ${i + 1}/${count}`);
       }
     }
@@ -587,6 +608,16 @@ worldInstance.onReady((assets) => {
 
         // Initialize AI behavior for soldier to chase zombies
         unitManager.initializeAIBehavior(soldier, position);
+
+        // Initialize combat for soldier
+        unitManager.initializeCombat(soldier, 100);
+
+        // Add health bar to soldier
+        healthBarManager.createHealthBar(soldier, {
+          yOffset: 2.2,
+          alwaysShow: false,
+        });
+
         logger.info(`Created soldier ${i + 1}/${count}`);
       }
     }
@@ -597,6 +628,11 @@ worldInstance.onReady((assets) => {
   // Initialize combat for player character
   if (character) {
     unitManager.initializeCombat(character, MAX_STAMINA);
+    // Add health bar to player
+    healthBarManager.createHealthBar(character, {
+      yOffset: 2.5,
+      alwaysShow: false, // Only show when damaged
+    });
   }
 
   const treeModel = loadedAssets.models['low-poly-tree'] as any;
@@ -1355,6 +1391,19 @@ worldInstance.onReady((assets) => {
       const result = unitManager.performLightAttack(character, now);
       unitManager.playAnimation(character, 'lightAttack');
 
+      // Show damage numbers for hits
+      if (result.success && result.damages.length > 0) {
+        setTimeout(() => {
+          result.damages.forEach(({ unit, damageResult }) => {
+            if (damageResult) {
+              const pos = unit.model.position.clone();
+              pos.y += 1.5;
+              damageNumbersManager.showDamage(pos, damageResult);
+            }
+          });
+        }, LIGHT_ATTACK_ACTION_DELAY);
+      }
+
       setTimeout(() => {
         isAttacking = false;
         unitManager.playAnimation(character, 'idle');
@@ -1378,6 +1427,19 @@ worldInstance.onReady((assets) => {
       // Use unit manager for heavy attack
       const result = unitManager.performHeavyAttack(character, now);
       unitManager.playAnimation(character, 'heavyAttack');
+
+      // Show damage numbers for hits
+      if (result.success && result.damages.length > 0) {
+        setTimeout(() => {
+          result.damages.forEach(({ unit, damageResult }) => {
+            if (damageResult) {
+              const pos = unit.model.position.clone();
+              pos.y += 1.5;
+              damageNumbersManager.showDamage(pos, damageResult);
+            }
+          });
+        }, Constants.HEAVY_ATTACK_ACTION_DELAY);
+      }
 
       setTimeout(() => {
         isAttacking = false;
@@ -1988,6 +2050,10 @@ worldInstance.onReady((assets) => {
 
     // Update debug display
     updateDebugDisplay();
+
+    // Update health bars and damage numbers
+    healthBarManager.updateHealthBars(camera);
+    damageNumbersManager.update(deltaTime, elapsedTime);
 
     cinamaticCameraController.update(cycleData.delta);
 
