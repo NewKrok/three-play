@@ -601,7 +601,10 @@ world.onUpdate((deltaTime) => {
         // Show damage number
         showDamageNumber(result.finalDamage, target.model.position, result.wasCritical);
 
-        if (isDead) {
+        // Note: Death is now handled automatically by the combat system
+        // if the unit has death.autoHandle: true in its definition
+        // Manual handling only needed for custom death logic
+        if (isDead && !target.definition.death?.autoHandle) {
           handleUnitDeath(target);
         }
       }
@@ -708,7 +711,9 @@ function performAttack(attacker: Unit, target: Unit) {
     playCriticalHitSound();
   }
 
-  if (isDead) {
+  // Note: Death is now handled automatically by the combat system
+  // if the unit has death.autoHandle: true in its definition
+  if (isDead && !target.definition.death?.autoHandle) {
     handleDeath(target);
   }
 

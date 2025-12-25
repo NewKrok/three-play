@@ -107,6 +107,7 @@ type UnitDefinition = {
     materialModifier?: (instance: THREE.Group) => void;
   };
   ai?: AIBehaviorConfig;            // AI configuration
+  death?: DeathConfig;              // Death behavior configuration
 };
 ```
 
@@ -158,6 +159,13 @@ const warriorDefinition: UnitDefinition = {
       knockbackForce: 5,
       stunDuration: 1000
     }
+  },
+  death: {
+    animations: ['death1', 'death2', 'death3'], // Random selection
+    removeDelay: 2000, // Wait 2 seconds before removing
+    loop: false,
+    clampWhenFinished: true,
+    autoHandle: true // Automatically handled by core
   }
 };
 
@@ -211,6 +219,110 @@ type Unit = {
   effects?: Record<string, any>;    // Visual effects
   userData?: Record<string, any>;   // Custom data
 };
+```
+
+## Death Configuration
+
+### DeathConfig Type
+
+The `DeathConfig` type configures automatic death handling behavior for units. When a unit's health reaches zero, the core combat system automatically handles death animations, cleanup, and unit removal.
+
+```typescript
+type DeathConfig = {
+  animations?: string[];            // Array of death animations (random selection)
+  animation?: string;               // Single death animation name
+  removeDelay?: number;             // Delay before unit removal (ms, default: 2000)
+  loop?: boolean;                   // Whether to loop animation (default: false)
+  clampWhenFinished?: boolean;      // Clamp at final frame (default: true)
+  autoHandle?: boolean;             // Auto-handle death (default: true)
+};
+```
+
+### Death Handling Features
+
+When `autoHandle` is `true` (default), the core combat system automatically:
+1. Marks unit as dead to prevent further damage
+2. Stops AI behavior immediately
+3. Plays a death animation (random selection from array if provided)
+4. Removes health bar (if health bar manager is configured)
+5. Removes unit from scene after `removeDelay`
+
+**Example with multiple death animations:**
+
+```typescript
+const zombieDef: UnitDefinition = {
+  id: 'zombie',
+  type: 'enemy',
+  // ... other config
+  death: {
+    animations: ['death1', 'death2', 'death3'], // Randomly picks one
+    removeDelay: 2000,  // 2 seconds
+    loop: false,
+    clampWhenFinished: true,
+    autoHandle: true
+  }
+};
+```
+
+**Example with single death animation:**
+
+```typescript
+const goblinDef: UnitDefinition = {
+  id: 'goblin',
+  type: 'enemy',
+  // ... other config
+  death: {
+    animation: 'death',  // Always plays this animation
+    removeDelay: 1500,   // 1.5 seconds
+    clampWhenFinished: true
+  }
+};
+```
+
+**Example with custom death handling:**
+
+```typescript
+const bossDef: UnitDefinition = {
+  id: 'boss',
+  type: 'enemy',
+  // ... other config
+  death: {
+    autoHandle: false  // You handle death manually
+  }
+};
+
+// Handle death manually in onDamage callback
+const combatConfig = {
+  onDamage: (attacker: Unit, target: Unit, damageResult: DamageResult) => {
+    if (target.stats.health <= 0 && !target.userData?.isDead) {
+      target.userData = target.userData || {};
+      target.userData.isDead = true;
+
+      // Custom death logic (cutscene, rewards, etc.)
+      playBossDefeatCutscene();
+      spawnLoot(target.model.position);
+
+      // Manual cleanup
+      setTimeout(() => {
+        unitManager.removeUnit(target.id);
+      }, 5000);
+    }
+  }
+};
+```
+
+### Health Bar Integration
+
+To automatically remove health bars on death, set the health bar manager:
+
+```typescript
+const healthBarManager = world.getHealthBarManager();
+const unitManager = world.getUnitManager();
+
+// Configure automatic health bar cleanup
+unitManager.setHealthBarManager(healthBarManager);
+
+// Now health bars are automatically removed when units die
 ```
 
 ## UnitManager API
@@ -832,6 +944,38 @@ Remove all unit outlines.
 unitManager.removeAllUnitOutlines(world);
 ```
 
+### Health Bar Management
+
+#### `setHealthBarManager(healthBarManager: any): void`
+
+Configure automatic health bar cleanup on unit death.
+
+When set, health bars are automatically removed when units die (if `death.autoHandle` is true).
+
+**Example:**
+```typescript
+const healthBarManager = world.getHealthBarManager();
+const unitManager = world.getUnitManager();
+
+// Enable automatic health bar cleanup
+unitManager.setHealthBarManager(healthBarManager);
+
+// Now when units die, their health bars are automatically removed
+const unit = unitManager.createUnit({
+  definitionId: 'enemy',
+  position: new THREE.Vector3(10, 0, 10)
+});
+
+// Create health bar
+const healthBar = healthBarManager.createHealthBar({
+  target: unit.model,
+  maxHealth: unit.stats.maxHealth,
+  currentHealth: unit.stats.health
+});
+
+// When unit dies, health bar is automatically cleaned up
+```
+
 ## Complete Example
 
 ```typescript
@@ -893,6 +1037,12 @@ const enemyDef: UnitDefinition = {
       attackCooldown: 1500,
       knockbackForce: 5
     }
+  },
+  death: {
+    animation: 'goblinDeath',
+    removeDelay: 2000,
+    clampWhenFinished: true,
+    autoHandle: true  // Automatic death handling
   }
 };
 
@@ -988,21 +1138,18 @@ world.onReady(() => {
           unitManager.playAnimation(player, 'attack', 0.1);
           console.log(`Hit ${result.hitUnits.length} enemies!`);
 
-          // Handle deaths
-          result.damages.forEach(({ unit, damage }) => {
-            if (unit.stats.health <= 0) {
-              unitManager.playAnimation(unit, 'death');
-              setTimeout(() => unitManager.removeUnit(unit.id), 2000);
-            }
-          });
+          // Deaths are handled automatically by the combat system
+          // No manual death handling needed!
         }
       }
     }
 
-    // Check health
-    if (player.stats.health <= 0) {
+    // Check player health (player death could also be automatic)
+    if (player.stats.health <= 0 && !player.userData?.isDead) {
+      player.userData = player.userData || {};
+      player.userData.isDead = true;
       console.log('Player died!');
-      unitManager.playAnimation(player, 'death');
+      // Game over logic here
     }
   });
 
@@ -1056,24 +1203,62 @@ world.onUpdate(() => {
 
 ### Death Handling
 
+**Automatic (Recommended):**
+
+With automatic death handling, units die automatically when health reaches zero:
+
 ```typescript
+const enemyDef: UnitDefinition = {
+  id: 'enemy',
+  type: 'enemy',
+  // ... other config
+  death: {
+    animations: ['death1', 'death2', 'death3'], // Random selection
+    removeDelay: 2000,
+    clampWhenFinished: true,
+    autoHandle: true  // Automatic death handling
+  }
+};
+
+// Death is handled automatically by the combat system
+// No manual death checking needed!
+```
+
+**Manual (For custom logic):**
+
+For custom death behavior (boss fights, cutscenes, etc.):
+
+```typescript
+const bossDef: UnitDefinition = {
+  id: 'boss',
+  type: 'enemy',
+  // ... other config
+  death: {
+    autoHandle: false  // Disable automatic handling
+  }
+};
+
+// Handle death manually
 world.onUpdate(() => {
   const units = unitManager.getAllUnits();
 
   units.forEach(unit => {
-    if (unit.stats.health <= 0 && !unit.userData.isDead) {
+    if (unit.stats.health <= 0 && !unit.userData?.isDead) {
+      unit.userData = unit.userData || {};
       unit.userData.isDead = true;
 
-      // Play death animation
+      // Custom death logic
       unitManager.playAnimation(unit, 'death');
-
-      // Stop AI
       unitManager.stopUnitMovement(unit);
+
+      // Trigger custom events
+      triggerBossDefeatCutscene();
+      spawnLoot(unit.model.position);
 
       // Remove after animation
       setTimeout(() => {
         unitManager.removeUnit(unit.id);
-      }, 2000);
+      }, 5000);
     }
   });
 });
