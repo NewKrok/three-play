@@ -333,6 +333,14 @@ const createWorld = (config: WorldConfig): WorldInstance => {
         });
       }
 
+      // Store projectile manager reference for ranged attacks
+      if (projectileManager && unitManager) {
+        (unitManager as any).projectileManager = projectileManager;
+
+        // Setup projectile damage integration
+        unitManager.setupProjectileDamageIntegration?.(projectileManager);
+      }
+
       logger.debug('Unit manager initialized');
     }
 

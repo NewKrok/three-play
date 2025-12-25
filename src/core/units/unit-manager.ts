@@ -322,6 +322,123 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
     };
   };
 
+  /**
+   * Handle projectile hit event and apply damage
+   * This integrates projectile hits with the combat damage system
+   */
+  const handleProjectileHit = (event: any): void => {
+    const { projectile, target, position } = event;
+
+    // Extract combat data from projectile userData
+    const combatData = projectile.userData?.combatData;
+    if (!combatData || !combatData.attackerUnit) {
+      // No combat data, this is a non-combat projectile
+      return;
+    }
+
+    const attacker = combatData.attackerUnit;
+
+    // Handle area damage if configured
+    if (combatData.areaDamage) {
+      handleAreaDamage(attacker, position, combatData.areaDamage);
+    } else {
+      // Single target damage
+      // Find the target unit
+      const allUnits = Array.from(units.values());
+      const targetUnit = allUnits.find((u) => u.model === target);
+
+      if (targetUnit && !targetUnit.userData?.isDead) {
+        applyProjectileDamage(attacker, targetUnit, event);
+      }
+    }
+  };
+
+  /**
+   * Handle area damage from projectile
+   */
+  const handleAreaDamage = (
+    attacker: Unit,
+    position: THREE.Vector3,
+    areaConfig: { radius: number; maxTargets: number; damageMultiplier?: number },
+  ): void => {
+    // Get units in area
+    const unitsInArea = getUnitsInRange(position, areaConfig.radius, attacker);
+
+    // Filter valid targets (team system)
+    const teamConfig = config?.teams;
+    const validTargets = unitsInArea.filter(
+      (unit) =>
+        !unit.userData?.isDead &&
+        (teamConfig?.enableFriendlyFire || unit.team !== attacker.team),
+    );
+
+    // Sort by distance and limit to maxTargets
+    validTargets.sort((a, b) => {
+      const distA = a.model.position.distanceTo(position);
+      const distB = b.model.position.distanceTo(position);
+      return distA - distB;
+    });
+
+    const targets = validTargets.slice(0, areaConfig.maxTargets);
+
+    // Apply damage to each target
+    for (const target of targets) {
+      applyProjectileDamage(attacker, target, {
+        projectile: { position },
+        position,
+      });
+    }
+  };
+
+  /**
+   * Apply damage from projectile hit
+   */
+  const applyProjectileDamage = (
+    attacker: Unit,
+    target: Unit,
+    event: any,
+  ): void => {
+    // Use combat controller to calculate and apply damage
+    const { isDead, damageResult } = combatController.applyDamage(target, 0, attacker);
+
+    // Trigger onDamage callback for UI integration
+    if (damageResult) {
+      // Check for global damage number callback
+      if (typeof (window as any).showDamageNumber === 'function') {
+        (window as any).showDamageNumber(target, damageResult);
+      }
+    }
+
+    // Handle death
+    if (isDead && !target.userData?.isDead) {
+      target.userData = target.userData || {};
+      target.userData.isDead = true;
+
+      // Stop AI behavior
+      if (target.ai) {
+        target.ai.isStunned = true;
+      }
+
+      logger?.info(`Unit ${target.id} killed by projectile from ${attacker.id}`);
+    }
+  };
+
+  /**
+   * Setup projectile damage integration with projectile manager
+   * Should be called after projectile manager is available
+   */
+  const setupProjectileDamageIntegration = (projectileManager: any): void => {
+    if (!projectileManager || !projectileManager.onHit) {
+      logger?.warn('Projectile manager not available for damage integration');
+      return;
+    }
+
+    // Subscribe to projectile hit events
+    projectileManager.onHit(handleProjectileHit);
+
+    logger?.info('Projectile damage integration set up successfully');
+  };
+
   // Track unit outlines
   const unitOutlines = new Map<string, string>(); // unitId -> outlineId
 
@@ -720,6 +837,7 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
     // Combat methods (will be added after combat controller is created)
     performLightAttack: null as any,
     performHeavyAttack: null as any,
+    performRangedAttack: null as any,
     canAttack: null as any,
     initializeCombat: null as any,
     setStamina: null as any,
@@ -732,6 +850,8 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
     // Projectile integration methods
     checkProjectileCollision: null as any,
     createProjectileCollisionFunction: null as any,
+    getProjectileManager: () => (unitManager as any).projectileManager || null,
+    setupProjectileDamageIntegration,
     // Outline management methods
     addUnitOutline: null as any,
     removeUnitOutline: null as any,
@@ -752,6 +872,7 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
   // Add combat methods to unit manager
   unitManager.performLightAttack = combatController.performLightAttack;
   unitManager.performHeavyAttack = combatController.performHeavyAttack;
+  unitManager.performRangedAttack = combatController.performRangedAttack;
   unitManager.canAttack = combatController.canAttack;
   unitManager.initializeCombat = combatController.initializeCombat;
   unitManager.setStamina = combatController.setStamina;

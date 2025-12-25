@@ -20,7 +20,37 @@ export type AnimationState = string;
 /**
  * Combat attack types
  */
-export type AttackType = 'light' | 'heavy' | 'special';
+export type AttackType = 'light' | 'heavy' | 'special' | 'ranged';
+
+/**
+ * Ranged attack configuration for units
+ */
+export type RangedAttackConfig = {
+  /** Projectile definition ID to launch */
+  projectileId: string;
+  /** Animation to play when firing */
+  animation: string;
+  /** Range in world units */
+  range: number;
+  /** Cooldown in milliseconds */
+  cooldown: number;
+  /** Stamina cost per shot */
+  staminaCost: number;
+  /** Action delay before projectile launches (ms) */
+  actionDelay: number;
+  /** Optional ammo type for inventory checking */
+  ammoType?: string;
+  /** Whether this attack can target ground */
+  canTargetGround?: boolean;
+  /** Area of effect radius for ground attacks */
+  areaRadius?: number;
+  /** Max number of targets hit in area */
+  maxTargets?: number;
+  /** Bone name to spawn projectile from (e.g., 'mixamorigRightHand') */
+  spawnBone?: string;
+  /** Spawn offset relative to spawn bone or unit position */
+  spawnOffset?: { x?: number; y?: number; z?: number };
+};
 
 /**
  * Combat system configuration
@@ -52,6 +82,20 @@ export type CombatConfig = {
   logger?: import('../core/utils/logger.js').Logger;
   /** Callback when damage is dealt */
   onDamage?: (attacker: Unit, target: Unit, damageResult: import('./combat.js').DamageResult) => void;
+  /** Ranged attack configuration */
+  rangedAttack?: {
+    /** Action delay before projectile launches (ms) */
+    actionDelay?: number;
+    /** Whether to enable ammo system */
+    enableAmmo?: boolean;
+  };
+  /** Ammo system callbacks */
+  ammo?: {
+    /** Check if unit can use ammo */
+    canUseAmmo?: (unit: Unit, ammoType: string) => boolean;
+    /** Consume ammo when attacking */
+    consumeAmmo?: (unit: Unit, ammoType: string, amount: number) => void;
+  };
 };
 
 /**
@@ -95,6 +139,8 @@ export type UnitDefinition = {
     /** Material customization function */
     materialModifier?: (instance: THREE.Group) => void;
   };
+  /** Ranged attack configuration (optional) */
+  rangedAttack?: RangedAttackConfig;
   /** AI behavior configuration (only for non-player units) */
   ai?: AIBehaviorConfig;
 };
@@ -202,8 +248,12 @@ export type Unit = {
     lastLightAttackTime?: number;
     /** Last heavy attack time */
     lastHeavyAttackTime?: number;
+    /** Last ranged attack time */
+    lastRangedAttackTime?: number;
     /** Whether unit is currently in attack animation */
     isAttacking?: boolean;
+    /** Whether unit is currently aiming */
+    isAiming?: boolean;
     /** Remaining stamina */
     stamina?: number;
     /** Maximum stamina */
@@ -370,6 +420,12 @@ export type UnitManager = {
   performLightAttack: (attacker: Unit, currentTime: number) => any;
   /** Perform heavy attack */
   performHeavyAttack: (attacker: Unit, currentTime: number) => any;
+  /** Perform ranged attack */
+  performRangedAttack: (
+    attacker: Unit,
+    target: THREE.Vector3 | Unit,
+    currentTime: number,
+  ) => any;
   /** Check if unit can attack */
   canAttack: (
     unit: Unit,
@@ -377,7 +433,7 @@ export type UnitManager = {
     currentTime: number,
   ) => boolean;
   /** Initialize combat data for a unit */
-  initializeCombat: (unit: Unit, stamina?: number) => void;
+  initializeCombat: (unit: Unit, stamina?: number, config?: CombatConfig) => void;
   /** Set stamina for a unit */
   setStamina: (unit: Unit, stamina: number) => void;
   // Effects methods
@@ -417,6 +473,10 @@ export type UnitManager = {
   getOutlinedUnits: () => Unit[];
   /** Remove all unit outlines */
   removeAllUnitOutlines: (worldInstance: any) => void;
+  /** Setup automatic projectile damage integration */
+  setupProjectileDamageIntegration?: (projectileManager: any) => void;
+  /** Get projectile manager reference */
+  getProjectileManager?: () => any;
 };
 
 /**

@@ -1,6 +1,35 @@
 import * as THREE from 'three';
 import type { ObjectPool } from './common.js';
 import type { Logger } from '../core/utils/logger.js';
+import type { Unit } from './units.js';
+
+/**
+ * Combat data attached to projectiles for damage integration
+ */
+export type ProjectileCombatData = {
+  /** The unit that launched this projectile */
+  attackerUnit: Unit;
+  /** Whether projectile can penetrate through targets */
+  canPenetrate?: boolean;
+  /** Maximum number of targets to hit */
+  maxHits?: number;
+  /** Current hit count */
+  hitCount?: number;
+  /** Area damage configuration */
+  areaDamage?: {
+    /** Damage radius */
+    radius: number;
+    /** Maximum targets in area */
+    maxTargets: number;
+    /** Damage multiplier for area damage */
+    damageMultiplier?: number;
+  };
+};
+
+/**
+ * Projectile behavior types
+ */
+export type ProjectileType = 'ballistic' | 'area-target' | 'homing' | 'linear';
 
 /**
  * Physics configuration for projectiles

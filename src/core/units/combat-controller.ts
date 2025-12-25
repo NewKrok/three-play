@@ -30,6 +30,20 @@ export type CombatController = {
   performLightAttack: (attacker: Unit, currentTime: number) => AttackResult;
   /** Perform a heavy attack */
   performHeavyAttack: (attacker: Unit, currentTime: number) => AttackResult;
+  /** Perform a ranged attack */
+  performRangedAttack: (
+    attacker: Unit,
+    target: THREE.Vector3 | Unit,
+    currentTime: number,
+  ) => AttackResult;
+  /** Check if unit can perform ranged attack */
+  canPerformRangedAttack: (
+    attacker: Unit,
+    target: THREE.Vector3 | Unit,
+    currentTime: number,
+  ) => boolean;
+  /** Get ranged attack range for a unit */
+  getRangedAttackRange: (unit: Unit) => number;
   /** Apply damage to a unit */
   applyDamage: (
     target: Unit,
@@ -80,6 +94,11 @@ export const createCombatController = (
       stunDuration: 2000,
       actionDelay: 500,
     },
+    rangedAttack = {
+      actionDelay: 400,
+      enableAmmo: false,
+    },
+    ammo,
     enableDamage = true,
   } = config;
 
@@ -93,7 +112,9 @@ export const createCombatController = (
 
     unit.combat.lastLightAttackTime = 0;
     unit.combat.lastHeavyAttackTime = 0;
+    unit.combat.lastRangedAttackTime = 0;
     unit.combat.isAttacking = false;
+    unit.combat.isAiming = false;
     unit.combat.stamina = stamina;
     unit.combat.maxStamina = stamina;
   };
@@ -356,6 +377,184 @@ export const createCombatController = (
     return executeAttack(attacker, 'heavy', currentTime);
   };
 
+  const getRangedAttackRange = (unit: Unit): number => {
+    return unit.definition.rangedAttack?.range || 0;
+  };
+
+  const canPerformRangedAttack = (
+    attacker: Unit,
+    target: THREE.Vector3 | Unit,
+    currentTime: number,
+  ): boolean => {
+    if (!attacker.combat) return false;
+    if (!attacker.definition.rangedAttack) return false;
+
+    // Check if already attacking
+    if (attacker.combat.isAttacking) return false;
+
+    // Check if stunned
+    if (attacker.ai?.isStunned) return false;
+
+    const rangedConfig = attacker.definition.rangedAttack;
+
+    // Check stamina
+    if ((attacker.combat.stamina || 0) < rangedConfig.staminaCost) return false;
+
+    // Check cooldown
+    const lastAttackTime = attacker.combat.lastRangedAttackTime || 0;
+    if (currentTime < lastAttackTime + rangedConfig.cooldown) return false;
+
+    // Check ammo if enabled
+    if (rangedAttack.enableAmmo && rangedConfig.ammoType && ammo?.canUseAmmo) {
+      if (!ammo.canUseAmmo(attacker, rangedConfig.ammoType)) return false;
+    }
+
+    // Check range
+    const targetPosition = target instanceof THREE.Vector3 ? target : target.model.position;
+    const distance = attacker.model.position.distanceTo(targetPosition);
+    if (distance > rangedConfig.range) return false;
+
+    return true;
+  };
+
+  const performRangedAttack = (
+    attacker: Unit,
+    target: THREE.Vector3 | Unit,
+    currentTime: number,
+  ): AttackResult => {
+    if (!canPerformRangedAttack(attacker, target, currentTime)) {
+      return {
+        success: false,
+        hitUnits: [],
+        damages: [],
+        failureReason:
+          'Cannot perform ranged attack (cooldown, stamina, ammo, range, or already attacking)',
+      };
+    }
+
+    const rangedConfig = attacker.definition.rangedAttack!;
+    const projectileManager = unitManager.getProjectileManager?.();
+
+    if (!projectileManager) {
+      logger?.error('Projectile manager not available for ranged attack');
+      return {
+        success: false,
+        hitUnits: [],
+        damages: [],
+        failureReason: 'Projectile manager not available',
+      };
+    }
+
+    // Set attacking state
+    if (attacker.combat) {
+      attacker.combat.isAttacking = true;
+      attacker.combat.lastRangedAttackTime = currentTime;
+
+      // Consume stamina
+      attacker.combat.stamina = (attacker.combat.stamina || 0) - rangedConfig.staminaCost;
+      attacker.combat.stamina = Math.max(0, attacker.combat.stamina);
+
+      // Consume ammo if enabled
+      if (rangedAttack.enableAmmo && rangedConfig.ammoType && ammo?.consumeAmmo) {
+        ammo.consumeAmmo(attacker, rangedConfig.ammoType, 1);
+      }
+    }
+
+    // Play ranged attack animation
+    if (unitManager.playAnimation && rangedConfig.animation) {
+      unitManager.playAnimation(attacker, rangedConfig.animation);
+    }
+
+    // Calculate animation duration
+    const animationDuration = 1000; // Default 1 second
+
+    // End attacking state after animation
+    setTimeout(() => {
+      if (attacker.combat) {
+        attacker.combat.isAttacking = false;
+      }
+      // Return to idle
+      if (unitManager.playAnimation) {
+        unitManager.playAnimation(attacker, 'idle');
+      }
+    }, animationDuration);
+
+    // Launch projectile after action delay
+    setTimeout(() => {
+      // Calculate launch position
+      const launchPosition = new THREE.Vector3();
+
+      // Try to use spawn bone if specified
+      if (rangedConfig.spawnBone) {
+        let bone: THREE.Object3D | null = null;
+        attacker.model.traverse((child: THREE.Object3D) => {
+          if (child.name === rangedConfig.spawnBone) {
+            bone = child;
+          }
+        });
+
+        if (bone) {
+          (bone as THREE.Object3D).getWorldPosition(launchPosition);
+        } else {
+          // Fallback to unit position
+          launchPosition.copy(attacker.model.position);
+          launchPosition.y += 1.5;
+        }
+      } else {
+        // Default: chest height
+        launchPosition.copy(attacker.model.position);
+        launchPosition.y += 1.5;
+      }
+
+      // Apply spawn offset if specified
+      if (rangedConfig.spawnOffset) {
+        launchPosition.x += rangedConfig.spawnOffset.x || 0;
+        launchPosition.y += rangedConfig.spawnOffset.y || 0;
+        launchPosition.z += rangedConfig.spawnOffset.z || 0;
+      }
+
+      // Calculate direction to target
+      const targetPosition = target instanceof THREE.Vector3 ? target : target.model.position;
+      const direction = new THREE.Vector3()
+        .subVectors(targetPosition, launchPosition)
+        .normalize();
+
+      // Add upward arc for ballistic trajectory
+      direction.y += 0.3; // Increased arc for better trajectory
+      direction.normalize();
+
+      // Prepare combat data
+      const combatData = {
+        attackerUnit: attacker,
+        areaDamage: rangedConfig.areaRadius
+          ? {
+              radius: rangedConfig.areaRadius,
+              maxTargets: rangedConfig.maxTargets || 5,
+            }
+          : undefined,
+      };
+
+      // Launch projectile
+      projectileManager.launch({
+        definitionId: rangedConfig.projectileId,
+        origin: launchPosition,
+        direction,
+        strength: 18, // Projectile launch strength
+        userData: { combatData },
+      });
+
+      logger?.info(
+        `Unit ${attacker.id} launched ${rangedConfig.projectileId} projectile`,
+      );
+    }, rangedConfig.actionDelay);
+
+    return {
+      success: true,
+      hitUnits: [],
+      damages: [],
+    };
+  };
+
   const setStamina = (unit: Unit, stamina: number): void => {
     if (!unit.combat) {
       initializeCombat(unit, stamina);
@@ -392,6 +591,9 @@ export const createCombatController = (
   return {
     performLightAttack,
     performHeavyAttack,
+    performRangedAttack,
+    canPerformRangedAttack,
+    getRangedAttackRange,
     applyDamage,
     canAttack,
     updateCombat,

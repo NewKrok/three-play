@@ -188,6 +188,8 @@ export type {
   ProjectileVisualConfig,
   ProjectileCollisionConfig,
   ProjectileSpreadConfig,
+  ProjectileCombatData,
+  ProjectileType,
 } from './types/projectiles.js';
 export type {
   ObjectPool,
@@ -197,6 +199,9 @@ export type {
 export type {
   UnitType,
   AnimationState,
+  AttackType,
+  RangedAttackConfig,
+  CombatConfig,
   UnitDefinition,
   AIBehaviorConfig,
   Unit,

@@ -62,7 +62,6 @@ const {
   ENEMY_COUNT,
   SOLDIER_COUNT,
   APPLE_HIT_RADIUS,
-  APPLE_PUSH_FORCE,
   MAX_STAMINA,
   STAMINA_RECOVERY,
   STAMINA_DRAIN,
@@ -106,13 +105,10 @@ let character: Unit | null = null;
 let crates = [];
 let nearbyCreateOutlines = new Map();
 let crateProxyMeshes = new Map(); // Individual meshes for outlined crates
-let lastThrowTime = 0;
 let lastRollTime = 0;
 let lastDashTime = 0;
 let isMousePressed = false;
-let isThrowing = false;
 let isDashing = false;
-let rightHandBone: THREE.Bone | null = null;
 
 // Unit and Projectile systems
 let unitManager: UnitManagerType;
@@ -123,7 +119,8 @@ let damageNumbersManager: DamageNumbersManager;
 let lastLightAttackTime = 0;
 let lastHeavyAttackTime = 0;
 let isRolling = false;
-let isAttacking = false;
+// Note: isAttacking is now tracked in character.combat.isAttacking
+const isAttacking = () => character?.combat?.isAttacking ?? false;
 let isAiming = false;
 let aimCameraOffset = new THREE.Vector3(0, 0, 0);
 let aimCameraLookAtOffset = new THREE.Vector3(0, 0, 0);
@@ -131,12 +128,10 @@ let previousRotation = 0;
 let currentAngularVelocity = 0;
 let smoothedAngularVelocity = 0;
 let isTurning = false;
-const throwCooldown = 250;
 const rollCooldown = 500;
 const dashCooldown = 800;
 const dashDuration = 200;
-const throwStrength = 18;
-const throwSpread = 0.02;
+const throwSpread = 0.02; // Used by projectile config
 const rotationTargetQuaternion = new THREE.Quaternion();
 const dummy = new THREE.Object3D();
 const mousePosition = new THREE.Vector2();
@@ -520,26 +515,6 @@ worldInstance.onReady((assets) => {
       runningInWater: runningInWaterEffectParticleSystem,
     };
 
-    // Find the right hand bone for throwing
-    const actualModel = character.model.children[0];
-    if (actualModel) {
-      // Find the root bone (mixamorigHips) which contains all other bones in hierarchy
-      let rootBone: THREE.Object3D | null = null;
-      actualModel.children.forEach((child) => {
-        if (child.name === 'mixamorigHips') {
-          rootBone = child;
-        }
-      });
-
-      if (rootBone) {
-        // Traverse the bone hierarchy to find right hand
-        rootBone.traverse((bone) => {
-          if (bone.name === 'mixamorigRightHand') {
-            rightHandBone = bone as THREE.Bone;
-          }
-        });
-      }
-    }
   }
 
   // Configure day/night system to follow the main character for optimized shadows
@@ -555,6 +530,46 @@ worldInstance.onReady((assets) => {
     });
     logger.info('Day/night system configured to follow character');
   }
+
+  // Shared onDamage handler for all units
+  const handleUnitDamage = (attacker: any, target: any) => {
+    // Handle death
+    if (target.userData?.health !== undefined && target.userData.health <= 0) {
+      if (!target.userData.isDead) {
+        target.userData.isDead = true;
+
+        // Choose random death animation for zombies (death1, death2, death3)
+        if (target.definition.id === 'zombie-enemy') {
+          const deathAnimationIndex = Math.floor(Math.random() * 3) + 1;
+          const deathAnimationName = `death${deathAnimationIndex}`;
+
+          // Play death animation
+          unitManager.playAnimation(target, deathAnimationName);
+
+          // Make the death animation non-looping and clamp at end
+          if (target.actions && target.actions[deathAnimationName]) {
+            target.actions[deathAnimationName].setLoop(THREE.LoopOnce as any, 1);
+            target.actions[deathAnimationName].clampWhenFinished = true;
+          }
+
+          // Remove unit after animation completes
+          setTimeout(() => {
+            unitManager.removeUnit(target.id);
+          }, 2000);
+        } else {
+          // For other units, remove immediately or use their own death logic
+          setTimeout(() => {
+            unitManager.removeUnit(target.id);
+          }, 2000);
+        }
+
+        // Update score if player killed an enemy
+        if (attacker === character && target.team !== character.team) {
+          gameState.score++;
+        }
+      }
+    }
+  };
 
   // Create enemies using unit manager
   const createEnemies = async (count: number) => {
@@ -581,7 +596,9 @@ worldInstance.onReady((assets) => {
         unitManager.initializeAIBehavior(enemy, position);
 
         // Initialize combat for enemy
-        unitManager.initializeCombat(enemy, 100);
+        unitManager.initializeCombat(enemy, 100, {
+          onDamage: handleUnitDamage,
+        });
 
         // Add health bar to enemy
         healthBarManager.createHealthBar(enemy, {
@@ -621,7 +638,9 @@ worldInstance.onReady((assets) => {
         unitManager.initializeAIBehavior(soldier, position);
 
         // Initialize combat for soldier
-        unitManager.initializeCombat(soldier, 100);
+        unitManager.initializeCombat(soldier, 100, {
+          onDamage: handleUnitDamage,
+        });
 
         // Add health bar to soldier
         healthBarManager.createHealthBar(soldier, {
@@ -638,7 +657,27 @@ worldInstance.onReady((assets) => {
 
   // Initialize combat for player character
   if (character) {
-    unitManager.initializeCombat(character, MAX_STAMINA);
+    unitManager.initializeCombat(character, MAX_STAMINA, {
+      rangedAttack: {
+        actionDelay: 400,
+        enableAmmo: true,
+      },
+      ammo: {
+        canUseAmmo: (unit, ammoType) => {
+          if (ammoType === 'apple' && unit === character) {
+            return uiManager.getItemCount('apple') > 0;
+          }
+          return true; // NPCs have infinite ammo
+        },
+        consumeAmmo: (unit, ammoType, amount) => {
+          if (ammoType === 'apple' && unit === character) {
+            uiManager.removeItem('apple', amount);
+            gameState.collectedApples -= amount;
+          }
+        },
+      },
+      onDamage: handleUnitDamage,
+    });
     // Add health bar to player
     healthBarManager.createHealthBar(character, {
       yOffset: 2.5,
@@ -758,8 +797,9 @@ worldInstance.onReady((assets) => {
   }
 
   // Set up projectile event handlers
+  // Visual effects only - damage is handled by the combat system
   projectileManager.onHit((event) => {
-    const { projectile, target, position } = event;
+    const { projectile, position } = event;
 
     if (projectile.definition.id === 'apple') {
       // Create splash effect
@@ -770,72 +810,6 @@ worldInstance.onReady((assets) => {
       splashEffectInstance.position.copy(position);
       scene.add(splashEffectInstance);
       setTimeout(dispose, 1000);
-
-      // Check if we hit a unit (target will be the unit's model if we hit one)
-      if (target) {
-        const allUnits = unitManager.getAllUnits();
-        const hitUnit = allUnits.find((unit) => unit.model === target);
-
-        if (hitUnit && hitUnit !== character && !hitUnit.userData.isDead) {
-          // Reduce health
-          hitUnit.userData.health -= 1;
-
-          // Apply knockback using unit physics
-          const away = hitUnit.model.position.clone().sub(position).normalize();
-          const knockback = away.multiplyScalar(APPLE_PUSH_FORCE);
-
-          // Add knockback to unit
-          if (!hitUnit.userData.knockbackVelocity)
-            hitUnit.userData.knockbackVelocity = new THREE.Vector3();
-          hitUnit.userData.knockbackVelocity.add(knockback);
-
-          // Check if unit died
-          if (hitUnit.userData.health <= 0) {
-            hitUnit.userData.isDead = true;
-
-            // Disable AI behavior by clearing the behavior data
-            if (hitUnit.userData.aiBehavior) {
-              hitUnit.userData.aiBehavior = null;
-            }
-
-            // Choose random death animation (1, 2, or 3)
-            const deathAnimationIndex = Math.floor(Math.random() * 3) + 1;
-            const deathAnimationName = `death${deathAnimationIndex}`;
-
-            // Play death animation
-            unitManager.playAnimation(hitUnit, deathAnimationName);
-
-            // Make the death animation non-looping and clamp at end
-            if (hitUnit.actions && hitUnit.actions[deathAnimationName]) {
-              hitUnit.actions[deathAnimationName].setLoop(
-                THREE.LoopOnce as any,
-                1,
-              );
-              hitUnit.actions[deathAnimationName].clampWhenFinished = true;
-            }
-
-            // Show death text
-            showFloatingLabel({
-              text: 'Dead!',
-              position: hitUnit.model.position,
-            });
-
-            // Remove unit after animation completes (approximately 2 seconds)
-            setTimeout(() => {
-              unitManager.removeUnit(hitUnit.id);
-            }, 2000);
-          } else {
-            // Show hit text
-            showFloatingLabel({
-              text: getSplashText(),
-              position: hitUnit.model.position,
-            });
-          }
-
-          // Update score
-          gameState.score++;
-        }
-      }
     }
   });
 
@@ -1030,20 +1004,6 @@ worldInstance.onReady((assets) => {
   };
 
   // Helper functions
-  const getSplashText = () => {
-    const texts = [
-      'Splash!',
-      'Pow!',
-      'Thud!',
-      'Smash!',
-      'Bam!',
-      'Whack!',
-      'Bonk!',
-      'Kaboom!',
-    ];
-    return texts[Math.floor(Math.random() * texts.length)];
-  };
-
   const updateCamera = () => {
     if (!character) return;
 
@@ -1161,7 +1121,7 @@ worldInstance.onReady((assets) => {
     }
 
     // Handle rotation - always rotate toward mouse position in both modes
-    if (!isRolling && !isAttacking && !isDashing) {
+    if (!isRolling && !isAttacking() && !isDashing) {
       raycasterMouse.setFromCamera(mousePosition, camera);
 
       // Create ground plane at character's current height
@@ -1232,9 +1192,8 @@ worldInstance.onReady((assets) => {
       isMoving &&
       isRunningKey &&
       !isRolling &&
-      !isAttacking &&
+      !isAttacking() &&
       !isAiming &&
-      !isThrowing &&
       !isDashing
     ) {
       if (gameState.stamina > 0) {
@@ -1247,7 +1206,7 @@ worldInstance.onReady((assets) => {
       gameState.stamina = Math.min(gameState.stamina, MAX_STAMINA);
     }
 
-    if (isMoving && !isRolling && !isAttacking && !isThrowing && !isDashing) {
+    if (isMoving && !isRolling && !isAttacking() && !isDashing) {
       character.userData.oldPos = character.model.position.clone();
 
       // Determine movement type based on input keys
@@ -1341,7 +1300,7 @@ worldInstance.onReady((assets) => {
       if (terrainHeight < WATER_LEVEL - 0.5) {
         character.model.position.copy(character.userData.oldPos);
       }
-    } else if (!isRolling && !isAttacking && !isThrowing && !isDashing) {
+    } else if (!isRolling && !isAttacking() && !isDashing) {
       // Handle idle state with turn animations
       const turnOnThreshold = 1.5;
       const turnOffThreshold = 0.8;
@@ -1388,19 +1347,17 @@ worldInstance.onReady((assets) => {
     if (
       inputManager.isActionActive('lightAttack') &&
       !isRolling &&
-      !isAttacking &&
+      !isAttacking() &&
       !isDashing &&
       lastLightAttackTime + LIGHT_ATTACK_COOLDOWN < now &&
       gameState.stamina >= STAMINA_FOR_LIGHT_ATTACK
     ) {
-      isAttacking = true;
       lastLightAttackTime = now;
       gameState.stamina -= STAMINA_FOR_LIGHT_ATTACK;
       gameState.stamina = Math.max(gameState.stamina, 0);
 
-      // Use unit manager for combat
+      // Use unit manager for combat (handles isAttacking state internally)
       const result = unitManager.performLightAttack(character, now);
-      unitManager.playAnimation(character, 'lightAttack');
 
       // Show damage numbers for hits
       if (result.success && result.damages.length > 0) {
@@ -1414,30 +1371,23 @@ worldInstance.onReady((assets) => {
           });
         }, LIGHT_ATTACK_ACTION_DELAY);
       }
-
-      setTimeout(() => {
-        isAttacking = false;
-        unitManager.playAnimation(character, 'idle');
-      }, LIGHT_ATTACK_ACTION_DELAY); // Approximate attack duration
     }
 
     // Heavy attack
     if (
       inputManager.isActionActive('heavyAttack') &&
       !isRolling &&
-      !isAttacking &&
+      !isAttacking() &&
       !isDashing &&
       lastHeavyAttackTime + HEAVY_ATTACK_COOLDOWN < now &&
       gameState.stamina >= STAMINA_FOR_HEAVY_ATTACK
     ) {
-      isAttacking = true;
       lastHeavyAttackTime = now;
       gameState.stamina -= STAMINA_FOR_HEAVY_ATTACK;
       gameState.stamina = Math.max(gameState.stamina, 0);
 
-      // Use unit manager for heavy attack
+      // Use unit manager for heavy attack (handles isAttacking state internally)
       const result = unitManager.performHeavyAttack(character, now);
-      unitManager.playAnimation(character, 'heavyAttack');
 
       // Show damage numbers for hits
       if (result.success && result.damages.length > 0) {
@@ -1451,11 +1401,6 @@ worldInstance.onReady((assets) => {
           });
         }, Constants.HEAVY_ATTACK_ACTION_DELAY);
       }
-
-      setTimeout(() => {
-        isAttacking = false;
-        unitManager.playAnimation(character, 'idle');
-      }, Constants.HEAVY_ATTACK_ACTION_DELAY); // Approximate attack duration
     }
   };
 
@@ -1539,110 +1484,10 @@ worldInstance.onReady((assets) => {
     if (!character) return;
 
     // Check for mouse press and aim mode
-    if (isMousePressed && isAiming && !isThrowing) {
+    if (isMousePressed && isAiming && mouseWorldPosition) {
       const now = performance.now();
-      const appleCount = uiManager.getItemCount('apple');
-      if (
-        now - lastThrowTime > throwCooldown &&
-        appleCount > 0
-      ) {
-        gameState.collectedApples--;
-        uiManager.removeItem('apple', 1);
-        isThrowing = true;
-
-        // Play throw animation (non-looping)
-        unitManager.playAnimation(character, 'throw');
-
-        // Throw apple 0.4 seconds after animation starts
-        setTimeout(() => {
-          throwApple();
-        }, 400);
-
-        // Reset throwing state when animation completes (1 second for full throw animation)
-        setTimeout(() => {
-          isThrowing = false;
-          // Return to appropriate idle animation
-          if (isAiming) {
-            unitManager.playAnimation(character, 'aimIdle');
-          } else {
-            unitManager.playAnimation(character, 'idle');
-          }
-        }, 1000);
-
-        lastThrowTime = now;
-      }
-    }
-  };
-
-  const throwApple = () => {
-    if (!character) return;
-
-    // Use right hand bone position if available, otherwise use character position
-    const origin = new THREE.Vector3();
-
-    // Try to find the bone now if we haven't found it yet
-    if (!rightHandBone && character.model.children[0]) {
-      const actualModel = character.model.children[0];
-      let rootBone: THREE.Bone | null = null;
-      actualModel.children.forEach((child) => {
-        if (child instanceof THREE.Bone && child.name === 'mixamorigHips') {
-          rootBone = child;
-        }
-      });
-
-      if (rootBone) {
-        rootBone.traverse((bone) => {
-          if (
-            bone instanceof THREE.Bone &&
-            bone.name === 'mixamorigRightHand'
-          ) {
-            rightHandBone = bone;
-          }
-        });
-      }
-    }
-
-    if (rightHandBone) {
-      // Get world position of right hand bone (wrist)
-      rightHandBone.getWorldPosition(origin);
-
-      // Add offset to position apple at palm/fingertips instead of wrist
-      // Get character's forward direction
-      const forward = character.model.getWorldDirection(new THREE.Vector3());
-      forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-
-      // Offset forward (towards fingers)
-      origin.addScaledVector(forward, 0.2);
-
-      // Offset slightly downward
-      origin.y -= 0.1;
-    } else {
-      // Fallback to character position + offset
-      origin.copy(character.model.position);
-      origin.y += 0.5;
-    }
-
-    // Get character's forward direction
-    const direction = character.model.getWorldDirection(new THREE.Vector3());
-    direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-
-    // Add consistent upward trajectory for arc
-    direction.y += 0.05;
-    direction.normalize();
-
-    // Launch projectile with spread and strength
-    const projectile = projectileManager.launch({
-      definitionId: 'apple',
-      origin,
-      direction,
-      strength: throwStrength,
-      userData: { thrownBy: 'player' },
-    });
-
-    if (projectile) {
-      logger.info('Apple thrown successfully!');
-    } else {
-      logger.warn('Failed to throw apple - no projectiles available');
+      // Combat system handles ammo checking and consumption via callbacks
+      unitManager.performRangedAttack(character, mouseWorldPosition, now);
     }
   };
 

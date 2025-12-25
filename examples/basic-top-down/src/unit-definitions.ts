@@ -54,6 +54,18 @@ export const humanUnitDefinition: UnitDefinition = {
     scale: 1.0,
     rotation: Math.PI / 2, // Adjust for correct orientation
   },
+  rangedAttack: {
+    projectileId: 'apple',
+    animation: 'throw',
+    range: 15.0,
+    cooldown: 1000,
+    staminaCost: 20,
+    actionDelay: 400,
+    ammoType: 'apple',
+    canTargetGround: false,
+    spawnBone: 'mixamorigRightHand',
+    spawnOffset: { x: 0.2, y: -0.1, z: 0 }, // Offset from wrist to palm
+  },
 };
 
 /**
