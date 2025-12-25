@@ -96,9 +96,6 @@ import { createInputManager } from '@three-play/core/input';
 ### Utilities
 ```typescript
 import {
-  // Math utilities
-  calculateDistance3D,
-  lerp,
   // Easing functions
   EasingFunctions,
   applyEasing,
