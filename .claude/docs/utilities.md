@@ -11,11 +11,82 @@ Collection of shared utility functions used throughout THREE Play.
 ## Overview
 
 The utilities module provides:
+- **Math Utilities** - Distance calculations and interpolation
 - **Easing Functions** - Smooth transitions and interpolation
 - **Logger** - Configurable logging system
 - **Object Pool** - Efficient memory management
 - **Damage Calculator** - Combat damage calculation system
 - **Team Utils** - Team-based targeting utilities
+
+---
+
+## Math Utilities
+
+Basic math operations for game development.
+
+### Location
+- [src/core/test-feature.ts](../../src/core/test-feature.ts)
+
+### `calculateDistance3D(x1, y1, z1, x2, y2, z2): number`
+
+Calculates the Euclidean distance between two 3D points.
+
+**Parameters:**
+- `x1`: number - X coordinate of first point
+- `y1`: number - Y coordinate of first point
+- `z1`: number - Z coordinate of first point
+- `x2`: number - X coordinate of second point
+- `y2`: number - Y coordinate of second point
+- `z2`: number - Z coordinate of second point
+
+**Returns:**
+- `number` - The Euclidean distance between the two points
+
+**Example:**
+```typescript
+import { calculateDistance3D } from '@three-play/core';
+
+const distance = calculateDistance3D(0, 0, 0, 10, 10, 10);
+console.log(distance);  // ~17.32
+
+// Check if unit is in attack range
+const dist = calculateDistance3D(
+  unit.position.x, unit.position.y, unit.position.z,
+  target.position.x, target.position.y, target.position.z
+);
+
+if (dist <= attackRange) {
+  // Attack target
+}
+```
+
+### `lerp(start, end, t): number`
+
+Linearly interpolates between two values.
+
+**Parameters:**
+- `start`: number - Starting value
+- `end`: number - Ending value
+- `t`: number - Interpolation factor (0-1)
+
+**Returns:**
+- `number` - Interpolated value
+
+**Example:**
+```typescript
+import { lerp } from '@three-play/core';
+
+const value = lerp(0, 100, 0.5);
+console.log(value);  // 50
+
+// Smooth position transition
+world.onUpdate((deltaTime) => {
+  const t = Math.min(progress, 1.0);
+  unit.position.x = lerp(startX, targetX, t);
+  unit.position.y = lerp(startY, targetY, t);
+  unit.position.z = lerp(startZ, targetZ, t);
+});
+```
 
 ---
 
