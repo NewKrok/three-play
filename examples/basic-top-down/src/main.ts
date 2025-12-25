@@ -575,7 +575,15 @@ worldInstance.onReady((assets) => {
   const spawnZombie = () => {
     if (zombieCount >= Constants.MAX_ZOMBIES) return;
 
+    // Randomize spawn position within 2 meter radius
+    const randomOffset = new THREE.Vector2(
+      (Math.random() - 0.5) * 4, // -2 to +2 meters on X
+      (Math.random() - 0.5) * 4  // -2 to +2 meters on Z
+    );
+
     const position = zombieSpawnPos.clone();
+    position.x += randomOffset.x;
+    position.z += randomOffset.y;
     position.y = heightmapUtils.getHeightFromPosition(position);
 
     const enemy = decorateUnit(
@@ -623,7 +631,15 @@ worldInstance.onReady((assets) => {
   const spawnSoldier = () => {
     if (soldierCount >= Constants.MAX_SOLDIERS) return;
 
+    // Randomize spawn position within 2 meter radius
+    const randomOffset = new THREE.Vector2(
+      (Math.random() - 0.5) * 4, // -2 to +2 meters on X
+      (Math.random() - 0.5) * 4  // -2 to +2 meters on Z
+    );
+
     const position = soldierSpawnPos.clone();
+    position.x += randomOffset.x;
+    position.z += randomOffset.y;
     position.y = heightmapUtils.getHeightFromPosition(position);
 
     const soldier = decorateUnit(
@@ -1892,6 +1908,9 @@ worldInstance.onReady((assets) => {
 
     // Handle unit spawning
     if (elapsedTime - lastSpawnTime >= Constants.SPAWN_INTERVAL) {
+      // Spawn 3 zombies for each soldier (balance)
+      spawnZombie();
+      spawnZombie();
       spawnZombie();
       spawnSoldier();
       lastSpawnTime = elapsedTime;

@@ -91,12 +91,12 @@ export const zombieUnitDefinition: UnitDefinition = {
   },
   stats: {
     speed: 0.8,
-    health: 75,
+    health: 60, // Reduced from 75 (spawns in pairs now)
     attackDamage: 15,
     collisionRadius: 0.5,
     combat: {
-      attackDamageMin: 10,
-      attackDamageMax: 20,
+      attackDamageMin: 8,  // Wider damage range for variety
+      attackDamageMax: 22,
       damageType: 'normal',
       armor: 0,
       armorType: 'light',
@@ -159,15 +159,15 @@ export const soldierUnitDefinition: UnitDefinition = {
     attackDamage: 30,
     collisionRadius: 0.5,
     combat: {
-      attackDamageMin: 25,
-      attackDamageMax: 35,
+      attackDamageMin: 18,  // Wider damage range, lower base
+      attackDamageMax: 30,
       damageType: 'pierce',
-      armor: 3,
+      armor: 2,  // Reduced from 3 for better balance
       armorType: 'heavy',
       attackSpeed: 1200,
       healthRegen: 0.3, // 0.3 HP per second
-      critChance: 0.10, // 10% crit chance
-      critMultiplier: 2.5, // 250% damage on crit
+      critChance: 0.25, // Increased from 10% to 25% - tactical advantage
+      critMultiplier: 2.0, // 200% damage on crit
       attackRange: 1.5,
     },
   },

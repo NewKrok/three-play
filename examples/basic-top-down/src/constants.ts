@@ -50,7 +50,7 @@ export const LIGHT_ATTACK_ACTION_DELAY = 500;
 export const STAMINA_FOR_LIGHT_ATTACK = 1;
 export const LIGHT_ATTACK_COOLDOWN = 900;
 export const LIGHT_ATTACK_EFFECT_AREA = 3;
-export const LIGHT_ATTACK_STUN_DURATION = 1000;
+export const LIGHT_ATTACK_STUN_DURATION = 0; // No stun on light attacks
 
 export const HEAVY_ATTACK_KNOCKBACK = 40;
 export const HEAVY_ATTACK_ACTION_DELAY = 1500;
