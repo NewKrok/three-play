@@ -558,6 +558,12 @@ worldInstance.onReady((assets) => {
     // Death is now automatically handled by the core combat system
     // We only need to handle game-specific logic here
 
+    // Sync player health with gameState
+    if (target === character) {
+      gameState.health = target.stats.health;
+      logger.info(`Player damaged! Health: ${gameState.health}/${gameState.maxHealth}`);
+    }
+
     // Update score if player killed an enemy
     if (target.stats.health <= 0 && attacker === character && target.team !== character.team) {
       gameState.score++;
@@ -706,6 +712,12 @@ worldInstance.onReady((assets) => {
       },
       onDamage: handleUnitDamage,
     });
+
+    // Initialize gameState.health from character's actual health
+    gameState.health = character.stats.health;
+    gameState.maxHealth = character.stats.health;
+    logger.info(`Player initialized with health: ${gameState.health}`);
+
     // Add health bar to player
     healthBarManager.createHealthBar(character, {
       yOffset: 2.5,
@@ -1939,8 +1951,11 @@ worldInstance.onReady((assets) => {
 
     updateTimeDisplay();
 
-    // Update UI displays
-    uiManager.updateHealth(gameState.health);
+    // Update UI displays - use character's actual stats for health
+    if (character) {
+      uiManager.updateHealth(character.stats.health);
+      gameState.health = character.stats.health; // Keep gameState in sync
+    }
     uiManager.updateStamina(gameState.stamina);
 
     // Update debug display
