@@ -241,6 +241,11 @@ export const createCombatController = (
             if (onDamage) {
               onDamage(attacker, target, damageResult);
             }
+
+            // Also call global window callback if it exists (for UI integration)
+            if (typeof window !== 'undefined' && (window as any).showDamageNumber) {
+              (window as any).showDamageNumber(target, damageResult);
+            }
           }
 
           if (isDead) {

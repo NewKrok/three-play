@@ -368,18 +368,14 @@ worldInstance.onReady((assets) => {
     return;
   }
 
-  // Set up damage callback for damage numbers (this is a workaround to hook into combat)
-  // We'll patch the combat controller's config after it's created
-  const unitManagerInternal = unitManager as any;
-  if (unitManagerInternal.combatController) {
-    const originalConfig = unitManagerInternal.combatController.config || {};
-    originalConfig.onDamage = (attacker: Unit, target: Unit, damageResult: any) => {
-      // Show damage numbers
+  // Set up global damage callback that combat system can use
+  (window as any).showDamageNumber = (target: Unit, damageResult: any) => {
+    if (damageNumbersManager && damageResult) {
       const pos = target.model.position.clone();
       pos.y += 1.5;
       damageNumbersManager.showDamage(pos, damageResult);
-    };
-  }
+    }
+  };
 
   // Initialize UI Manager
   uiManager = createUIManager({
