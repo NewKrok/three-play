@@ -275,7 +275,7 @@ describe('CombatController', () => {
 
       const result = combatController.applyDamage(targetUnit, damage);
 
-      expect(result).toBe(false); // Unit is still alive
+      expect(result.isDead).toBe(false); // Unit is still alive
       expect(targetUnit.stats.health).toBe(initialHealth - damage);
     });
 
@@ -284,7 +284,7 @@ describe('CombatController', () => {
 
       const result = combatController.applyDamage(targetUnit, damage);
 
-      expect(result).toBe(true);
+      expect(result.isDead).toBe(true);
       expect(targetUnit.stats.health).toBe(0);
     });
 
@@ -293,7 +293,7 @@ describe('CombatController', () => {
 
       const result = combatController.applyDamage(targetUnit, 0);
 
-      expect(result).toBe(false); // Unit is still alive
+      expect(result.isDead).toBe(false); // Unit is still alive
       expect(targetUnit.stats.health).toBe(initialHealth);
     });
 
@@ -302,7 +302,7 @@ describe('CombatController', () => {
 
       const result = combatController.applyDamage(targetUnit, -10);
 
-      expect(result).toBe(false); // Unit is still alive
+      expect(result.isDead).toBe(false); // Unit is still alive
       expect(targetUnit.stats.health).toBe(initialHealth + 10); // Negative damage = healing
     });
   });

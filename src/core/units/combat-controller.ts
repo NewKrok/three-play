@@ -201,7 +201,22 @@ export const createCombatController = (
       }
     }
 
-    // Schedule attack effect (delayed like in original)
+    // Calculate animation duration - should complete before cooldown
+    const animationDuration = attackType === 'light' ? 1000 : 1500; // Approximate durations
+
+    // End attacking state after animation duration (independent of damage delay)
+    setTimeout(() => {
+      if (attacker.combat) {
+        attacker.combat.isAttacking = false;
+      }
+
+      // Return to idle animation
+      if (unitManager.playAnimation) {
+        unitManager.playAnimation(attacker, 'idle');
+      }
+    }, animationDuration);
+
+    // Schedule attack effect (delayed for impact timing)
     setTimeout(() => {
       for (const target of targetsInRange) {
         // Skip if target is already dead (may have died during setTimeout delay)
@@ -292,19 +307,6 @@ export const createCombatController = (
 
         result.hitUnits.push(target);
       }
-
-      // End attacking state after animation duration
-      const animationDuration = attackType === 'light' ? 1000 : 1500; // Approximate durations
-      setTimeout(() => {
-        if (attacker.combat) {
-          attacker.combat.isAttacking = false;
-        }
-
-        // Return to idle animation
-        if (unitManager.playAnimation) {
-          unitManager.playAnimation(attacker, 'idle');
-        }
-      }, animationDuration);
     }, attackConfig.actionDelay || 0);
 
     return result;
@@ -366,7 +368,7 @@ export const createCombatController = (
   const updateCombat = (
     units: Unit[],
     deltaTime: number,
-    currentTime: number,
+    _currentTime: number,
   ): void => {
     for (const unit of units) {
       if (!unit.combat) continue;
