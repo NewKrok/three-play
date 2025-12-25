@@ -164,8 +164,12 @@ export const createHealthBarManager = (scene: THREE.Scene): HealthBarManager => 
     healthFill.renderOrder = 1000;
     if (border) border.renderOrder = 1001;
 
-    // Add to unit's model
-    unit.model.add(container);
+    // Add to scene directly, not to unit model, to avoid inheriting rotation
+    scene.add(container);
+
+    // Set initial position above unit
+    container.position.copy(unit.model.position);
+    container.position.y += fullConfig.yOffset;
 
     // Hide if not always showing
     if (!fullConfig.alwaysShow && unit.stats.health === unit.stats.maxHealth) {
@@ -186,8 +190,8 @@ export const createHealthBarManager = (scene: THREE.Scene): HealthBarManager => 
   };
 
   const removeHealthBar = (healthBar: HealthBar): void => {
-    // Remove from scene
-    healthBar.unit.model.remove(healthBar.container);
+    // Remove from scene (not from unit.model, since we added it to scene directly)
+    scene.remove(healthBar.container);
 
     // Dispose geometries and materials
     healthBar.background.geometry.dispose();
@@ -206,6 +210,10 @@ export const createHealthBarManager = (scene: THREE.Scene): HealthBarManager => 
   const updateHealthBars = (camera: THREE.Camera): void => {
     for (const healthBar of healthBars.values()) {
       const { unit, healthFill, container, config } = healthBar;
+
+      // Update position to follow unit
+      container.position.copy(unit.model.position);
+      container.position.y += config.yOffset;
 
       // Calculate health percentage
       const healthPercent = unit.stats.health / unit.stats.maxHealth;
@@ -234,7 +242,7 @@ export const createHealthBarManager = (scene: THREE.Scene): HealthBarManager => 
         container.visible = healthPercent < 1.0;
       }
 
-      // Make health bar always face camera
+      // Make health bar always face camera (billboard effect)
       container.quaternion.copy(camera.quaternion);
     }
   };
