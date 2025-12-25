@@ -534,6 +534,37 @@ export const createCombatController = (
       };
     }
 
+    // Check if attacker is facing the target (within acceptable angle tolerance)
+    const targetPosition = target instanceof THREE.Vector3 ? target : target.model.position;
+    const directionToTarget = new THREE.Vector3()
+      .subVectors(targetPosition, attacker.model.position)
+      .normalize();
+    directionToTarget.y = 0; // Only check horizontal facing
+
+    // Get attacker's forward direction
+    const attackerForward = new THREE.Vector3(1, 0, 0);
+    attackerForward.applyQuaternion(attacker.model.quaternion);
+    attackerForward.y = 0;
+    attackerForward.normalize();
+
+    // Calculate angle between attacker's facing and target direction
+    const dotProduct = attackerForward.dot(directionToTarget);
+    const angleRadians = Math.acos(Math.max(-1, Math.min(1, dotProduct)));
+    const angleDegrees = (angleRadians * 180) / Math.PI;
+
+    // Angle tolerance: 5-10 degrees as per user preference
+    const angleToleranceDegrees = 10;
+
+    // If not facing target, don't start the attack
+    if (angleDegrees > angleToleranceDegrees) {
+      return {
+        success: false,
+        hitUnits: [],
+        damages: [],
+        failureReason: 'Not facing target - wait for character to rotate',
+      };
+    }
+
     // Set attacking state
     if (attacker.combat) {
       attacker.combat.isAttacking = true;
@@ -609,7 +640,7 @@ export const createCombatController = (
         .normalize();
 
       // Add upward arc for ballistic trajectory
-      direction.y += 0.3; // Increased arc for better trajectory
+      direction.y += 0.05; // Small arc to hit enemies at chest height
       direction.normalize();
 
       // Prepare combat data
