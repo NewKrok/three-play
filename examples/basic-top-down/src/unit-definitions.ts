@@ -116,11 +116,11 @@ export const zombieUnitDefinition: UnitDefinition = {
     type: 'chase',
     targeting: {
       preferredTargets: ['player'],
-      detectionRange: 8.0,
+      detectionRange: 30.0, // Increased detection range to ensure zombies chase enemies
       attackRange: 1.5,
     },
     movement: {
-      speed: 0.8,
+      speed: 4.0, // Speed for running animation
     },
   },
 
@@ -180,11 +180,11 @@ export const soldierUnitDefinition: UnitDefinition = {
     type: 'chase',
     targeting: {
       preferredTargets: ['enemy'],
-      detectionRange: 15.0,
+      detectionRange: 30.0, // Increased detection range to ensure soldiers chase zombies
       attackRange: 1.5,
     },
     movement: {
-      speed: 1.0,
+      speed: 4.0, // Speed for running animation
     },
   },
 };

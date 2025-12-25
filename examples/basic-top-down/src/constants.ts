@@ -25,8 +25,6 @@ export const SMALL_ROCK_COUNT = 200;
 export const LARGE_ROCK_COUNT = 100;
 export const TREE_COUNT = 1000;
 export const CRATE_COUNT = 100;
-export const ENEMY_COUNT = 20;
-export const SOLDIER_COUNT = 20;
 
 // Collision constants
 export const TREE_COLLISION_RADIUS = 1.5;
@@ -63,4 +61,14 @@ export const HEAVY_ATTACK_STUN_DURATION = 3000;
 
 // Misc constants
 export const startingPosition = { x: 88, y: 0, z: 132 };
-export const soldierSpawnPosition = { x: 120, y: 10, z: 144 };
+
+// Unit spawning constants
+export const MAX_ZOMBIES = 50;
+export const MAX_SOLDIERS = 50;
+export const SPAWN_INTERVAL = 10; // seconds
+
+export const zombieSpawnPosition = { x: 88, y: 8, z: 166 };
+export const zombieTargetPosition = { x: 115, y: 9, z: 174 };
+
+export const soldierSpawnPosition = { x: 154, y: 9, z: 171 };
+export const soldierTargetPosition = { x: 115, y: 9, z: 174 };

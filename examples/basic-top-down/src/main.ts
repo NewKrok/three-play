@@ -59,8 +59,6 @@ const {
   CRATE_INTERACTION_RADIUS,
   MIN_APPLES_PER_TREE,
   MAX_APPLES_PER_TREE,
-  ENEMY_COUNT,
-  SOLDIER_COUNT,
   APPLE_HIT_RADIUS,
   MAX_STAMINA,
   STAMINA_RECOVERY,
@@ -79,10 +77,28 @@ const startingPosition = new THREE.Vector3(
   Constants.startingPosition.z,
 );
 
-const soldierSpawnPosition = new THREE.Vector3(
+const zombieSpawnPos = new THREE.Vector3(
+  Constants.zombieSpawnPosition.x,
+  Constants.zombieSpawnPosition.y,
+  Constants.zombieSpawnPosition.z,
+);
+
+const zombieTargetPos = new THREE.Vector3(
+  Constants.zombieTargetPosition.x,
+  Constants.zombieTargetPosition.y,
+  Constants.zombieTargetPosition.z,
+);
+
+const soldierSpawnPos = new THREE.Vector3(
   Constants.soldierSpawnPosition.x,
   Constants.soldierSpawnPosition.y,
   Constants.soldierSpawnPosition.z,
+);
+
+const soldierTargetPos = new THREE.Vector3(
+  Constants.soldierTargetPosition.x,
+  Constants.soldierTargetPosition.y,
+  Constants.soldierTargetPosition.z,
 );
 
 const appleEffects = [
@@ -119,6 +135,9 @@ let damageNumbersManager: DamageNumbersManager;
 let lastLightAttackTime = 0;
 let lastHeavyAttackTime = 0;
 let isRolling = false;
+let lastSpawnTime = 0;
+let zombieCount = 0;
+let soldierCount = 0;
 // Note: isAttacking is now tracked in character.combat.isAttacking
 const isAttacking = () => character?.combat?.isAttacking ?? false;
 let isAiming = false;
@@ -542,92 +561,111 @@ worldInstance.onReady((assets) => {
     // Update score if player killed an enemy
     if (target.stats.health <= 0 && attacker === character && target.team !== character.team) {
       gameState.score++;
-    }
-  };
 
-  // Create enemies using unit manager
-  const createEnemies = async (count: number) => {
-    for (let i = 0; i < count; i++) {
-      const position = startingPosition.clone();
-      position.x += 10 + i * 1.5 - Math.floor(i / 5) * (5 * 1.5);
-      position.z += -10 + Math.floor(i / 5) * 2;
-      position.y = heightmapUtils.getHeightFromPosition(position);
-
-      const enemy = decorateUnit(
-        unitManager.createUnit({
-          definitionId: 'zombie-enemy',
-          position,
-        }),
-        COLOR_THEMES.zombie,
-      );
-
-      if (enemy) {
-        // Initialize health tracking (3 hits to kill)
-        enemy.userData.health = 3;
-        enemy.userData.isDead = false;
-
-        // Initialize AI behavior for enemy
-        unitManager.initializeAIBehavior(enemy, position);
-
-        // Initialize combat for enemy
-        unitManager.initializeCombat(enemy, 100, {
-          onDamage: handleUnitDamage,
-        });
-
-        // Add health bar to enemy
-        healthBarManager.createHealthBar(enemy, {
-          yOffset: 2.2,
-          alwaysShow: false,
-        });
-
-        logger.info(`Created enemy ${i + 1}/${count}`);
+      // Decrease counter when unit dies
+      if (target.definition?.type === 'enemy') {
+        zombieCount--;
+      } else if (target.definition?.type === 'npc') {
+        soldierCount--;
       }
     }
   };
 
-  createEnemies(ENEMY_COUNT);
+  // Spawn a single zombie
+  const spawnZombie = () => {
+    if (zombieCount >= Constants.MAX_ZOMBIES) return;
 
-  // Create soldiers using unit manager
-  const createSoldiers = async (count: number) => {
-    for (let i = 0; i < count; i++) {
-      const position = soldierSpawnPosition.clone();
-      position.x += (i % 5) * 2 - 4; // Spread in rows of 5
-      position.z += Math.floor(i / 5) * 2;
-      position.y = heightmapUtils.getHeightFromPosition(position);
+    const position = zombieSpawnPos.clone();
+    position.y = heightmapUtils.getHeightFromPosition(position);
 
-      const soldier = decorateUnit(
-        unitManager.createUnit({
-          definitionId: 'soldier-ally',
-          position,
-        }),
-        COLOR_THEMES.soldier,
-      );
+    const enemy = decorateUnit(
+      unitManager.createUnit({
+        definitionId: 'zombie-enemy',
+        position,
+      }),
+      COLOR_THEMES.zombie,
+    );
 
-      if (soldier) {
-        // Initialize health tracking
-        soldier.userData.health = 5; // Soldiers are tougher than zombies
-        soldier.userData.isDead = false;
+    if (enemy) {
+      // Initialize health tracking (3 hits to kill)
+      enemy.userData.health = 3;
+      enemy.userData.isDead = false;
 
-        // Initialize AI behavior for soldier to chase zombies
-        unitManager.initializeAIBehavior(soldier, position);
+      // Initialize AI behavior for enemy - spawn position as home
+      unitManager.initializeAIBehavior(enemy, position);
 
-        // Initialize combat for soldier
-        unitManager.initializeCombat(soldier, 100, {
-          onDamage: handleUnitDamage,
-        });
-
-        // Add health bar to soldier
-        healthBarManager.createHealthBar(soldier, {
-          yOffset: 2.2,
-          alwaysShow: false,
-        });
-
-        logger.info(`Created soldier ${i + 1}/${count}`);
+      // Manually set AI to move to target position (as if returning home)
+      const behaviorData = unitManager.getAIBehaviorData(enemy);
+      if (behaviorData) {
+        behaviorData.state = 'return'; // Use 'return' state which uses 'run' animation
+        behaviorData.homePosition.copy(zombieTargetPos); // Set target as "home"
+        behaviorData.targetPosition.copy(zombieTargetPos); // Set immediate target
+        behaviorData.isMoving = true; // Start moving immediately
       }
+
+      // Initialize combat for enemy
+      unitManager.initializeCombat(enemy, 100, {
+        onDamage: handleUnitDamage,
+      });
+
+      // Add health bar to enemy
+      healthBarManager.createHealthBar(enemy, {
+        yOffset: 2.2,
+        alwaysShow: false,
+      });
+
+      zombieCount++;
+      logger.info(`Spawned zombie (${zombieCount}/${Constants.MAX_ZOMBIES})`);
     }
   };
 
-  createSoldiers(SOLDIER_COUNT);
+  // Spawn a single soldier
+  const spawnSoldier = () => {
+    if (soldierCount >= Constants.MAX_SOLDIERS) return;
+
+    const position = soldierSpawnPos.clone();
+    position.y = heightmapUtils.getHeightFromPosition(position);
+
+    const soldier = decorateUnit(
+      unitManager.createUnit({
+        definitionId: 'soldier-ally',
+        position,
+      }),
+      COLOR_THEMES.soldier,
+    );
+
+    if (soldier) {
+      // Initialize health tracking
+      soldier.userData.health = 5; // Soldiers are tougher than zombies
+      soldier.userData.isDead = false;
+
+      // Initialize AI behavior for soldier - spawn position as home
+      unitManager.initializeAIBehavior(soldier, position);
+
+      // Manually set AI to move to target position (as if returning home)
+      const behaviorData = unitManager.getAIBehaviorData(soldier);
+      if (behaviorData) {
+        behaviorData.state = 'return'; // Use 'return' state which uses 'run' animation
+        behaviorData.homePosition.copy(soldierTargetPos); // Set target as "home"
+        behaviorData.targetPosition.copy(soldierTargetPos); // Set immediate target
+        behaviorData.isMoving = true; // Start moving immediately
+      }
+
+      // Initialize combat for soldier
+      unitManager.initializeCombat(soldier, 100, {
+        onDamage: handleUnitDamage,
+      });
+
+      // Add health bar to soldier
+      healthBarManager.createHealthBar(soldier, {
+        yOffset: 2.2,
+        alwaysShow: false,
+      });
+
+      soldierCount++;
+      logger.info(`Spawned soldier (${soldierCount}/${Constants.MAX_SOLDIERS})`);
+    }
+  };
 
   // Initialize combat for player character
   if (character) {
@@ -1851,6 +1889,13 @@ worldInstance.onReady((assets) => {
     cycleData.elapsed = elapsedTime;
 
     updateParticleSystems(cycleData);
+
+    // Handle unit spawning
+    if (elapsedTime - lastSpawnTime >= Constants.SPAWN_INTERVAL) {
+      spawnZombie();
+      spawnSoldier();
+      lastSpawnTime = elapsedTime;
+    }
 
     if (!cinamaticCameraController.isPlaying()) {
       updateCamera();
