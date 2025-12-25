@@ -386,6 +386,9 @@ worldInstance.onReady((assets) => {
   damageNumbersManager = createDamageNumbersManager(scene);
   logger.info('Health bar and damage numbers managers initialized');
 
+  // Setup health bar manager for automatic cleanup on death
+  unitManager.setHealthBarManager?.(healthBarManager);
+
   // Initialize debug display
   const debugDisplay = document.getElementById('debug-display');
   const updateDebugDisplay = () => {
@@ -533,41 +536,12 @@ worldInstance.onReady((assets) => {
 
   // Shared onDamage handler for all units
   const handleUnitDamage = (attacker: any, target: any) => {
-    // Handle death
-    if (target.userData?.health !== undefined && target.userData.health <= 0) {
-      if (!target.userData.isDead) {
-        target.userData.isDead = true;
+    // Death is now automatically handled by the core combat system
+    // We only need to handle game-specific logic here
 
-        // Choose random death animation for zombies (death1, death2, death3)
-        if (target.definition.id === 'zombie-enemy') {
-          const deathAnimationIndex = Math.floor(Math.random() * 3) + 1;
-          const deathAnimationName = `death${deathAnimationIndex}`;
-
-          // Play death animation
-          unitManager.playAnimation(target, deathAnimationName);
-
-          // Make the death animation non-looping and clamp at end
-          if (target.actions && target.actions[deathAnimationName]) {
-            target.actions[deathAnimationName].setLoop(THREE.LoopOnce as any, 1);
-            target.actions[deathAnimationName].clampWhenFinished = true;
-          }
-
-          // Remove unit after animation completes
-          setTimeout(() => {
-            unitManager.removeUnit(target.id);
-          }, 2000);
-        } else {
-          // For other units, remove immediately or use their own death logic
-          setTimeout(() => {
-            unitManager.removeUnit(target.id);
-          }, 2000);
-        }
-
-        // Update score if player killed an enemy
-        if (attacker === character && target.team !== character.team) {
-          gameState.score++;
-        }
-      }
+    // Update score if player killed an enemy
+    if (target.stats.health <= 0 && attacker === character && target.team !== character.team) {
+      gameState.score++;
     }
   };
 
@@ -1897,34 +1871,7 @@ worldInstance.onReady((assets) => {
 
     // UnitManager handles all unit updates automatically (AI, animation, combat, physics)
     // No need for manual updateUnits() as the UnitManager is called in worldInstance.onUpdate()
-
-    // Check for dead units and handle their death
-    const allUnits = unitManager.getAllUnits();
-    for (const unit of allUnits) {
-      if (unit.stats.health <= 0 && !unit.userData.isDead) {
-        unit.userData.isDead = true;
-
-        // Stop AI behavior immediately
-        if (unit.ai) {
-          unit.ai.isStunned = true;
-        }
-
-        // Play death animation if available
-        const deathAnims = ['death1', 'death2', 'death3'];
-        const availableDeathAnim = deathAnims.find(anim => unit.actions[anim]);
-        if (availableDeathAnim) {
-          unitManager.playAnimation(unit, availableDeathAnim);
-        }
-
-        // Remove unit after delay
-        setTimeout(() => {
-          healthBarManager.removeHealthBar(
-            healthBarManager.getHealthBar(unit)
-          );
-          unitManager.removeUnit(unit.id);
-        }, 2000);
-      }
-    }
+    // Death handling is now automatic via the combat system and unit definitions
 
     updateTimeDisplay();
 

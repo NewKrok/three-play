@@ -123,6 +123,14 @@ export const zombieUnitDefinition: UnitDefinition = {
       speed: 0.8,
     },
   },
+
+  death: {
+    animations: ['death1', 'death2', 'death3'], // Random selection from these
+    removeDelay: 2000, // Wait 2 seconds before removing
+    loop: false,
+    clampWhenFinished: true,
+    autoHandle: true, // Automatically handled by core
+  },
 };
 
 /**

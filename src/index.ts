@@ -204,6 +204,7 @@ export type {
   CombatConfig,
   UnitDefinition,
   AIBehaviorConfig,
+  DeathConfig,
   Unit,
   UnitManagerConfig,
   CreateUnitParams,

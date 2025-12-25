@@ -143,6 +143,26 @@ export type UnitDefinition = {
   rangedAttack?: RangedAttackConfig;
   /** AI behavior configuration (only for non-player units) */
   ai?: AIBehaviorConfig;
+  /** Death behavior configuration (optional) */
+  death?: DeathConfig;
+};
+
+/**
+ * Death behavior configuration
+ */
+export type DeathConfig = {
+  /** List of death animation names to choose from randomly */
+  animations?: string[];
+  /** Single death animation name (alternative to animations array) */
+  animation?: string;
+  /** Duration to wait before removing unit (ms). Default: 2000 */
+  removeDelay?: number;
+  /** Whether death animations should loop. Default: false */
+  loop?: boolean;
+  /** Whether to clamp animation at final frame. Default: true */
+  clampWhenFinished?: boolean;
+  /** Whether to automatically handle death in core. Default: true */
+  autoHandle?: boolean;
 };
 
 /**
@@ -477,6 +497,8 @@ export type UnitManager = {
   setupProjectileDamageIntegration?: (projectileManager: any) => void;
   /** Get projectile manager reference */
   getProjectileManager?: () => any;
+  /** Set health bar manager for automatic cleanup on death */
+  setHealthBarManager?: (healthBarManager: any) => void;
 };
 
 /**

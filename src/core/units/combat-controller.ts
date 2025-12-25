@@ -64,6 +64,8 @@ export type CombatController = {
   setStamina: (unit: Unit, stamina: number) => void;
   /** Get units in attack range */
   getUnitsInAttackRange: (attacker: Unit, attackType: AttackType) => Unit[];
+  /** Set health bar manager for automatic cleanup on death */
+  setHealthBarManager: (manager: any) => void;
 };
 
 /**
@@ -104,6 +106,13 @@ export const createCombatController = (
 
   // Reusable objects to avoid garbage collection
   const tempDirection = new THREE.Vector3();
+
+  // Optional health bar manager for automatic cleanup
+  let healthBarManager: any = null;
+
+  const setHealthBarManager = (manager: any): void => {
+    healthBarManager = manager;
+  };
 
   const initializeCombat = (unit: Unit, stamina: number = 100): void => {
     if (!unit.combat) {
@@ -169,6 +178,73 @@ export const createCombatController = (
     );
   };
 
+  /**
+   * Handle unit death with animations and cleanup
+   */
+  const handleUnitDeath = (unit: Unit): void => {
+    // Skip if already marked as dead
+    if (unit.userData?.isDead) return;
+
+    // Mark as dead immediately to prevent multiple death triggers
+    if (!unit.userData) unit.userData = {};
+    unit.userData.isDead = true;
+
+    // Stop AI behavior immediately
+    if (unit.ai) {
+      unit.ai.isStunned = true;
+    }
+
+    // Get death configuration from unit definition
+    const deathConfig = unit.definition.death;
+    const autoHandle = deathConfig?.autoHandle !== false; // Default true
+
+    if (!autoHandle) {
+      // If autoHandle is disabled, only call onDamage callback
+      // and let the application handle death
+      return;
+    }
+
+    // Choose death animation
+    let deathAnimation: string | undefined;
+    if (deathConfig?.animations && deathConfig.animations.length > 0) {
+      // Random selection from animations array
+      const randomIndex = Math.floor(Math.random() * deathConfig.animations.length);
+      deathAnimation = deathConfig.animations[randomIndex];
+    } else if (deathConfig?.animation) {
+      // Single animation specified
+      deathAnimation = deathConfig.animation;
+    }
+
+    // Play death animation if available
+    if (deathAnimation && unit.actions?.[deathAnimation]) {
+      unitManager.playAnimation(unit, deathAnimation);
+
+      // Configure animation properties
+      const action = unit.actions[deathAnimation];
+      if (action) {
+        const loop = deathConfig?.loop ?? false;
+        const clampWhenFinished = deathConfig?.clampWhenFinished ?? true;
+
+        action.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, 1);
+        action.clampWhenFinished = clampWhenFinished;
+      }
+    }
+
+    // Schedule unit removal
+    const removeDelay = deathConfig?.removeDelay ?? 2000;
+    setTimeout(() => {
+      // Remove health bar if health bar manager is available
+      if (healthBarManager) {
+        const healthBar = healthBarManager.getHealthBar(unit);
+        if (healthBar) {
+          healthBarManager.removeHealthBar(healthBar);
+        }
+      }
+
+      unitManager.removeUnit(unit.id);
+    }, removeDelay);
+  };
+
   const applyDamage = (
     target: Unit,
     damage: number,
@@ -180,6 +256,12 @@ export const createCombatController = (
     if (source) {
       const damageResult = calculateDamage(source, target);
       const isDead = applyCalculatedDamage(target, damageResult);
+
+      // Handle death automatically if enabled
+      if (isDead) {
+        handleUnitDeath(target);
+      }
+
       return { isDead, damageResult };
     }
 
@@ -188,7 +270,14 @@ export const createCombatController = (
     target.stats.health = Math.max(0, target.stats.health);
 
     // Return true if unit died
-    return { isDead: target.stats.health <= 0 };
+    const isDead = target.stats.health <= 0;
+
+    // Handle death automatically if enabled
+    if (isDead) {
+      handleUnitDeath(target);
+    }
+
+    return { isDead };
   };
 
   const executeAttack = (
@@ -600,6 +689,7 @@ export const createCombatController = (
     initializeCombat,
     setStamina,
     getUnitsInAttackRange,
+    setHealthBarManager,
   };
 };
 

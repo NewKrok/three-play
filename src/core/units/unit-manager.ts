@@ -852,6 +852,8 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
     createProjectileCollisionFunction: null as any,
     getProjectileManager: () => (unitManager as any).projectileManager || null,
     setupProjectileDamageIntegration,
+    // Health bar integration
+    setHealthBarManager: null as any,
     // Outline management methods
     addUnitOutline: null as any,
     removeUnitOutline: null as any,
@@ -895,6 +897,11 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
   unitManager.hasUnitOutline = hasUnitOutline;
   unitManager.getOutlinedUnits = getOutlinedUnits;
   unitManager.removeAllUnitOutlines = removeAllUnitOutlines;
+
+  // Add health bar manager setter
+  unitManager.setHealthBarManager = (healthBarManager: any) => {
+    combatController.setHealthBarManager(healthBarManager);
+  };
 
   return unitManager;
 };
