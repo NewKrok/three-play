@@ -50,6 +50,8 @@ export type CombatConfig = {
   enableDamage?: boolean;
   /** Logger instance for debugging */
   logger?: import('../core/utils/logger.js').Logger;
+  /** Callback when damage is dealt */
+  onDamage?: (attacker: Unit, target: Unit, damageResult: import('./combat.js').DamageResult) => void;
 };
 
 /**

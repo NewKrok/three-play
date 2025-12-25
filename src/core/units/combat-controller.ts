@@ -61,6 +61,7 @@ export const createCombatController = (
 ): CombatController => {
   const {
     logger,
+    onDamage,
     lightAttack = {
       damage: 10,
       knockback: 5,
@@ -234,6 +235,11 @@ export const createCombatController = (
               logger?.info(
                 `CRITICAL HIT! ${attacker.id} dealt ${damageResult.finalDamage} damage to ${target.id}`,
               );
+            }
+
+            // Call onDamage callback if provided
+            if (onDamage) {
+              onDamage(attacker, target, damageResult);
             }
           }
 

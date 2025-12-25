@@ -118,6 +118,8 @@ let rightHandBone: THREE.Bone | null = null;
 let unitManager: UnitManagerType;
 let projectileManager: ProjectileManager;
 let uiManager: UIManager;
+let healthBarManager: HealthBarManager;
+let damageNumbersManager: DamageNumbersManager;
 let lastLightAttackTime = 0;
 let lastHeavyAttackTime = 0;
 let isRolling = false;
@@ -366,6 +368,19 @@ worldInstance.onReady((assets) => {
     return;
   }
 
+  // Set up damage callback for damage numbers (this is a workaround to hook into combat)
+  // We'll patch the combat controller's config after it's created
+  const unitManagerInternal = unitManager as any;
+  if (unitManagerInternal.combatController) {
+    const originalConfig = unitManagerInternal.combatController.config || {};
+    originalConfig.onDamage = (attacker: Unit, target: Unit, damageResult: any) => {
+      // Show damage numbers
+      const pos = target.model.position.clone();
+      pos.y += 1.5;
+      damageNumbersManager.showDamage(pos, damageResult);
+    };
+  }
+
   // Initialize UI Manager
   uiManager = createUIManager({
     maxHealth: MAX_HEALTH,
@@ -376,8 +391,8 @@ worldInstance.onReady((assets) => {
   logger.info('UI Manager initialized');
 
   // Initialize health bar and damage numbers managers
-  const healthBarManager = createHealthBarManager(scene);
-  const damageNumbersManager = createDamageNumbersManager(scene);
+  healthBarManager = createHealthBarManager(scene);
+  damageNumbersManager = createDamageNumbersManager(scene);
   logger.info('Health bar and damage numbers managers initialized');
 
   // Initialize debug display
@@ -2041,6 +2056,29 @@ worldInstance.onReady((assets) => {
 
     // UnitManager handles all unit updates automatically (AI, animation, combat, physics)
     // No need for manual updateUnits() as the UnitManager is called in worldInstance.onUpdate()
+
+    // Check for dead units and handle their death
+    const allUnits = unitManager.getAllUnits();
+    for (const unit of allUnits) {
+      if (unit.stats.health <= 0 && !unit.userData.isDead) {
+        unit.userData.isDead = true;
+
+        // Play death animation if available
+        const deathAnims = ['death1', 'death2', 'death3'];
+        const availableDeathAnim = deathAnims.find(anim => unit.actions[anim]);
+        if (availableDeathAnim) {
+          unitManager.playAnimation(unit, availableDeathAnim);
+        }
+
+        // Remove unit after delay
+        setTimeout(() => {
+          healthBarManager.removeHealthBar(
+            healthBarManager.getHealthBar(unit)
+          );
+          unitManager.removeUnit(unit.id);
+        }, 2000);
+      }
+    }
 
     updateTimeDisplay();
 
