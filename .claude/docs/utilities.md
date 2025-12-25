@@ -1,0 +1,725 @@
+# Utilities Module
+
+Collection of shared utility functions used throughout THREE Play.
+
+## Location
+
+- Implementation: [src/core/utils/](../../src/core/utils/)
+- Types: [src/types/common.ts](../../src/types/common.ts), [src/types/combat.ts](../../src/types/combat.ts)
+- Export: [src/core/utils/index.ts](../../src/core/utils/index.ts)
+
+## Overview
+
+The utilities module provides:
+- **Easing Functions** - Smooth transitions and interpolation
+- **Logger** - Configurable logging system
+- **Object Pool** - Efficient memory management
+- **Damage Calculator** - Combat damage calculation system
+- **Team Utils** - Team-based targeting utilities
+
+---
+
+## Easing Utils
+
+Smooth value transitions with various easing functions.
+
+### Location
+- [src/core/utils/easing-utils.ts](../../src/core/utils/easing-utils.ts)
+
+### `EasingFunctions` Object
+
+Collection of easing functions.
+
+**Available Functions:**
+```typescript
+const EasingFunctions = {
+  linear: (t: number) => number,
+  'ease-in': (t: number) => number,
+  'ease-out': (t: number) => number,
+  'ease-in-out': (t: number) => number
+};
+```
+
+**Example:**
+```typescript
+import { EasingFunctions } from '@three-play/core/utils';
+
+const t = 0.5;  // 50% through transition
+const eased = EasingFunctions['ease-out'](t);
+console.log(eased);  // ~0.75
+```
+
+### `applyEasing(startValue, endValue, startTime, duration, currentTime, easingType): number`
+
+Apply easing to a value transition.
+
+**Parameters:**
+- `startValue`: number - Starting value
+- `endValue`: number - Target value
+- `startTime`: number - Start time (seconds)
+- `duration`: number - Duration (seconds)
+- `currentTime`: number - Current time (seconds)
+- `easingType`: EasingType - Easing function to use (default: 'linear')
+
+**Returns:**
+- `number` - Interpolated value
+
+**Example:**
+```typescript
+import { applyEasing } from '@three-play/core/utils';
+
+const startValue = 0;
+const endValue = 100;
+const startTime = 0;
+const duration = 2.0;  // 2 seconds
+const currentTime = 1.0;  // 1 second elapsed
+
+const value = applyEasing(
+  startValue,
+  endValue,
+  startTime,
+  duration,
+  currentTime,
+  'ease-out'
+);
+
+console.log(value);  // ~75 (smooth transition)
+```
+
+**Animation Example:**
+```typescript
+let startTime = 0;
+const duration = 1.0;
+
+world.onUpdate((deltaTime, elapsedTime) => {
+  if (startTime === 0) startTime = elapsedTime;
+
+  const value = applyEasing(
+    0,      // from
+    100,    // to
+    startTime,
+    duration,
+    elapsedTime,
+    'ease-in-out'
+  );
+
+  object.position.x = value;
+});
+```
+
+### `isEasingComplete(startTime, duration, currentTime): boolean`
+
+Check if easing transition is complete.
+
+**Parameters:**
+- `startTime`: number - Start time (seconds)
+- `duration`: number - Duration (seconds)
+- `currentTime`: number - Current time (seconds)
+
+**Returns:**
+- `boolean` - True if complete
+
+**Example:**
+```typescript
+import { isEasingComplete, applyEasing } from '@three-play/core/utils';
+
+let startTime = 0;
+const duration = 1.0;
+
+world.onUpdate((deltaTime, elapsedTime) => {
+  if (startTime === 0) startTime = elapsedTime;
+
+  if (isEasingComplete(startTime, duration, elapsedTime)) {
+    console.log('Easing complete!');
+    startTime = 0;  // Reset
+    return;
+  }
+
+  const value = applyEasing(0, 100, startTime, duration, elapsedTime, 'ease-out');
+  // Use value...
+});
+```
+
+---
+
+## Logger
+
+Configurable logging system with log levels.
+
+### Location
+- [src/core/utils/logger.ts](../../src/core/utils/logger.ts)
+
+### `createLogger(config?: LoggerConfig): Logger`
+
+Create a logger instance.
+
+**Parameters:**
+```typescript
+type LoggerConfig = {
+  level?: 'debug' | 'info' | 'warn' | 'error';  // default: 'info'
+  prefix?: string;  // Optional prefix for all messages
+};
+```
+
+**Returns:**
+- `Logger` instance
+
+**Example:**
+```typescript
+import { createLogger } from '@three-play/core/utils';
+
+const logger = createLogger({
+  level: 'debug',
+  prefix: '[Game]'
+});
+
+logger.debug('Debug message');
+logger.info('Info message');
+logger.warn('Warning message');
+logger.error('Error message');
+```
+
+### Logger Interface
+
+```typescript
+type Logger = {
+  debug(message: string, ...args: any[]): void;
+  info(message: string, ...args: any[]): void;
+  warn(message: string, ...args: any[]): void;
+  error(message: string, ...args: any[]): void;
+};
+```
+
+**Log Levels:**
+- `debug`: Verbose debugging information
+- `info`: General informational messages
+- `warn`: Warning messages
+- `error`: Error messages
+
+**Level Filtering:**
+Setting level to `'warn'` will only show warn and error messages.
+
+**Example Usage:**
+```typescript
+const logger = createLogger({ level: 'info' });
+
+logger.debug('This will not appear');  // Below info level
+logger.info('Player spawned at (0,0,0)');  // Shows
+logger.warn('Low memory');  // Shows
+logger.error('Failed to load asset');  // Shows
+```
+
+---
+
+## Object Pool
+
+Generic object pooling for efficient memory management.
+
+### Location
+- [src/core/utils/object-pool.ts](../../src/core/utils/object-pool.ts)
+
+### `createObjectPool<T>(config): ObjectPool<T>`
+
+Create an object pool.
+
+**Parameters:**
+```typescript
+type ObjectPoolConfig<T> = {
+  createFn: () => T;                 // Function to create new objects
+  resetFn?: (item: T) => void;       // Function to reset objects
+  logger?: Logger;                   // Logger instance
+  initialSize?: number;              // Pre-allocate count (default: 10)
+  maxSize?: number;                  // Max pool size (0 = unlimited)
+  autoGrow?: boolean;                // Auto-create if pool empty (default: true)
+};
+```
+
+**Returns:**
+- `ObjectPool<T>` instance
+
+**Example:**
+```typescript
+import { createObjectPool } from '@three-play/core/utils';
+import * as THREE from 'three';
+
+// Create a pool of Vector3 objects
+const vectorPool = createObjectPool<THREE.Vector3>({
+  createFn: () => new THREE.Vector3(),
+  resetFn: (v) => v.set(0, 0, 0),
+  initialSize: 100,
+  maxSize: 1000,
+  autoGrow: true
+});
+
+// Get vector from pool
+const vec = vectorPool.get();
+if (vec) {
+  vec.set(10, 20, 30);
+  // Use vector...
+
+  // Return to pool when done
+  vectorPool.release(vec);
+}
+```
+
+### ObjectPool Interface
+
+```typescript
+type ObjectPool<T> = {
+  get(): T | null;                   // Get object from pool
+  release(item: T): void;            // Return object to pool
+  preallocate(count: number): void;  // Pre-allocate objects
+  clear(): void;                     // Clear all objects
+  getStats(): ObjectPoolStats;       // Get usage statistics
+};
+
+type ObjectPoolStats = {
+  total: number;      // Total objects (available + in use)
+  available: number;  // Available in pool
+  inUse: number;      // Currently in use
+  peak: number;       // Peak usage
+};
+```
+
+**Example with Stats:**
+```typescript
+const stats = vectorPool.getStats();
+console.log(`Pool: ${stats.inUse}/${stats.total} in use`);
+console.log(`Peak usage: ${stats.peak}`);
+console.log(`Available: ${stats.available}`);
+
+// Pre-allocate more if needed
+if (stats.available < 10) {
+  vectorPool.preallocate(50);
+}
+```
+
+**Complete Example:**
+```typescript
+// Particle system with object pooling
+type Particle = {
+  position: THREE.Vector3;
+  velocity: THREE.Vector3;
+  life: number;
+  mesh: THREE.Mesh;
+};
+
+const particlePool = createObjectPool<Particle>({
+  createFn: () => ({
+    position: new THREE.Vector3(),
+    velocity: new THREE.Vector3(),
+    life: 0,
+    mesh: new THREE.Mesh(
+      new THREE.SphereGeometry(0.1),
+      new THREE.MeshBasicMaterial()
+    )
+  }),
+  resetFn: (p) => {
+    p.position.set(0, 0, 0);
+    p.velocity.set(0, 0, 0);
+    p.life = 0;
+    p.mesh.visible = false;
+  },
+  initialSize: 100,
+  maxSize: 500
+});
+
+// Spawn particle
+function spawnParticle(position: THREE.Vector3) {
+  const particle = particlePool.get();
+  if (particle) {
+    particle.position.copy(position);
+    particle.velocity.set(
+      Math.random() - 0.5,
+      Math.random(),
+      Math.random() - 0.5
+    );
+    particle.life = 1.0;
+    particle.mesh.visible = true;
+    scene.add(particle.mesh);
+
+    activeParticles.push(particle);
+  }
+}
+
+// Update particles
+world.onUpdate((deltaTime) => {
+  for (let i = activeParticles.length - 1; i >= 0; i--) {
+    const p = activeParticles[i];
+
+    p.life -= deltaTime;
+    if (p.life <= 0) {
+      // Return to pool
+      scene.remove(p.mesh);
+      particlePool.release(p);
+      activeParticles.splice(i, 1);
+    } else {
+      // Update particle
+      p.position.addScaledVector(p.velocity, deltaTime);
+      p.mesh.position.copy(p.position);
+    }
+  }
+});
+```
+
+---
+
+## Damage Calculator
+
+Combat damage calculation system with armor, critical hits, and type effectiveness.
+
+### Location
+- [src/core/utils/damage-calculator.ts](../../src/core/utils/damage-calculator.ts)
+
+### `calculateDamage(attacker, target, config?): DamageResult`
+
+Calculate damage dealt from attacker to target.
+
+**Parameters:**
+- `attacker`: Unit - Attacking unit
+- `target`: Unit - Target unit
+- `config`: DamageCalculatorConfig (optional)
+
+```typescript
+type DamageCalculatorConfig = {
+  enableCriticals?: boolean;           // Enable crits (default: true)
+  enableArmor?: boolean;               // Enable armor (default: true)
+  enableTypeEffectiveness?: boolean;   // Enable type system (default: true)
+  minDamage?: number;                  // Min damage (default: 1)
+};
+```
+
+**Returns:**
+```typescript
+type DamageResult = {
+  finalDamage: number;         // Actual damage dealt
+  baseDamage: number;          // Base damage before modifiers
+  wasCritical: boolean;        // Was critical hit
+  typeMultiplier: number;      // Type effectiveness multiplier
+  armorReduction: number;      // Damage reduced by armor
+  damageType: DamageType;      // Attack damage type
+  armorType: ArmorType;        // Target armor type
+};
+```
+
+**Example:**
+```typescript
+import { calculateDamage } from '@three-play/core/utils';
+
+const result = calculateDamage(attacker, target, {
+  enableCriticals: true,
+  enableArmor: true,
+  enableTypeEffectiveness: true,
+  minDamage: 1
+});
+
+console.log(`Dealt ${result.finalDamage} damage`);
+if (result.wasCritical) {
+  console.log('Critical hit!');
+}
+console.log(`Type effectiveness: ${result.typeMultiplier}x`);
+console.log(`Armor reduced: ${result.armorReduction}`);
+```
+
+### `applyCalculatedDamage(target, damageResult): { isDead: boolean }`
+
+Apply calculated damage to target.
+
+**Parameters:**
+- `target`: Unit - Target unit
+- `damageResult`: DamageResult - Result from calculateDamage
+
+**Returns:**
+- `{ isDead: boolean }` - Whether target died
+
+**Example:**
+```typescript
+import { calculateDamage, applyCalculatedDamage } from '@three-play/core/utils';
+
+const damageResult = calculateDamage(attacker, target);
+const { isDead } = applyCalculatedDamage(target, damageResult);
+
+if (isDead) {
+  console.log('Target killed!');
+  // Handle death
+}
+```
+
+### `regenerateHealth(unit, amount): number`
+
+Regenerate health for a unit.
+
+**Parameters:**
+- `unit`: Unit - Target unit
+- `amount`: number - Health to regenerate
+
+**Returns:**
+- `number` - Actual health regenerated (capped at max health)
+
+**Example:**
+```typescript
+import { regenerateHealth } from '@three-play/core/utils';
+
+// Regenerate 5 HP per second
+world.onUpdate((deltaTime) => {
+  const regenRate = 5.0;
+  const regenAmount = regenRate * deltaTime;
+
+  units.forEach(unit => {
+    if (unit.stats.health < unit.stats.maxHealth) {
+      const healed = regenerateHealth(unit, regenAmount);
+      if (healed > 0) {
+        console.log(`${unit.id} regenerated ${healed} HP`);
+      }
+    }
+  });
+});
+```
+
+### Damage Types & Armor Types
+
+**Damage Types:**
+- `normal` - Standard physical damage
+- `pierce` - Piercing damage (arrows, bullets)
+- `siege` - Siege damage (buildings)
+- `magic` - Magic damage
+- `chaos` - Pure damage (ignores armor)
+- `hero` - Hero damage
+
+**Armor Types:**
+- `unarmored` - No armor
+- `light` - Light armor
+- `medium` - Medium armor
+- `heavy` - Heavy armor
+- `fortified` - Building armor
+- `hero` - Hero armor
+
+### Type Effectiveness Table
+
+```typescript
+const DAMAGE_TYPE_EFFECTIVENESS = {
+  normal: {
+    unarmored: 1.0,
+    light: 1.0,
+    medium: 1.0,
+    heavy: 1.0,
+    fortified: 0.7,
+    hero: 1.0
+  },
+  pierce: {
+    unarmored: 1.5,
+    light: 2.0,
+    medium: 0.75,
+    heavy: 0.75,
+    fortified: 0.35,
+    hero: 0.5
+  },
+  // ... other types
+};
+```
+
+**Example:**
+Pierce damage deals 200% to light armor, but only 75% to heavy armor.
+
+### Combat Stats Configuration
+
+```typescript
+type CombatStats = {
+  health: number;
+  maxHealth: number;
+  attackDamageMin: number;         // Min damage
+  attackDamageMax: number;         // Max damage
+  damageType: DamageType;          // Damage type
+  armor: number;                   // Armor value
+  armorType: ArmorType;            // Armor type
+  attackSpeed: number;             // MS between attacks
+  healthRegen: number;             // HP per second
+  critChance: number;              // 0.0-1.0
+  critMultiplier: number;          // Default: 2.0
+  attackRange: number;             // Attack range
+};
+```
+
+**Configure on Unit Definition:**
+```typescript
+const warriorDef: UnitDefinition = {
+  id: 'warrior',
+  type: 'enemy',
+  stats: {
+    speed: 5,
+    health: 100,
+    combat: {
+      attackDamageMin: 15,
+      attackDamageMax: 25,
+      damageType: 'normal',
+      armor: 5,
+      armorType: 'heavy',
+      critChance: 0.1,
+      critMultiplier: 2.0,
+      attackRange: 2.5
+    }
+  }
+  // ... rest of definition
+};
+```
+
+### Complete Combat Example
+
+```typescript
+import {
+  calculateDamage,
+  applyCalculatedDamage,
+  regenerateHealth
+} from '@three-play/core/utils';
+
+world.onUpdate((deltaTime) => {
+  const units = unitManager.getAllUnits();
+
+  // Health regeneration
+  units.forEach(unit => {
+    const regenRate = unit.stats.combat?.healthRegen || 0;
+    if (regenRate > 0 && unit.stats.health < unit.stats.maxHealth) {
+      regenerateHealth(unit, regenRate * deltaTime);
+    }
+  });
+
+  // Combat
+  units.forEach(attacker => {
+    const nearbyEnemies = getNearbyEnemies(attacker, attacker.stats.combat?.attackRange || 2);
+
+    if (nearbyEnemies.length > 0) {
+      const target = nearbyEnemies[0];
+
+      // Check attack cooldown
+      if (canAttack(attacker)) {
+        // Calculate damage
+        const result = calculateDamage(attacker, target);
+
+        // Apply damage
+        const { isDead } = applyCalculatedDamage(target, result);
+
+        // Show damage number
+        showDamageNumber(result.finalDamage, target.model.position, result.wasCritical);
+
+        if (isDead) {
+          handleUnitDeath(target);
+        }
+      }
+    }
+  });
+});
+```
+
+---
+
+## Team Utils
+
+Team-based targeting utilities.
+
+### Location
+- [src/core/utils/team-utils.ts](../../src/core/utils/team-utils.ts)
+
+### `TeamUtils.areEnemies(unit1, unit2): boolean`
+
+Check if two units are enemies.
+
+**Example:**
+```typescript
+import { TeamUtils } from '@three-play/core/utils';
+
+if (TeamUtils.areEnemies(playerUnit, enemyUnit)) {
+  // Can attack
+}
+```
+
+### `TeamUtils.isEnemy(unit, targetUnit): boolean`
+
+Check if target is an enemy of unit.
+
+**Example:**
+```typescript
+const enemies = allUnits.filter(target =>
+  TeamUtils.isEnemy(myUnit, target)
+);
+```
+
+---
+
+## Common Patterns
+
+### Smooth Camera Movement
+```typescript
+import { applyEasing } from '@three-play/core/utils';
+
+let startPos = camera.position.clone();
+let targetPos = new THREE.Vector3(10, 5, 10);
+let startTime = 0;
+const duration = 2.0;
+
+world.onUpdate((deltaTime, elapsedTime) => {
+  if (startTime === 0) startTime = elapsedTime;
+
+  const x = applyEasing(startPos.x, targetPos.x, startTime, duration, elapsedTime, 'ease-in-out');
+  const y = applyEasing(startPos.y, targetPos.y, startTime, duration, elapsedTime, 'ease-in-out');
+  const z = applyEasing(startPos.z, targetPos.z, startTime, duration, elapsedTime, 'ease-in-out');
+
+  camera.position.set(x, y, z);
+});
+```
+
+### Particle System with Pooling
+```typescript
+import { createObjectPool } from '@three-play/core/utils';
+
+const particlePool = createObjectPool({
+  createFn: () => createParticle(),
+  resetFn: (p) => resetParticle(p),
+  initialSize: 100,
+  maxSize: 1000
+});
+
+function spawnExplosion(position: THREE.Vector3) {
+  for (let i = 0; i < 50; i++) {
+    const particle = particlePool.get();
+    if (particle) {
+      initializeParticle(particle, position);
+    }
+  }
+}
+```
+
+### Combat with Damage Calculator
+```typescript
+import { calculateDamage, applyCalculatedDamage } from '@three-play/core/utils';
+
+function performAttack(attacker: Unit, target: Unit) {
+  const result = calculateDamage(attacker, target, {
+    enableCriticals: true,
+    enableArmor: true,
+    enableTypeEffectiveness: true
+  });
+
+  const { isDead } = applyCalculatedDamage(target, result);
+
+  // Show feedback
+  showDamageNumber(result.finalDamage, target.model.position, result.wasCritical);
+
+  if (result.wasCritical) {
+    playCriticalHitSound();
+  }
+
+  if (isDead) {
+    handleDeath(target);
+  }
+
+  return result;
+}
+```
+
+## See Also
+
+- [World Module](world.md) - Uses logger and easing
+- [Units Module](units.md) - Uses damage calculator
+- [Projectiles Module](projectiles.md) - Uses object pooling
+- [Input Module](input.md) - Uses easing for smooth input
+- [API Reference](api-reference.md) - Complete API index
