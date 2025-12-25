@@ -468,10 +468,13 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
     const playerUnit =
       allUnits.find((unit) => unit.definition.type === 'player') || null;
 
-    // Update AI behaviors for non-player units
+    // Update AI behaviors for non-player units (exclude dead units)
     const aiUnits = allUnits.filter(
       (unit) =>
-        unit.definition.type !== 'player' && unit.ai && !unit.ai.isStunned,
+        unit.definition.type !== 'player' &&
+        unit.ai &&
+        !unit.ai.isStunned &&
+        !unit.userData?.isDead,
     );
 
     if (aiUnits.length > 0) {
@@ -637,7 +640,10 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
    * Handle collisions between units
    */
   const handleUnitCollisions = (): void => {
-    const unitsArray = Array.from(units.values());
+    // Filter out dead units - they should not participate in collision detection
+    const unitsArray = Array.from(units.values()).filter(
+      (unit) => !unit.userData?.isDead,
+    );
 
     for (let i = 0; i < unitsArray.length; i++) {
       for (let j = i + 1; j < unitsArray.length; j++) {

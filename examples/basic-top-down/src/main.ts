@@ -2059,6 +2059,11 @@ worldInstance.onReady((assets) => {
       if (unit.stats.health <= 0 && !unit.userData.isDead) {
         unit.userData.isDead = true;
 
+        // Stop AI behavior immediately
+        if (unit.ai) {
+          unit.ai.isStunned = true;
+        }
+
         // Play death animation if available
         const deathAnims = ['death1', 'death2', 'death3'];
         const availableDeathAnim = deathAnims.find(anim => unit.actions[anim]);

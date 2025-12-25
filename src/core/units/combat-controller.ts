@@ -139,10 +139,12 @@ export const createCombatController = (
       attacker,
     );
 
-    // Filter by team - only include units that can be attacked
+    // Filter by team - only include units that can be attacked and are not dead
     const teamConfig = unitManager.config?.teams;
-    return unitsInRange.filter((unit: Unit) =>
-      TeamUtils.canAttack(attacker, unit, teamConfig),
+    return unitsInRange.filter(
+      (unit: Unit) =>
+        TeamUtils.canAttack(attacker, unit, teamConfig) &&
+        !unit.userData?.isDead,
     );
   };
 
@@ -202,6 +204,11 @@ export const createCombatController = (
     // Schedule attack effect (delayed like in original)
     setTimeout(() => {
       for (const target of targetsInRange) {
+        // Skip if target is already dead (may have died during setTimeout delay)
+        if (target.userData?.isDead) {
+          continue;
+        }
+
         // Calculate knockback direction
         tempDirection.subVectors(
           target.model.position,
@@ -254,8 +261,12 @@ export const createCombatController = (
           }
         }
 
-        // Apply stun
-        if (attackConfig.stunDuration && target.ai) {
+        // Apply stun (only if target is still alive and not already dead)
+        if (
+          attackConfig.stunDuration &&
+          target.ai &&
+          !target.userData?.isDead
+        ) {
           target.ai.isStunned = true;
 
           // Play hit animation if unit manager has animation control
@@ -265,11 +276,15 @@ export const createCombatController = (
 
           // Remove stun after duration
           setTimeout(() => {
-            if (target.ai) {
+            if (target.ai && !target.userData?.isDead) {
               target.ai.isStunned = false;
             }
-            // Return to idle if still alive
-            if (target.stats.health > 0 && unitManager.playAnimation) {
+            // Return to idle if still alive and not dead
+            if (
+              target.stats.health > 0 &&
+              !target.userData?.isDead &&
+              unitManager.playAnimation
+            ) {
               unitManager.playAnimation(target, 'idle');
             }
           }, attackConfig.stunDuration);
