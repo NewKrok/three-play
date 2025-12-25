@@ -5,6 +5,7 @@ import type {
   AIBehaviorData,
 } from '../core/units/ai-behavior-controller.js';
 import type { TeamId } from './team.js';
+import type { CombatStats } from './combat.js';
 
 /**
  * Unit type definitions
@@ -80,6 +81,8 @@ export type UnitDefinition = {
     attackDamage?: number;
     /** Collision radius */
     collisionRadius?: number;
+    /** Combat statistics configuration */
+    combat?: Partial<CombatStats>;
   };
   /** Visual properties */
   appearance?: {
@@ -156,6 +159,8 @@ export type Unit = {
     speed: number;
     attackDamage: number;
     collisionRadius: number;
+    /** Combat statistics for damage calculation */
+    combat?: CombatStats;
   };
   /** Physics properties */
   physics?: {

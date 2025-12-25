@@ -37,6 +37,18 @@ export const humanUnitDefinition: UnitDefinition = {
     health: 100,
     attackDamage: 25,
     collisionRadius: 0.5,
+    combat: {
+      attackDamageMin: 20,
+      attackDamageMax: 30,
+      damageType: 'normal',
+      armor: 2,
+      armorType: 'medium',
+      attackSpeed: 1000,
+      healthRegen: 0.5, // 0.5 HP per second
+      critChance: 0.15, // 15% crit chance
+      critMultiplier: 2.0, // 200% damage on crit
+      attackRange: 2.5,
+    },
   },
   appearance: {
     scale: 1.0,
@@ -70,6 +82,18 @@ export const zombieUnitDefinition: UnitDefinition = {
     health: 75,
     attackDamage: 15,
     collisionRadius: 0.5,
+    combat: {
+      attackDamageMin: 10,
+      attackDamageMax: 20,
+      damageType: 'normal',
+      armor: 0,
+      armorType: 'light',
+      attackSpeed: 1500,
+      healthRegen: 0.2, // 0.2 HP per second
+      critChance: 0.05, // 5% crit chance
+      critMultiplier: 1.5, // 150% damage on crit
+      attackRange: 1.5,
+    },
   },
   appearance: {
     scale: 1.0,
@@ -114,6 +138,18 @@ export const soldierUnitDefinition: UnitDefinition = {
     health: 100,
     attackDamage: 30,
     collisionRadius: 0.5,
+    combat: {
+      attackDamageMin: 25,
+      attackDamageMax: 35,
+      damageType: 'pierce',
+      armor: 3,
+      armorType: 'heavy',
+      attackSpeed: 1200,
+      healthRegen: 0.3, // 0.3 HP per second
+      critChance: 0.10, // 10% crit chance
+      critMultiplier: 2.5, // 250% damage on crit
+      attackRange: 1.5,
+    },
   },
   appearance: {
     scale: 1.0,

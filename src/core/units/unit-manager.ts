@@ -46,9 +46,8 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
   const animationController: AnimationControllerImpl =
     createAnimationController({ logger });
 
-  // Create AI behavior controller
-  const aiBehaviorController: AIBehaviorController =
-    createAIBehaviorController();
+  // Create AI behavior controller (will be re-created later with combat controller reference)
+  let aiBehaviorController: AIBehaviorController = createAIBehaviorController();
 
   // We'll create combat controller after unit manager functions are defined
   let combatController: CombatController;
@@ -740,6 +739,9 @@ export const createUnitManager = (config: UnitManagerConfig): UnitManager => {
 
   // Now create combat controller with unit manager reference
   combatController = createCombatController({ logger }, unitManager);
+
+  // Create AI behavior controller with combat controller reference
+  aiBehaviorController = createAIBehaviorController({}, combatController);
 
   // Add combat methods to unit manager
   unitManager.performLightAttack = combatController.performLightAttack;

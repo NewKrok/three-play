@@ -1,6 +1,12 @@
 import * as THREE from 'three';
 import type { Unit, AttackType, CombatConfig } from '../../types/units';
 import { TeamUtils } from '../utils/team-utils.js';
+import {
+  calculateDamage,
+  applyCalculatedDamage,
+  regenerateHealth,
+} from '../utils/damage-calculator.js';
+import type { DamageResult } from '../../types/combat.js';
 
 /**
  * Combat attack result
@@ -10,8 +16,8 @@ export type AttackResult = {
   success: boolean;
   /** Units that were hit */
   hitUnits: Unit[];
-  /** Damage dealt to each unit */
-  damages: { unit: Unit; damage: number }[];
+  /** Damage dealt to each unit with detailed breakdown */
+  damages: { unit: Unit; damage: number; damageResult?: DamageResult }[];
   /** Reason for failure if attack failed */
   failureReason?: string;
 };
@@ -25,7 +31,11 @@ export type CombatController = {
   /** Perform a heavy attack */
   performHeavyAttack: (attacker: Unit, currentTime: number) => AttackResult;
   /** Apply damage to a unit */
-  applyDamage: (target: Unit, damage: number, source?: Unit) => boolean;
+  applyDamage: (
+    target: Unit,
+    damage: number,
+    source?: Unit,
+  ) => { isDead: boolean; damageResult?: DamageResult };
   /** Check if unit can attack */
   canAttack: (
     unit: Unit,
@@ -139,14 +149,22 @@ export const createCombatController = (
     target: Unit,
     damage: number,
     source?: Unit,
-  ): boolean => {
-    if (!enableDamage) return false;
+  ): { isDead: boolean; damageResult?: DamageResult } => {
+    if (!enableDamage) return { isDead: false };
 
+    // If source is provided, use the new damage calculation system
+    if (source) {
+      const damageResult = calculateDamage(source, target);
+      const isDead = applyCalculatedDamage(target, damageResult);
+      return { isDead, damageResult };
+    }
+
+    // Fallback to simple damage (for backwards compatibility)
     target.stats.health -= damage;
     target.stats.health = Math.max(0, target.stats.health);
 
     // Return true if unit died
-    return target.stats.health <= 0;
+    return { isDead: target.stats.health <= 0 };
   };
 
   const executeAttack = (
@@ -200,12 +218,24 @@ export const createCombatController = (
           );
         }
 
-        // Apply damage
-        let damage = 0;
-        if (enableDamage && attackConfig.damage) {
-          damage = attackConfig.damage;
-          const isDead = applyDamage(target, damage, attacker);
-          result.damages.push({ unit: target, damage });
+        // Apply damage using the new combat system
+        if (enableDamage) {
+          const { isDead, damageResult } = applyDamage(target, 0, attacker);
+
+          if (damageResult) {
+            result.damages.push({
+              unit: target,
+              damage: damageResult.finalDamage,
+              damageResult,
+            });
+
+            // Log combat details
+            if (damageResult.wasCritical) {
+              logger?.info(
+                `CRITICAL HIT! ${attacker.id} dealt ${damageResult.finalDamage} damage to ${target.id}`,
+              );
+            }
+          }
 
           if (isDead) {
             // Handle unit death if needed
@@ -322,6 +352,11 @@ export const createCombatController = (
           unit.combat.maxStamina || 100,
           (unit.combat.stamina || 0) + staminaRegenRate * deltaTime,
         );
+      }
+
+      // Regenerate health if unit has combat stats configured
+      if (unit.stats.combat?.healthRegen) {
+        regenerateHealth(unit, deltaTime);
       }
     }
   };

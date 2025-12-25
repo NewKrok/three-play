@@ -77,6 +77,7 @@ export type AIBehaviorController = {
  */
 export const createAIBehaviorController = (
   config: AIBehaviorConfig = {},
+  combatController?: any,
 ): AIBehaviorController => {
   const {
     detectionRange = 10.0,
@@ -274,8 +275,12 @@ export const createAIBehaviorController = (
               // Target moved away, resume chase
               behaviorData.state = 'chase';
               behaviorData.isAttacking = false;
+            } else {
+              // Perform actual attack using combat controller
+              if (combatController && combatController.canAttack(unit, 'light', elapsedTime * 1000)) {
+                combatController.performLightAttack(unit, elapsedTime * 1000);
+              }
             }
-            // Attack logic will be handled by animation/combat system
           } else {
             behaviorData.state = 'return';
             behaviorData.targetPosition.copy(behaviorData.homePosition);

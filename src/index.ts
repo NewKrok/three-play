@@ -68,6 +68,20 @@ export { ObjectPoolUtils, createObjectPool } from './core/utils/index.js';
 // Team utilities
 export { TeamUtils } from './core/utils/index.js';
 
+// Damage calculator utilities
+export {
+  calculateDamage,
+  applyCalculatedDamage,
+  regenerateHealth,
+  DamageCalculatorUtils,
+} from './core/utils/index.js';
+
+// UI utilities
+export {
+  createHealthBarManager,
+  createDamageNumbersManager,
+} from './core/ui/index.js';
+
 // Unit management utilities
 export {
   CharacterAssetUtils,
@@ -198,3 +212,20 @@ export type {
   TeamManagerConfig,
   TeamUtils as TeamUtilsType,
 } from './types/team.js';
+export type {
+  DamageType,
+  ArmorType,
+  CombatStats,
+  DamageResult,
+} from './types/combat.js';
+export type {
+  DamageCalculatorConfig,
+} from './core/utils/damage-calculator.js';
+export type {
+  HealthBar,
+  HealthBarConfig,
+  HealthBarManager,
+  DamageNumber,
+  DamageNumberConfig,
+  DamageNumbersManager,
+} from './core/ui/index.js';
