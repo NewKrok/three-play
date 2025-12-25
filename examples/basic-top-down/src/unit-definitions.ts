@@ -83,6 +83,7 @@ export const zombieUnitDefinition: UnitDefinition = {
       walk: 'zombie-walk',
       run: 'zombie-run',
       attack: 'zombie-attack',
+      lightAttack: 'zombie-attack', // AI uses this for attacking
       hitToBody: 'hit-to-body',
       death1: 'death-1',
       death2: 'death-2',
