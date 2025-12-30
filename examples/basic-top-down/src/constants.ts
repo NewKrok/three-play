@@ -6,8 +6,8 @@ export const ELEVATION_RATIO = 30;
 export const WATER_LEVEL = 7.8;
 
 // Movement constants
-export const WALK_SPEED = 5;
-export const RUN_SPEED = 10;
+export const WALK_SPEED = 4;
+export const RUN_SPEED = 8;
 export const AIM_WALK_SPEED = 3.5;
 export const ROLL_SPEED = 5;
 export const FAST_ROLL_SPEED = 10;
@@ -36,7 +36,7 @@ export const APPLE_HIT_RADIUS = 0.8;
 // Apple constants
 export const MIN_APPLES_PER_TREE = 2;
 export const MAX_APPLES_PER_TREE = 6;
-export const APPLE_PUSH_FORCE = 25;
+export const APPLE_PUSH_FORCE = 60;
 
 // Player stats constants
 export const MAX_STAMINA = 100.0;

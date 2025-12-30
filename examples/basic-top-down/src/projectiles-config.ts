@@ -17,11 +17,11 @@ export const createAppleProjectileDefinition = (
   name: 'Apple',
   physics: {
     velocity: new THREE.Vector3(0, 0, 0), // Will be set when launching
-    gravity: new THREE.Vector3(0, -9.81, 0),
-    airResistance: 0.98,
+    gravity: new THREE.Vector3(0, -4.0, 0), // Reduced gravity for longer flight
+    airResistance: 0.99, // Less air resistance for more distance
     bounciness: 0,
     stickOnHit: false,
-    lifetime: 5,
+    lifetime: 8, // Extended lifetime for longer flights
   },
   visual: {
     geometry: appleGeometry,
