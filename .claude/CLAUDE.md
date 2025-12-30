@@ -15,7 +15,7 @@ src/
 └── __tests__/      - Jest unit tests
 
 .claude/
-├── README.md       - This file (project overview and guidelines)
+├── CLAUDE.md       - This file (project overview and guidelines)
 └── docs/           - Detailed module documentation
     ├── api-reference.md    - Complete API reference index
     ├── world.md            - World orchestrator

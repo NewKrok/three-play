@@ -337,7 +337,7 @@ if (!removed) {
 
 ## See Also
 
-- [Project README](../README.md) - Project overview and guidelines
+- [Project CLAUDE](../CLAUDE.md) - Project overview and guidelines
 - [World Module](world.md) - Core orchestrator
 - [Units Module](units.md) - Character system
 - [Projectiles Module](projectiles.md) - Projectile system
