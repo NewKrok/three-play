@@ -141,6 +141,7 @@ const isAttacking = () => character?.combat?.isAttacking ?? false;
 // Character is always in aim mode now - no need for isAiming toggle
 let aimCameraOffset = new THREE.Vector3(0, 0, 0);
 let aimCameraLookAtOffset = new THREE.Vector3(0, 0, 0);
+let smoothedLookAtPosition = new THREE.Vector3(0, 0, 0);
 let previousRotation = 0;
 let currentAngularVelocity = 0;
 let smoothedAngularVelocity = 0;
@@ -1078,8 +1079,10 @@ worldInstance.onReady((assets) => {
     targetLookAt.x += aimCameraLookAtOffset.x;
     targetLookAt.z += aimCameraLookAtOffset.z;
 
+    // Smooth both camera position and lookAt target to prevent tilting
     camera.position.lerp(targetCameraPosition, cycleData.delta * 5);
-    camera.lookAt(targetLookAt);
+    smoothedLookAtPosition.lerp(targetLookAt, cycleData.delta * 5);
+    camera.lookAt(smoothedLookAtPosition);
   };
 
   // Player input handling
