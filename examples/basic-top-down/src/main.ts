@@ -41,11 +41,9 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 const {
   WALK_SPEED,
   RUN_SPEED,
-  AIM_WALK_SPEED,
   ROLL_SPEED,
   FAST_ROLL_SPEED,
   DASH_SPEED,
-  BACKWARD_SPEED_MULTIPLIER,
   WATER_SPEED_MULTIPLIER,
   WATER_SPEED_LEVEL,
   DISTANCE_FROM_CAMERA,
@@ -140,7 +138,7 @@ let zombieCount = 0;
 let soldierCount = 0;
 // Note: isAttacking is now tracked in character.combat.isAttacking
 const isAttacking = () => character?.combat?.isAttacking ?? false;
-let isAiming = false;
+// Character is always in aim mode now - no need for isAiming toggle
 let aimCameraOffset = new THREE.Vector3(0, 0, 0);
 let aimCameraLookAtOffset = new THREE.Vector3(0, 0, 0);
 let previousRotation = 0;
@@ -1055,23 +1053,23 @@ worldInstance.onReady((assets) => {
 
     let targetLookAt = character.model.position.clone();
 
-    // In aim mode, calculate target offset but lerp smoothly towards it
-    if (isAiming && mouseWorldPosition) {
-      const targetAimOffset = new THREE.Vector3()
+    // Always calculate camera offset based on mouse distance
+    // The further the mouse from character, the more the camera shifts (max 2 units)
+    if (mouseWorldPosition) {
+      const mouseDirection = new THREE.Vector3()
         .subVectors(mouseWorldPosition, character.model.position)
-        .normalize()
-        .multiplyScalar(4); // Fixed offset distance
+        .setY(0); // Keep it horizontal
 
-      // Smoothly interpolate current offset towards target (takes ~1 second)
+      const mouseDistance = mouseDirection.length();
+      // Normalize distance: clamp to reasonable range (0-10 units) and map to 0-1
+      const normalizedDistance = Math.min(mouseDistance / 10, 1);
+
+      // Calculate target offset: direction * distance factor * max offset (2 units)
+      const targetAimOffset = mouseDirection.normalize().multiplyScalar(normalizedDistance * 2);
+
+      // Smoothly interpolate current offset towards target
       aimCameraOffset.lerp(targetAimOffset, cycleData.delta * 2);
       aimCameraLookAtOffset.lerp(targetAimOffset, cycleData.delta * 2);
-    } else {
-      // When not aiming, smoothly return to zero offset
-      aimCameraOffset.lerp(new THREE.Vector3(0, 0, 0), cycleData.delta * 3);
-      aimCameraLookAtOffset.lerp(
-        new THREE.Vector3(0, 0, 0),
-        cycleData.delta * 3,
-      );
     }
 
     // Apply the smoothed offset
@@ -1088,26 +1086,10 @@ worldInstance.onReady((assets) => {
   const handlePlayerInput = () => {
     if (!character) return;
 
-    // Check aim mode
-    const wasAiming = isAiming;
-    isAiming = inputManager.isActionActive('aim');
-
-    // Reset turn state when exiting aim mode
-    if (wasAiming && !isAiming) {
-      isTurning = false;
-      smoothedAngularVelocity = 0;
-      currentAngularVelocity = 0;
-    }
-
-    // Toggle crosshair visibility based on aim mode
+    // Crosshair is always visible now
     if (crosshairElement) {
-      if (isAiming) {
-        crosshairElement.classList.add('active');
-        document.body.classList.add('aim-mode');
-      } else {
-        crosshairElement.classList.remove('active');
-        document.body.classList.remove('aim-mode');
-      }
+      crosshairElement.classList.add('active');
+      document.body.classList.add('aim-mode');
     }
 
     // Movement input
@@ -1115,46 +1097,16 @@ worldInstance.onReady((assets) => {
     const moveRight = inputManager.isActionActive('moveRight');
     const moveUp = inputManager.isActionActive('moveUp');
     const moveDown = inputManager.isActionActive('moveDown');
-    const isRunningKey = inputManager.isActionActive('run') && !isAiming;
+    const isRunningKey = inputManager.isActionActive('run');
 
-    // Calculate movement direction relative to mouse position
+    // Calculate movement direction in WORLD SPACE (not character-relative)
+    // W = North (-Z), S = South (+Z), A = West (-X), D = East (+X)
     let movementDirection = new THREE.Vector3(0, 0, 0);
 
-    // Get direction from character to mouse
-    const toMouse = new THREE.Vector3(
-      mouseWorldPosition.x - character.model.position.x,
-      0,
-      mouseWorldPosition.z - character.model.position.z,
-    );
-
-    if (toMouse.lengthSq() > 0) {
-      toMouse.normalize();
-
-      // Calculate right vector (perpendicular to forward)
-      const rightVector = new THREE.Vector3(-toMouse.z, 0, toMouse.x);
-
-      if (isAiming) {
-        // Aim mode: allow full 8-directional movement
-        // W: forward (toward mouse), S: backward (away from mouse)
-        if (moveUp) movementDirection.add(toMouse);
-        if (moveDown) movementDirection.sub(toMouse);
-
-        // A: strafe left, D: strafe right (perpendicular to mouse direction)
-        if (moveLeft) movementDirection.sub(rightVector);
-        if (moveRight) movementDirection.add(rightVector);
-      } else {
-        // Normal mode: prioritize forward/backward over strafing
-        if (moveUp || moveDown) {
-          // If moving forward or backward, ignore strafe input
-          if (moveUp) movementDirection.add(toMouse);
-          if (moveDown) movementDirection.sub(toMouse);
-        } else {
-          // Only strafe if not moving forward/backward
-          if (moveLeft) movementDirection.sub(rightVector);
-          if (moveRight) movementDirection.add(rightVector);
-        }
-      }
-    }
+    if (moveUp) movementDirection.z -= 1;    // North
+    if (moveDown) movementDirection.z += 1;  // South
+    if (moveLeft) movementDirection.x -= 1;  // West
+    if (moveRight) movementDirection.x += 1; // East
 
     if (movementDirection.lengthSq() > 0) {
       movementDirection.normalize();
@@ -1199,8 +1151,8 @@ worldInstance.onReady((assets) => {
           angleToMouse,
         );
 
-        // Use slower rotation speed in aim mode, faster in normal mode
-        const rotationSpeed = isAiming ? 5 : 10;
+        // Always use slower rotation speed (always in aim-like mode)
+        const rotationSpeed = 5;
         character.model.quaternion.slerp(
           rotationTargetQuaternion,
           cycleData.delta * rotationSpeed,
@@ -1233,7 +1185,6 @@ worldInstance.onReady((assets) => {
       isRunningKey &&
       !isRolling &&
       !isAttacking() &&
-      !isAiming &&
       !isDashing
     ) {
       if (gameState.stamina > 0) {
@@ -1249,81 +1200,68 @@ worldInstance.onReady((assets) => {
     if (isMoving && !isRolling && !isAttacking() && !isDashing) {
       character.userData.oldPos = character.model.position.clone();
 
-      // Determine movement type based on input keys
-      const isForward = moveUp && !moveDown;
-      const isBackward = moveDown && !moveUp;
+      // Use normal walk/run speed (not aim mode speed)
+      const moveSpeed = isRunning ? RUN_SPEED : WALK_SPEED;
 
-      // Use different speed for aim mode
-      const moveSpeed = isAiming
-        ? AIM_WALK_SPEED
-        : isRunning
-          ? RUN_SPEED
-          : WALK_SPEED;
-
-      // Apply backward speed multiplier if moving backward
-      const speedMultiplier = isBackward ? BACKWARD_SPEED_MULTIPLIER : 1;
-
-      // Always use world space movement direction (same as aim mode)
+      // Always use world space movement direction
       character.model.position.addScaledVector(
         movementDirection,
         moveSpeed *
-          speedMultiplier *
           (character.model.position.y < WATER_SPEED_LEVEL
             ? WATER_SPEED_MULTIPLIER
             : 1) *
           cycleData.delta,
       );
-      const isStrafeLeft = moveLeft && !moveRight;
-      const isStrafeRight = moveRight && !moveLeft;
 
-      // Choose animation based on input combination
-      if (isAiming) {
-        // Aim mode: use jog animations with full 8-directional support
-        if (isForward && !isStrafeLeft && !isStrafeRight) {
-          // Pure forward (W only) - toward mouse
-          unitManager.playAnimation(character, 'jogForward');
-        } else if (isBackward && !isStrafeLeft && !isStrafeRight) {
-          // Pure backward (S only) - away from mouse
-          unitManager.playAnimation(character, 'jogBackward');
-        } else if (isStrafeRight) {
-          // Strafe right (D key is pressed)
-          unitManager.playAnimation(character, 'jogStrafeRight');
-        } else if (isStrafeLeft) {
-          // Strafe left (A key is pressed)
-          unitManager.playAnimation(character, 'jogStrafeLeft');
-        } else {
-          // Default to forward for diagonal movement
-          unitManager.playAnimation(character, 'jogForward');
-        }
-      } else {
-        // Normal mode: forward/backward has priority over strafing
-        if (isRunning) {
-          if (isForward) {
-            // Forward movement (W) - ignore A/D in normal mode
+      // Determine animation based on movement direction relative to character facing
+      // Since character always faces mouse, we need to check movement vs facing direction
+      const characterForward = new THREE.Vector3(1, 0, 0)
+        .applyQuaternion(character.model.quaternion)
+        .normalize();
+
+      const characterRight = new THREE.Vector3(0, 0, 1)
+        .applyQuaternion(character.model.quaternion)
+        .normalize();
+
+      // Calculate dot products to determine relative movement direction
+      const forwardDot = movementDirection.dot(characterForward);
+      const rightDot = movementDirection.dot(characterRight);
+
+      // Determine primary direction and choose animation
+      const absForward = Math.abs(forwardDot);
+      const absRight = Math.abs(rightDot);
+
+      if (isRunning) {
+        // Running animations
+        if (absForward > absRight) {
+          // Moving more forward/backward than sideways
+          if (forwardDot > 0) {
             unitManager.playAnimation(character, 'run');
-          } else if (isBackward) {
-            // Backward movement (S) - ignore A/D in normal mode
+          } else {
             unitManager.playAnimation(character, 'runningBackward');
-          } else if (isStrafeRight) {
-            // Strafe right only if no forward/backward
-            unitManager.playAnimation(character, 'rightStrafe');
-          } else if (isStrafeLeft) {
-            // Strafe left only if no forward/backward
-            unitManager.playAnimation(character, 'leftStrafe');
           }
         } else {
-          // Walking
-          if (isForward) {
-            // Forward movement (W) - ignore A/D in normal mode
-            unitManager.playAnimation(character, 'walk');
-          } else if (isBackward) {
-            // Backward movement (S) - ignore A/D in normal mode
+          // Moving more sideways than forward/backward
+          if (rightDot > 0) {
+            unitManager.playAnimation(character, 'rightStrafe');
+          } else {
+            unitManager.playAnimation(character, 'leftStrafe');
+          }
+        }
+      } else {
+        // Walking animations (use jog animations for aim-like feel)
+        if (absForward > absRight) {
+          // Moving more forward/backward than sideways
+          if (forwardDot > 0) {
+            unitManager.playAnimation(character, 'jogForward');
+          } else {
             unitManager.playAnimation(character, 'jogBackward');
-          } else if (isStrafeRight) {
-            // Strafe right only if no forward/backward
+          }
+        } else {
+          // Moving more sideways than forward/backward
+          if (rightDot > 0) {
             unitManager.playAnimation(character, 'jogStrafeRight');
-          } else if (isStrafeLeft) {
-            // Strafe left only if no forward/backward
+          } else {
             unitManager.playAnimation(character, 'jogStrafeLeft');
           }
         }
@@ -1362,12 +1300,8 @@ worldInstance.onReady((assets) => {
           unitManager.playAnimation(character, 'rightTurn');
         }
       } else {
-        // Use different idle animation based on mode
-        if (isAiming) {
-          unitManager.playAnimation(character, 'aimIdle');
-        } else {
-          unitManager.playAnimation(character, 'idle');
-        }
+        // Always use aim idle animation
+        unitManager.playAnimation(character, 'aimIdle');
       }
     }
 
@@ -1523,8 +1457,8 @@ worldInstance.onReady((assets) => {
   const handleThrowInput = () => {
     if (!character) return;
 
-    // Check for mouse press and aim mode
-    if (isMousePressed && isAiming && mouseWorldPosition) {
+    // Always allow throwing when mouse is pressed (no aim mode check needed)
+    if (isMousePressed && mouseWorldPosition) {
       const now = performance.now();
       // Combat system handles ammo checking and consumption via callbacks
       unitManager.performRangedAttack(character, mouseWorldPosition, now);
