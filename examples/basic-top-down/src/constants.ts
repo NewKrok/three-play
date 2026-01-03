@@ -62,10 +62,10 @@ export const HEAVY_ATTACK_STUN_DURATION = 3000;
 // Misc constants
 export const startingPosition = { x: 88, y: 0, z: 132 };
 
-// Unit spawning constants
-export const MAX_ZOMBIES = 50;
-export const MAX_SOLDIERS = 50;
-export const SPAWN_INTERVAL = 10; // seconds
+// Unit spawning constants - DOTA-like settings
+export const MAX_ZOMBIES = 30;
+export const MAX_SOLDIERS = 30;
+export const SPAWN_INTERVAL = 30; // seconds (DOTA wave spawn interval)
 
 export const zombieSpawnPosition = { x: 88, y: 8, z: 166 };
 export const zombieTargetPosition = { x: 115, y: 9, z: 174 };

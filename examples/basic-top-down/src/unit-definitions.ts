@@ -92,19 +92,19 @@ export const zombieUnitDefinition: UnitDefinition = {
   },
   stats: {
     speed: 0.8,
-    health: 60, // Reduced from 75 (spawns in pairs now)
-    attackDamage: 15,
+    health: 550, // DOTA-like melee creep health
+    attackDamage: 19,
     collisionRadius: 0.5,
     combat: {
-      attackDamageMin: 8,  // Wider damage range for variety
-      attackDamageMax: 22,
+      attackDamageMin: 19,  // DOTA melee creep: 19-21 damage
+      attackDamageMax: 21,
       damageType: 'normal',
-      armor: 0,
+      armor: 0,  // DOTA melee creeps have 0 armor
       armorType: 'light',
-      attackSpeed: 1500,
-      healthRegen: 0.2, // 0.2 HP per second
-      critChance: 0.05, // 5% crit chance
-      critMultiplier: 1.5, // 150% damage on crit
+      attackSpeed: 1000, // DOTA creeps attack once per second
+      healthRegen: 0.5, // 0.5 HP per second (DOTA-like)
+      critChance: 0, // Creeps don't crit in DOTA
+      critMultiplier: 1.0,
       attackRange: 1.5,
     },
   },
@@ -156,19 +156,19 @@ export const soldierUnitDefinition: UnitDefinition = {
   },
   stats: {
     speed: 1.0,
-    health: 100,
-    attackDamage: 30,
+    health: 550, // DOTA-like melee creep health (same as zombies for balance)
+    attackDamage: 21,
     collisionRadius: 0.5,
     combat: {
-      attackDamageMin: 18,  // Wider damage range, lower base
-      attackDamageMax: 30,
+      attackDamageMin: 21,  // DOTA melee creep: slightly higher than zombies
+      attackDamageMax: 23,
       damageType: 'pierce',
-      armor: 2,  // Reduced from 3 for better balance
+      armor: 2,  // DOTA melee creeps have ~2 armor for allies
       armorType: 'heavy',
-      attackSpeed: 1200,
-      healthRegen: 0.3, // 0.3 HP per second
-      critChance: 0.25, // Increased from 10% to 25% - tactical advantage
-      critMultiplier: 2.0, // 200% damage on crit
+      attackSpeed: 1000, // DOTA creeps attack once per second
+      healthRegen: 0.5, // 0.5 HP per second (DOTA-like)
+      critChance: 0, // Creeps don't crit in DOTA
+      critMultiplier: 1.0,
       attackRange: 1.5,
     },
   },
@@ -206,7 +206,7 @@ export const zombieRangedUnitDefinition: UnitDefinition = {
       run: 'zombie-run',
       attack: 'zombie-attack',
       lightAttack: 'zombie-attack',
-      throw: 'zombie-attack', // Use attack animation for throwing
+      throw: 'throw', // Use throw animation for ranged attacks
       hitToBody: 'hit-to-body',
       death1: 'death-1',
       death2: 'death-2',
@@ -215,19 +215,19 @@ export const zombieRangedUnitDefinition: UnitDefinition = {
   },
   stats: {
     speed: 0.8,
-    health: 60,
-    attackDamage: 15,
+    health: 300, // DOTA-like ranged creep health (lower than melee)
+    attackDamage: 23,
     collisionRadius: 0.5,
     combat: {
-      attackDamageMin: 8,
-      attackDamageMax: 22,
+      attackDamageMin: 23, // DOTA ranged creep: 23-27 damage
+      attackDamageMax: 27,
       damageType: 'normal',
-      armor: 0,
+      armor: 0, // DOTA ranged creeps have 0 armor
       armorType: 'light',
-      attackSpeed: 1500,
-      healthRegen: 0.2,
-      critChance: 0.05,
-      critMultiplier: 1.5,
+      attackSpeed: 1000, // DOTA creeps attack once per second
+      healthRegen: 0.5,
+      critChance: 0, // Creeps don't crit in DOTA
+      critMultiplier: 1.0,
       attackRange: 1.5, // Melee fallback range
     },
   },
@@ -292,19 +292,19 @@ export const soldierRangedUnitDefinition: UnitDefinition = {
   },
   stats: {
     speed: 1.0,
-    health: 100,
-    attackDamage: 30,
+    health: 300, // DOTA-like ranged creep health (same as zombie ranged)
+    attackDamage: 25,
     collisionRadius: 0.5,
     combat: {
-      attackDamageMin: 18,
-      attackDamageMax: 30,
+      attackDamageMin: 25, // DOTA ranged creep: slightly higher than zombies
+      attackDamageMax: 29,
       damageType: 'pierce',
-      armor: 2,
+      armor: 2, // DOTA ranged creeps have ~2 armor for allies
       armorType: 'heavy',
-      attackSpeed: 1200,
-      healthRegen: 0.3,
-      critChance: 0.25,
-      critMultiplier: 2.0,
+      attackSpeed: 1000, // DOTA creeps attack once per second
+      healthRegen: 0.5,
+      critChance: 0, // Creeps don't crit in DOTA
+      critMultiplier: 1.0,
       attackRange: 1.5, // Melee fallback range
     },
   },
