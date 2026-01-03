@@ -125,7 +125,6 @@ let character: Unit | null = null;
 let crates = [];
 let nearbyCreateOutlines = new Map();
 let crateProxyMeshes = new Map(); // Individual meshes for outlined crates
-let isShowingInteractHint = false; // Track if "Press E" hint is currently visible
 let lastRollTime = 0;
 let lastDashTime = 0;
 let isMousePressed = false;
@@ -785,8 +784,8 @@ worldInstance.onReady((assets) => {
       blocksMovement: true,
       canInteract: false,
       userData: { type: 'tree', treeIndex: i },
-      onCollision: (unit) => {
-        // Apple collection happens on collision for player
+      onCollisionEnter: (unit) => {
+        // Apple collection happens when entering collision radius
         if (unit === character && tree.appleIndices && tree.isActive) {
           tree.isActive = false;
           removeApplesFromTree(tree.appleIndices);
@@ -995,7 +994,7 @@ worldInstance.onReady((assets) => {
     };
     crates.push(crate);
 
-    // Add crate to interaction manager with interact callback
+    // Add crate to interaction manager with enter/exit/interact callbacks
     const crateInteractable = interactionManager.addInteractable({
       id: `crate-${i}`,
       position: dummy.position.clone(),
@@ -1004,6 +1003,70 @@ worldInstance.onReady((assets) => {
       blocksMovement: true,
       canInteract: true,
       userData: { type: 'crate', crateIndex: i, crate },
+      onInteractionEnter: (unit, interactable) => {
+        if (unit !== character || !crate.isActive) return;
+
+        // Create individual mesh for this crate to apply outline
+        const proxyMesh = new THREE.Mesh(crateGeometry, crateMaterial);
+        proxyMesh.position.copy(crate.position);
+        proxyMesh.castShadow = true;
+        proxyMesh.receiveShadow = true;
+        scene.add(proxyMesh);
+
+        // Hide the original instance by moving it far away
+        dummy.position.set(0, -1000, 0);
+        dummy.updateMatrix();
+        crateMesh.setMatrixAt(i, dummy.matrix);
+        crateMesh.instanceMatrix.needsUpdate = true;
+
+        // Add outline to the individual mesh
+        const outlineId = worldInstance.addOutline(proxyMesh, {
+          color: '#ffffff',
+          strength: 0.8,
+          thickness: 1.5,
+          glow: 0.3,
+          priority: 1,
+        });
+
+        nearbyCreateOutlines.set(i, outlineId);
+        crateProxyMeshes.set(i, proxyMesh);
+
+        // Show "Press E" hint
+        const pos = character.model.position.clone();
+        pos.y += 2.5;
+        floatingTextManager.show(pos, {
+          text: 'Press E',
+          color: '#ffffff',
+          fontSize: 28,
+          duration: 0.5,
+          floatHeight: 0,
+          fadeOut: true,
+        });
+      },
+      onInteractionExit: (unit, interactable) => {
+        if (unit !== character) return;
+
+        // Remove outline and restore original instance
+        if (nearbyCreateOutlines.has(i)) {
+          const outlineId = nearbyCreateOutlines.get(i);
+          const proxyMesh = crateProxyMeshes.get(i);
+
+          worldInstance.removeOutline(outlineId);
+          scene.remove(proxyMesh);
+          nearbyCreateOutlines.delete(i);
+          crateProxyMeshes.delete(i);
+
+          // Restore original instance position if crate is still active
+          if (crate.isActive) {
+            dummy.position.copy(crate.position);
+            dummy.rotation.set(0, 0, 0);
+            dummy.scale.set(1, 1, 1);
+            dummy.updateMatrix();
+            crateMesh.setMatrixAt(i, dummy.matrix);
+            crateMesh.instanceMatrix.needsUpdate = true;
+          }
+        }
+      },
       onInteract: (unit, interactable) => {
         if (unit === character && crate.isActive) {
           // Remove outline and proxy mesh when crate is collected
@@ -1329,7 +1392,7 @@ worldInstance.onReady((assets) => {
   const handleInteractInput = () => {
     if (!character) return;
 
-    // Check if interact key was just pressed
+    // Trigger interactions when interact key is pressed
     if (inputManager.isActionActive('interact')) {
       const count = interactionManager.triggerInteraction(character);
       if (count > 0) {
@@ -1337,88 +1400,8 @@ worldInstance.onReady((assets) => {
       }
     }
 
-    // Check for nearby interactables to manage outlines and hints
-    const nearbyInteractables = interactionManager.checkInteractions(character);
-    const nearbyCrateIds = new Set<number>();
-
-    // Find nearby crates and collect their indices
-    nearbyInteractables.forEach((interactable) => {
-      if (interactable.userData?.type === 'crate' && interactable.isActive) {
-        const crateIndex = interactable.userData.crateIndex;
-        nearbyCrateIds.add(crateIndex);
-
-        // Add outline if not already present
-        if (!nearbyCreateOutlines.has(crateIndex)) {
-          const crate = interactable.userData.crate;
-          // Create individual mesh for this crate to apply outline
-          const proxyMesh = new THREE.Mesh(crateGeometry, crateMaterial);
-          proxyMesh.position.copy(crate.position);
-          proxyMesh.castShadow = true;
-          proxyMesh.receiveShadow = true;
-          scene.add(proxyMesh);
-
-          // Hide the original instance by moving it far away
-          dummy.position.set(0, -1000, 0);
-          dummy.updateMatrix();
-          crateMesh.setMatrixAt(crateIndex, dummy.matrix);
-          crateMesh.instanceMatrix.needsUpdate = true;
-
-          // Add outline to the individual mesh
-          const outlineId = worldInstance.addOutline(proxyMesh, {
-            color: '#ffffff',
-            strength: 0.8,
-            thickness: 1.5,
-            glow: 0.3,
-            priority: 1,
-          });
-
-          nearbyCreateOutlines.set(crateIndex, outlineId);
-          crateProxyMeshes.set(crateIndex, proxyMesh);
-        }
-      }
-    });
-
-    // Show "Press E" hint when near crates (only once on enter)
-    if (nearbyCrateIds.size > 0 && !isShowingInteractHint) {
-      isShowingInteractHint = true;
-      const pos = character.model.position.clone();
-      pos.y += 2.5; // Higher than pickup notifications
-      floatingTextManager.show(pos, {
-        text: 'Press E',
-        color: '#ffffff',
-        fontSize: 28,
-        duration: 0.5, // Show for half a second
-        floatHeight: 0, // Don't float up
-        fadeOut: true,
-      });
-    } else if (nearbyCrateIds.size === 0 && isShowingInteractHint) {
-      // Reset flag when no longer near crates
-      isShowingInteractHint = false;
-    }
-
-    // Remove outlines for crates that are no longer nearby
-    nearbyCreateOutlines.forEach((outlineId, crateIndex) => {
-      if (!nearbyCrateIds.has(crateIndex)) {
-        const proxyMesh = crateProxyMeshes.get(crateIndex);
-        const crate = crates.find((c) => c.index === crateIndex);
-
-        if (proxyMesh && crate) {
-          worldInstance.removeOutline(outlineId);
-          scene.remove(proxyMesh);
-
-          // Restore original instance position
-          dummy.position.copy(crate.position);
-          dummy.rotation.set(0, 0, 0);
-          dummy.scale.set(1, 1, 1);
-          dummy.updateMatrix();
-          crateMesh.setMatrixAt(crateIndex, dummy.matrix);
-          crateMesh.instanceMatrix.needsUpdate = true;
-
-          nearbyCreateOutlines.delete(crateIndex);
-          crateProxyMeshes.delete(crateIndex);
-        }
-      }
-    });
+    // Check interactions to trigger enter/exit callbacks
+    interactionManager.checkInteractions(character);
   };
 
   const handleCombatInput = () => {

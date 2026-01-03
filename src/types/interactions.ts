@@ -2,9 +2,24 @@ import type * as THREE from 'three';
 import type { Unit } from './units.js';
 
 /**
- * Callback when a unit collides with an interactable
+ * Callback when a unit enters collision radius
  */
-export type CollisionCallback = (unit: Unit, interactable: Interactable) => void;
+export type CollisionEnterCallback = (unit: Unit, interactable: Interactable) => void;
+
+/**
+ * Callback when a unit exits collision radius
+ */
+export type CollisionExitCallback = (unit: Unit, interactable: Interactable) => void;
+
+/**
+ * Callback when a unit enters interaction radius
+ */
+export type InteractionEnterCallback = (unit: Unit, interactable: Interactable) => void;
+
+/**
+ * Callback when a unit exits interaction radius
+ */
+export type InteractionExitCallback = (unit: Unit, interactable: Interactable) => void;
 
 /**
  * Callback when a unit interacts with an interactable
@@ -33,8 +48,14 @@ export type InteractableConfig = {
   object3D?: THREE.Object3D;
   /** Custom user data */
   userData?: Record<string, any>;
-  /** Callback when a unit collides with this object */
-  onCollision?: CollisionCallback;
+  /** Callback when a unit enters collision radius */
+  onCollisionEnter?: CollisionEnterCallback;
+  /** Callback when a unit exits collision radius */
+  onCollisionExit?: CollisionExitCallback;
+  /** Callback when a unit enters interaction radius */
+  onInteractionEnter?: InteractionEnterCallback;
+  /** Callback when a unit exits interaction radius */
+  onInteractionExit?: InteractionExitCallback;
   /** Callback when a unit interacts with this object */
   onInteract?: InteractionCallback;
 };
@@ -61,9 +82,15 @@ export type Interactable = {
   object3D?: THREE.Object3D;
   /** Custom user data */
   userData: Record<string, any>;
-  /** Collision callback */
-  onCollision?: CollisionCallback;
-  /** Interaction callback */
+  /** Callback when entering collision radius */
+  onCollisionEnter?: CollisionEnterCallback;
+  /** Callback when exiting collision radius */
+  onCollisionExit?: CollisionExitCallback;
+  /** Callback when entering interaction radius */
+  onInteractionEnter?: InteractionEnterCallback;
+  /** Callback when exiting interaction radius */
+  onInteractionExit?: InteractionExitCallback;
+  /** Callback when interacting */
   onInteract?: InteractionCallback;
 };
 

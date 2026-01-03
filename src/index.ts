@@ -255,6 +255,9 @@ export type {
   InteractableConfig,
   InteractionManager,
   InteractionManagerConfig,
-  CollisionCallback,
+  CollisionEnterCallback,
+  CollisionExitCallback,
+  InteractionEnterCallback,
+  InteractionExitCallback,
   InteractionCallback,
 } from './types/interactions.js';

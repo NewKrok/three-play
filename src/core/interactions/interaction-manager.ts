@@ -60,6 +60,10 @@ export const createInteractionManager = (
   const fullConfig = { ...DEFAULT_CONFIG, ...config };
   const interactables = new Map<string, Interactable>();
 
+  // Track which units are currently in collision/interaction radius
+  const unitsInCollisionRadius = new Map<string, Set<string>>(); // interactableId -> Set of unitIds
+  const unitsInInteractionRadius = new Map<string, Set<string>>(); // interactableId -> Set of unitIds
+
   let collisionEnabled = fullConfig.enableCollision;
   let interactionEnabled = fullConfig.enableInteraction;
 
@@ -78,11 +82,19 @@ export const createInteractionManager = (
       isActive: config.isActive ?? true,
       object3D: config.object3D,
       userData: config.userData ?? {},
-      onCollision: config.onCollision,
+      onCollisionEnter: config.onCollisionEnter,
+      onCollisionExit: config.onCollisionExit,
+      onInteractionEnter: config.onInteractionEnter,
+      onInteractionExit: config.onInteractionExit,
       onInteract: config.onInteract,
     };
 
     interactables.set(interactable.id, interactable);
+
+    // Initialize tracking sets for this interactable
+    unitsInCollisionRadius.set(interactable.id, new Set());
+    unitsInInteractionRadius.set(interactable.id, new Set());
+
     return interactable;
   };
 
@@ -90,6 +102,9 @@ export const createInteractionManager = (
    * Remove an interactable by ID
    */
   const removeInteractable = (id: string): boolean => {
+    // Clean up tracking sets
+    unitsInCollisionRadius.delete(id);
+    unitsInInteractionRadius.delete(id);
     return interactables.delete(id);
   };
 
@@ -122,13 +137,24 @@ export const createInteractionManager = (
 
     const activeInteractables = getActiveInteractables();
 
+    // Track units currently in range this frame
+    const currentFrameUnitsInRadius = new Map<string, Set<string>>();
+
+    for (const interactable of activeInteractables) {
+      currentFrameUnitsInRadius.set(interactable.id, new Set());
+    }
+
     for (const unit of units) {
       for (const interactable of activeInteractables) {
         if (!interactable.blocksMovement) continue;
 
         const distance = unit.model.position.distanceTo(interactable.position);
+        const wasInRadius = unitsInCollisionRadius.get(interactable.id)?.has(unit.id) ?? false;
+        const isInRadius = distance < interactable.collisionRadius;
 
-        if (distance < interactable.collisionRadius) {
+        if (isInRadius) {
+          currentFrameUnitsInRadius.get(interactable.id)?.add(unit.id);
+
           // Push unit away from interactable
           const away = new THREE.Vector3()
             .subVectors(unit.model.position, interactable.position)
@@ -137,12 +163,21 @@ export const createInteractionManager = (
           const pushDistance = interactable.collisionRadius - distance;
           unit.model.position.addScaledVector(away, pushDistance * 0.2);
 
-          // Call collision callback if provided
-          if (interactable.onCollision) {
-            interactable.onCollision(unit, interactable);
+          // Call enter callback if just entered
+          if (!wasInRadius && interactable.onCollisionEnter) {
+            interactable.onCollisionEnter(unit, interactable);
           }
+        } else if (wasInRadius && interactable.onCollisionExit) {
+          // Call exit callback if just exited
+          interactable.onCollisionExit(unit, interactable);
         }
       }
+    }
+
+    // Update tracking state for next frame
+    for (const interactable of activeInteractables) {
+      const currentUnits = currentFrameUnitsInRadius.get(interactable.id) ?? new Set();
+      unitsInCollisionRadius.set(interactable.id, currentUnits);
     }
   };
 
@@ -159,9 +194,27 @@ export const createInteractionManager = (
       if (!interactable.canInteract) continue;
 
       const distance = unit.model.position.distanceTo(interactable.position);
+      const wasInRadius = unitsInInteractionRadius.get(interactable.id)?.has(unit.id) ?? false;
+      const isInRadius = distance < interactable.interactionRadius;
 
-      if (distance < interactable.interactionRadius) {
+      if (isInRadius) {
         nearbyInteractables.push(interactable);
+
+        // Call enter callback if just entered
+        if (!wasInRadius && interactable.onInteractionEnter) {
+          interactable.onInteractionEnter(unit, interactable);
+        }
+
+        // Update tracking
+        unitsInInteractionRadius.get(interactable.id)?.add(unit.id);
+      } else if (wasInRadius) {
+        // Call exit callback if just exited
+        if (interactable.onInteractionExit) {
+          interactable.onInteractionExit(unit, interactable);
+        }
+
+        // Update tracking
+        unitsInInteractionRadius.get(interactable.id)?.delete(unit.id);
       }
     }
 
@@ -192,6 +245,8 @@ export const createInteractionManager = (
    */
   const clear = (): void => {
     interactables.clear();
+    unitsInCollisionRadius.clear();
+    unitsInInteractionRadius.clear();
   };
 
   /**

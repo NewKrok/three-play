@@ -254,22 +254,53 @@ describe('InteractionManager', () => {
       expect(unit.model!.position.z).toBe(10);
     });
 
-    it('should call onCollision callback', () => {
-      const onCollision = jest.fn();
+    it('should call onCollisionEnter callback when entering radius', () => {
+      const onCollisionEnter = jest.fn();
 
       interactionManager.addInteractable({
         id: 'wall-1',
         position: new THREE.Vector3(10, 0, 10),
         collisionRadius: 2.0,
         blocksMovement: true,
-        onCollision,
+        onCollisionEnter,
       });
 
       const unit = createMockUnit('unit-1', new THREE.Vector3(10, 0, 10.5));
-      interactionManager.checkCollisions([unit as Unit]);
 
-      expect(onCollision).toHaveBeenCalledTimes(1);
-      expect(onCollision).toHaveBeenCalledWith(unit, expect.any(Object));
+      // First check - unit enters radius
+      interactionManager.checkCollisions([unit as Unit]);
+      expect(onCollisionEnter).toHaveBeenCalledTimes(1);
+      expect(onCollisionEnter).toHaveBeenCalledWith(unit, expect.any(Object));
+
+      // Second check - unit still in radius (should not trigger again)
+      interactionManager.checkCollisions([unit as Unit]);
+      expect(onCollisionEnter).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call onCollisionExit callback when leaving radius', () => {
+      const onCollisionExit = jest.fn();
+
+      interactionManager.addInteractable({
+        id: 'wall-1',
+        position: new THREE.Vector3(10, 0, 10),
+        collisionRadius: 2.0,
+        blocksMovement: true,
+        onCollisionExit,
+      });
+
+      const unit = createMockUnit('unit-1', new THREE.Vector3(10, 0, 10.5));
+
+      // First check - unit enters radius
+      interactionManager.checkCollisions([unit as Unit]);
+      expect(onCollisionExit).not.toHaveBeenCalled();
+
+      // Move unit outside radius
+      unit.model!.position.set(10, 0, 15);
+
+      // Second check - unit exits radius
+      interactionManager.checkCollisions([unit as Unit]);
+      expect(onCollisionExit).toHaveBeenCalledTimes(1);
+      expect(onCollisionExit).toHaveBeenCalledWith(unit, expect.any(Object));
     });
 
     it('should handle multiple units', () => {
@@ -324,6 +355,55 @@ describe('InteractionManager', () => {
 
       expect(nearby).toHaveLength(1);
       expect(nearby[0].id).toBe('chest-1');
+    });
+
+    it('should call onInteractionEnter callback when entering radius', () => {
+      const onInteractionEnter = jest.fn();
+
+      interactionManager.addInteractable({
+        id: 'chest-1',
+        position: new THREE.Vector3(10, 0, 10),
+        interactionRadius: 3.0,
+        canInteract: true,
+        onInteractionEnter,
+      });
+
+      const unit = createMockUnit('unit-1', new THREE.Vector3(11, 0, 11));
+
+      // First check - unit enters radius
+      interactionManager.checkInteractions(unit as Unit);
+      expect(onInteractionEnter).toHaveBeenCalledTimes(1);
+      expect(onInteractionEnter).toHaveBeenCalledWith(unit, expect.any(Object));
+
+      // Second check - unit still in radius (should not trigger again)
+      interactionManager.checkInteractions(unit as Unit);
+      expect(onInteractionEnter).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call onInteractionExit callback when leaving radius', () => {
+      const onInteractionExit = jest.fn();
+
+      interactionManager.addInteractable({
+        id: 'chest-1',
+        position: new THREE.Vector3(10, 0, 10),
+        interactionRadius: 3.0,
+        canInteract: true,
+        onInteractionExit,
+      });
+
+      const unit = createMockUnit('unit-1', new THREE.Vector3(11, 0, 11));
+
+      // First check - unit enters radius
+      interactionManager.checkInteractions(unit as Unit);
+      expect(onInteractionExit).not.toHaveBeenCalled();
+
+      // Move unit outside radius
+      unit.model!.position.set(10, 0, 20);
+
+      // Second check - unit exits radius
+      interactionManager.checkInteractions(unit as Unit);
+      expect(onInteractionExit).toHaveBeenCalledTimes(1);
+      expect(onInteractionExit).toHaveBeenCalledWith(unit, expect.any(Object));
     });
 
     it('should not detect distant interactables', () => {
@@ -595,30 +675,29 @@ describe('InteractionManager', () => {
     });
 
     it('should handle trigger zone pattern', () => {
-      const onCollision = jest.fn((_, interactable) => {
-        if (!interactable.userData.triggered) {
-          interactable.userData.triggered = true;
-        }
+      const onCollisionEnter = jest.fn((_, interactable) => {
+        interactable.userData.triggered = true;
       });
 
       const interactable = interactionManager.addInteractable({
         id: 'checkpoint-1',
         position: new THREE.Vector3(10, 0, 10),
         collisionRadius: 3.0,
-        blocksMovement: true, // Must block movement for collision callback to trigger
+        blocksMovement: true,
         userData: { triggered: false },
-        onCollision,
+        onCollisionEnter,
       });
 
       const unit = createMockUnit('unit-1', new THREE.Vector3(10.5, 0, 10));
 
-      // First collision should trigger
+      // First collision should trigger once
       interactionManager.checkCollisions([unit as Unit]);
       expect(interactable.userData.triggered).toBe(true);
+      expect(onCollisionEnter).toHaveBeenCalledTimes(1);
 
-      // Subsequent collisions should be handled by callback logic
+      // Subsequent checks while in radius should not trigger again
       interactionManager.checkCollisions([unit as Unit]);
-      expect(onCollision).toHaveBeenCalledTimes(2);
+      expect(onCollisionEnter).toHaveBeenCalledTimes(1);
     });
   });
 });

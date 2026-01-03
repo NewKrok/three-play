@@ -85,8 +85,11 @@ Add an interactable object to the world.
 - `config.isActive` - Whether currently active (optional, default: true)
 - `config.object3D` - Optional Three.js object reference
 - `config.userData` - Custom user data
-- `config.onCollision` - Collision callback
-- `config.onInteract` - Interaction callback
+- `config.onCollisionEnter` - Called when unit enters collision radius
+- `config.onCollisionExit` - Called when unit exits collision radius
+- `config.onInteractionEnter` - Called when unit enters interaction radius
+- `config.onInteractionExit` - Called when unit exits interaction radius
+- `config.onInteract` - Interaction callback (triggered by user input)
 
 **Returns:** Created interactable
 
@@ -112,6 +115,8 @@ Get all interactables (active and inactive).
 
 Check collisions for all units against active interactables.
 Automatically pushes units away from blocking objects.
+Triggers `onCollisionEnter` when a unit enters collision radius.
+Triggers `onCollisionExit` when a unit leaves collision radius.
 
 **Parameters:**
 - `units` - Array of units to check
@@ -119,6 +124,8 @@ Automatically pushes units away from blocking objects.
 ### `checkInteractions(unit: Unit): Interactable[]`
 
 Check what interactables are within interaction range of a unit.
+Triggers `onInteractionEnter` when unit enters interaction radius.
+Triggers `onInteractionExit` when unit leaves interaction radius.
 
 **Parameters:**
 - `unit` - Unit to check
@@ -163,17 +170,20 @@ type InteractionManagerConfig = {
 
 ```typescript
 type InteractableConfig = {
-  id: string;                           // Unique identifier
-  position: THREE.Vector3;              // 3D position
-  collisionRadius?: number;             // Collision radius
-  interactionRadius?: number;           // Interaction radius
-  blocksMovement?: boolean;             // Blocks movement
-  canInteract?: boolean;                // Can be interacted with
-  isActive?: boolean;                   // Currently active
-  object3D?: THREE.Object3D;            // Optional 3D object
-  userData?: Record<string, any>;       // Custom data
-  onCollision?: CollisionCallback;      // Collision callback
-  onInteract?: InteractionCallback;     // Interaction callback
+  id: string;                                // Unique identifier
+  position: THREE.Vector3;                   // 3D position
+  collisionRadius?: number;                  // Collision radius
+  interactionRadius?: number;                // Interaction radius
+  blocksMovement?: boolean;                  // Blocks movement
+  canInteract?: boolean;                     // Can be interacted with
+  isActive?: boolean;                        // Currently active
+  object3D?: THREE.Object3D;                 // Optional 3D object
+  userData?: Record<string, any>;            // Custom data
+  onCollisionEnter?: CollisionEnterCallback; // Enters collision radius
+  onCollisionExit?: CollisionExitCallback;   // Exits collision radius
+  onInteractionEnter?: InteractionEnterCallback; // Enters interaction radius
+  onInteractionExit?: InteractionExitCallback;   // Exits interaction radius
+  onInteract?: InteractionCallback;          // Interaction callback
 };
 ```
 
@@ -204,14 +214,15 @@ interactionManager.addInteractable({
 ### Collectible Items
 
 ```typescript
+// Collision-based collection (automatic pickup)
 interactionManager.addInteractable({
   id: 'apple-1',
   position: applePosition,
   collisionRadius: 0.5,
-  interactionRadius: 1.5,
-  canInteract: true,
   blocksMovement: false,
-  onInteract: (unit, interactable) => {
+  onCollisionEnter: (unit, interactable) => {
+    if (unit !== playerUnit) return;
+
     // Add apple to inventory
     uiManager.addItem('apple', 1);
 
@@ -241,6 +252,17 @@ interactionManager.addInteractable({
     isOpen: false,
     contents: ['sword', 'potion', 'gold'],
   },
+  // Show hint when player gets close
+  onInteractionEnter: (unit, interactable) => {
+    if (unit !== playerUnit) return;
+
+    floatingTextManager.show(unit.model.position, {
+      text: 'Press E',
+      color: '#ffffff',
+      duration: 0.5,
+    });
+  },
+  // Open chest on interact
   onInteract: (unit, interactable) => {
     if (interactable.userData.isOpen) return;
 
@@ -281,19 +303,38 @@ interactionManager.addInteractable({
 ### Trigger Zones
 
 ```typescript
+// Single-trigger zone (checkpoint)
 interactionManager.addInteractable({
   id: 'checkpoint-1',
   position: checkpointPosition,
   collisionRadius: 3.0,
   blocksMovement: false,
-  userData: { triggered: false },
-  onCollision: (unit, interactable) => {
-    if (interactable.userData.triggered) return;
+  onCollisionEnter: (unit, interactable) => {
     if (unit !== playerUnit) return;
 
-    interactable.userData.triggered = true;
     console.log('Checkpoint reached!');
     saveGame();
+
+    // Deactivate after first trigger
+    interactable.isActive = false;
+  },
+});
+
+// Enter/exit zone (water, fire, etc.)
+interactionManager.addInteractable({
+  id: 'water-zone',
+  position: waterPosition,
+  collisionRadius: 5.0,
+  blocksMovement: false,
+  onCollisionEnter: (unit, interactable) => {
+    if (unit !== playerUnit) return;
+    console.log('Entered water - slower movement');
+    unit.userData.inWater = true;
+  },
+  onCollisionExit: (unit, interactable) => {
+    if (unit !== playerUnit) return;
+    console.log('Exited water - normal movement');
+    unit.userData.inWater = false;
   },
 });
 ```
@@ -367,23 +408,37 @@ worldInstance.onUpdate(() => {
 ### With Outline System
 
 ```typescript
-// Highlight nearby interactables
-worldInstance.onUpdate(() => {
-  const nearby = interactionManager.checkInteractions(playerUnit);
+// Track outlines per interactable
+const outlineMap = new Map<string, string>(); // interactableId -> outlineId
 
-  // Clear old outlines
-  previousOutlines.forEach(id => worldInstance.removeOutline(id));
+// Add outline when entering interaction radius
+interactionManager.addInteractable({
+  id: 'chest-1',
+  position: chestPosition,
+  canInteract: true,
+  object3D: chestMesh,
+  onInteractionEnter: (unit, interactable) => {
+    if (unit !== playerUnit) return;
+    if (!interactable.object3D) return;
 
-  // Add new outlines
-  nearby.forEach(interactable => {
-    if (interactable.object3D) {
-      const id = worldInstance.addOutline(interactable.object3D, {
-        color: '#ffffff',
-        strength: 0.8,
-      });
-      currentOutlines.push(id);
+    const outlineId = worldInstance.addOutline(interactable.object3D, {
+      color: '#ffffff',
+      strength: 0.8,
+    });
+    outlineMap.set(interactable.id, outlineId);
+  },
+  onInteractionExit: (unit, interactable) => {
+    if (unit !== playerUnit) return;
+
+    const outlineId = outlineMap.get(interactable.id);
+    if (outlineId) {
+      worldInstance.removeOutline(outlineId);
+      outlineMap.delete(interactable.id);
     }
-  });
+  },
+  onInteract: (unit, interactable) => {
+    console.log('Chest opened!');
+  },
 });
 ```
 
@@ -393,7 +448,10 @@ worldInstance.onUpdate(() => {
 2. **Active/Inactive:** Deactivate far-away interactables to reduce checks
 3. **Collision Batching:** Call `checkCollisions` once per frame with all units
 4. **Radius Tuning:** Keep collision radii as small as possible
-5. **Callback Efficiency:** Keep onCollision callbacks lightweight (called every frame during collision)
+5. **Callback Efficiency:**
+   - `onCollisionEnter/Exit` and `onInteractionEnter/Exit` only trigger once per state change
+   - These are lightweight and safe for most operations
+   - Avoid heavy operations in callbacks (defer to next frame if needed)
 
 ## Use Cases
 
