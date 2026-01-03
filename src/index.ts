@@ -86,6 +86,9 @@ export {
   createDamageNumbersManager,
 } from './core/ui/index.js';
 
+// Interaction utilities
+export { createInteractionManager } from './core/interactions/index.js';
+
 // Unit management utilities
 export {
   CharacterAssetUtils,
@@ -247,3 +250,11 @@ export type {
   DamageNumberConfig,
   DamageNumbersManager,
 } from './core/ui/index.js';
+export type {
+  Interactable,
+  InteractableConfig,
+  InteractionManager,
+  InteractionManagerConfig,
+  CollisionCallback,
+  InteractionCallback,
+} from './types/interactions.js';
