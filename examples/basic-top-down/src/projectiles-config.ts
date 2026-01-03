@@ -12,33 +12,35 @@ export const createAppleProjectileDefinition = (
   appleGeometry: THREE.SphereGeometry,
   appleMaterial: THREE.MeshStandardMaterial,
   throwSpread: number,
-): ProjectileDefinition => ({
-  id: 'apple',
-  name: 'Apple',
-  physics: {
-    velocity: new THREE.Vector3(0, 0, 0), // Will be set when launching
-    gravity: new THREE.Vector3(0, -4.0, 0), // Reduced gravity for longer flight
-    airResistance: 0.99, // Less air resistance for more distance
-    bounciness: 0,
-    stickOnHit: false,
-    lifetime: 8, // Extended lifetime for longer flights
-  },
-  visual: {
-    geometry: appleGeometry,
-    material: appleMaterial,
-    castShadow: true,
-    receiveShadow: true,
-  },
-  collision: {
-    radius: 0.2,
-    layers: ['default'],
-    checkTerrain: true,
-    checkObjects: true,
-  },
-  spread: {
-    horizontal: throwSpread,
-    vertical: 0.02,
-    velocityVariance: 0.02,
-  },
-  poolSize: 50,
-});
+): ProjectileDefinition => {
+  return {
+    id: 'apple',
+    name: 'Apple',
+    physics: {
+      velocity: new THREE.Vector3(0, 0, 0), // Will be set when launching
+      gravity: new THREE.Vector3(0, -9.8, 0),
+      airResistance: 0.98,
+      bounciness: 0,
+      stickOnHit: false,
+      lifetime: 5,
+    },
+    visual: {
+      geometry: appleGeometry,
+      material: appleMaterial,
+      castShadow: true,
+      receiveShadow: true,
+    },
+    collision: {
+      radius: 0.15,
+      layers: ['default'],
+      checkTerrain: true,
+      checkObjects: true,
+    },
+    spread: {
+      horizontal: throwSpread,
+      vertical: 0.02,
+      velocityVariance: 0.02,
+    },
+    poolSize: 50,
+  };
+};

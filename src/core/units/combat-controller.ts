@@ -492,7 +492,8 @@ export const createCombatController = (
     const rangedConfig = attacker.definition.rangedAttack;
 
     // Check stamina
-    if ((attacker.combat.stamina || 0) < rangedConfig.staminaCost) return false;
+    const currentStamina = attacker.combat.stamina || 0;
+    if (currentStamina < rangedConfig.staminaCost) return false;
 
     // Check cooldown
     const lastAttackTime = attacker.combat.lastRangedAttackTime || 0;
@@ -561,8 +562,9 @@ export const createCombatController = (
     const angleRadians = Math.acos(Math.max(-1, Math.min(1, dotProduct)));
     const angleDegrees = (angleRadians * 180) / Math.PI;
 
-    // Angle tolerance: 5-10 degrees as per user preference
-    const angleToleranceDegrees = 10;
+    // Angle tolerance: More lenient for AI units (90 degrees), strict for player (10 degrees)
+    const isPlayerUnit = attacker.definition.type === 'player';
+    const angleToleranceDegrees = isPlayerUnit ? 10 : 90; // DEBUG: Very lenient for testing
 
     // If not facing target, don't start the attack
     if (angleDegrees > angleToleranceDegrees) {
@@ -639,11 +641,17 @@ export const createCombatController = (
         launchPosition.y += 1.5;
       }
 
-      // Apply spawn offset if specified
+      // Apply spawn offset in local space (relative to character rotation)
       if (rangedConfig.spawnOffset) {
-        launchPosition.x += rangedConfig.spawnOffset.x || 0;
-        launchPosition.y += rangedConfig.spawnOffset.y || 0;
-        launchPosition.z += rangedConfig.spawnOffset.z || 0;
+        const offsetVector = new THREE.Vector3(
+          rangedConfig.spawnOffset.x || 0,
+          rangedConfig.spawnOffset.y || 0,
+          rangedConfig.spawnOffset.z || 0,
+        );
+
+        // Transform offset by character's rotation
+        offsetVector.applyQuaternion(attacker.model.quaternion);
+        launchPosition.add(offsetVector);
       }
 
       // Calculate direction to target
@@ -668,7 +676,7 @@ export const createCombatController = (
       };
 
       // Launch projectile
-      projectileManager.launch({
+      const projectile = projectileManager.launch({
         definitionId: rangedConfig.projectileId,
         origin: launchPosition,
         direction,
@@ -676,9 +684,15 @@ export const createCombatController = (
         userData: { combatData },
       });
 
-      logger?.info(
-        `Unit ${attacker.id} launched ${rangedConfig.projectileId} projectile`,
-      );
+      if (projectile) {
+        logger?.info(
+          `Unit ${attacker.id} launched ${rangedConfig.projectileId} projectile at ${launchPosition.x.toFixed(1)},${launchPosition.y.toFixed(1)},${launchPosition.z.toFixed(1)}`,
+        );
+      } else {
+        logger?.error(
+          `Unit ${attacker.id} FAILED to launch ${rangedConfig.projectileId} projectile!`,
+        );
+      }
     }, rangedConfig.actionDelay);
 
     return {

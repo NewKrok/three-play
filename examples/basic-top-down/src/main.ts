@@ -19,6 +19,8 @@ import {
   humanUnitDefinition,
   zombieUnitDefinition,
   soldierUnitDefinition,
+  zombieRangedUnitDefinition,
+  soldierRangedUnitDefinition,
 } from './unit-definitions.js';
 import { decorateUnit, COLOR_THEMES } from './unit-decorators.js';
 import { createUIManager } from './ui/index.js';
@@ -290,7 +292,13 @@ worldConfig.units = {
     minDistance: 1.0,
     pushStrength: 0.5,
   },
-  definitions: [humanUnitDefinition, zombieUnitDefinition, soldierUnitDefinition],
+  definitions: [
+    humanUnitDefinition,
+    zombieUnitDefinition,
+    soldierUnitDefinition,
+    zombieRangedUnitDefinition,
+    soldierRangedUnitDefinition,
+  ],
 } as any;
 
 // Set up projectile collision detection callback
@@ -304,10 +312,16 @@ worldConfig.projectiles = {
 
     const allUnits = unitManagerInstance.getAllUnits();
 
+    // Get shooter info from combat data
+    const combatData = projectile.userData?.combatData;
+    const shooter = combatData?.attackerUnit;
+
     for (const unit of allUnits) {
-      // Don't hit the player or soldiers (allies)
-      if (character && unit === character) continue;
-      if (unit.definition?.type === 'npc') continue; // Skip soldiers
+      // Don't hit the shooter
+      if (shooter && unit === shooter) continue;
+
+      // Don't hit allies (same team)
+      if (shooter && unit.team === shooter.team) continue;
 
       // Check collision with unit's body using a capsule approximation
       // Check if projectile is within horizontal range
@@ -576,8 +590,8 @@ worldInstance.onReady((assets) => {
     }
   };
 
-  // Spawn a single zombie
-  const spawnZombie = () => {
+  // Spawn a single zombie (can be melee or ranged)
+  const spawnZombie = (isRanged = false) => {
     if (zombieCount >= Constants.MAX_ZOMBIES) return;
 
     // Randomize spawn position within 2 meter radius
@@ -591,9 +605,10 @@ worldInstance.onReady((assets) => {
     position.z += randomOffset.y;
     position.y = heightmapUtils.getHeightFromPosition(position);
 
+    const definitionId = isRanged ? 'zombie-ranged-enemy' : 'zombie-enemy';
     const enemy = decorateUnit(
       unitManager.createUnit({
-        definitionId: 'zombie-enemy',
+        definitionId,
         position,
       }),
       COLOR_THEMES.zombie,
@@ -617,7 +632,11 @@ worldInstance.onReady((assets) => {
       }
 
       // Initialize combat for enemy
+      // Ranged units don't need ammo (infinite apples for NPCs)
       unitManager.initializeCombat(enemy, 100, {
+        rangedAttack: {
+          enableAmmo: false, // NPCs have infinite ammo
+        },
         onDamage: handleUnitDamage,
       });
 
@@ -628,12 +647,12 @@ worldInstance.onReady((assets) => {
       });
 
       zombieCount++;
-      logger.info(`Spawned zombie (${zombieCount}/${Constants.MAX_ZOMBIES})`);
+      logger.info(`Spawned ${isRanged ? 'ranged' : 'melee'} zombie (${zombieCount}/${Constants.MAX_ZOMBIES})`);
     }
   };
 
-  // Spawn a single soldier
-  const spawnSoldier = () => {
+  // Spawn a single soldier (can be melee or ranged)
+  const spawnSoldier = (isRanged = false) => {
     if (soldierCount >= Constants.MAX_SOLDIERS) return;
 
     // Randomize spawn position within 2 meter radius
@@ -647,9 +666,10 @@ worldInstance.onReady((assets) => {
     position.z += randomOffset.y;
     position.y = heightmapUtils.getHeightFromPosition(position);
 
+    const definitionId = isRanged ? 'soldier-ranged-ally' : 'soldier-ally';
     const soldier = decorateUnit(
       unitManager.createUnit({
-        definitionId: 'soldier-ally',
+        definitionId,
         position,
       }),
       COLOR_THEMES.soldier,
@@ -673,7 +693,11 @@ worldInstance.onReady((assets) => {
       }
 
       // Initialize combat for soldier
+      // Ranged units don't need ammo (infinite apples for NPCs)
       unitManager.initializeCombat(soldier, 100, {
+        rangedAttack: {
+          enableAmmo: false, // NPCs have infinite ammo
+        },
         onDamage: handleUnitDamage,
       });
 
@@ -684,7 +708,7 @@ worldInstance.onReady((assets) => {
       });
 
       soldierCount++;
-      logger.info(`Spawned soldier (${soldierCount}/${Constants.MAX_SOLDIERS})`);
+      logger.info(`Spawned ${isRanged ? 'ranged' : 'melee'} soldier (${soldierCount}/${Constants.MAX_SOLDIERS})`);
     }
   };
 
@@ -1887,11 +1911,16 @@ worldInstance.onReady((assets) => {
 
     // Handle unit spawning
     if (elapsedTime - lastSpawnTime >= Constants.SPAWN_INTERVAL) {
-      // Spawn 3 zombies for each soldier (balance)
-      spawnZombie();
-      spawnZombie();
-      spawnZombie();
-      spawnSoldier();
+      // Spawn 2 melee zombies + 1 ranged zombie
+      spawnZombie(false); // melee
+      spawnZombie(false); // melee
+      spawnZombie(true);  // ranged
+
+      // Spawn 2 melee soldiers + 1 ranged soldier
+      spawnSoldier(false); // melee
+      spawnSoldier(false); // melee
+      spawnSoldier(true);  // ranged
+
       lastSpawnTime = elapsedTime;
     }
 

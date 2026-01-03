@@ -189,3 +189,152 @@ export const soldierUnitDefinition: UnitDefinition = {
     },
   },
 };
+
+/**
+ * Ranged zombie enemy unit definition - throws apples
+ */
+export const zombieRangedUnitDefinition: UnitDefinition = {
+  id: 'zombie-ranged-enemy',
+  type: 'enemy',
+  team: 'zombies',
+  enemyTeams: ['player', 'soldiers'],
+  modelAssets: {
+    baseModel: 'zombie-idle',
+    animations: {
+      idle: 'zombie-idle',
+      walk: 'zombie-walk',
+      run: 'zombie-run',
+      attack: 'zombie-attack',
+      lightAttack: 'zombie-attack',
+      throw: 'zombie-attack', // Use attack animation for throwing
+      hitToBody: 'hit-to-body',
+      death1: 'death-1',
+      death2: 'death-2',
+      death3: 'death-3',
+    },
+  },
+  stats: {
+    speed: 0.8,
+    health: 60,
+    attackDamage: 15,
+    collisionRadius: 0.5,
+    combat: {
+      attackDamageMin: 8,
+      attackDamageMax: 22,
+      damageType: 'normal',
+      armor: 0,
+      armorType: 'light',
+      attackSpeed: 1500,
+      healthRegen: 0.2,
+      critChance: 0.05,
+      critMultiplier: 1.5,
+      attackRange: 1.5, // Melee fallback range
+    },
+  },
+  appearance: {
+    scale: 1.0,
+    rotation: Math.PI / 2,
+  },
+
+  ai: {
+    type: 'chase',
+    targeting: {
+      preferredTargets: ['player'],
+      detectionRange: 30.0,
+      attackRange: 12.0, // Prefer ranged attacks
+    },
+    movement: {
+      speed: 4.0,
+    },
+  },
+
+  rangedAttack: {
+    projectileId: 'apple',
+    animation: 'throw',
+    range: 12.0,
+    cooldown: 1500,
+    staminaCost: 0, // NPCs don't use stamina
+    actionDelay: 400,
+    ammoType: 'apple',
+    canTargetGround: false,
+    spawnBone: 'mixamorigRightHand',
+    spawnOffset: { x: 0.2, y: -0.1, z: 0 },
+  },
+
+  death: {
+    animations: ['death1', 'death2', 'death3'],
+    removeDelay: 2000,
+    loop: false,
+    clampWhenFinished: true,
+    autoHandle: true,
+  },
+};
+
+/**
+ * Ranged soldier unit definition - DEBUG: Disabled, just stands idle
+ */
+export const soldierRangedUnitDefinition: UnitDefinition = {
+  id: 'soldier-ranged-ally',
+  type: 'npc',
+  team: 'soldiers',
+  enemyTeams: ['zombies'],
+  modelAssets: {
+    baseModel: 'human-idle',
+    animations: {
+      idle: 'human-idle',
+      walk: 'walk',
+      run: 'run',
+      attack: 'light-attack',
+      lightAttack: 'light-attack',
+      throw: 'throw',
+      hitToBody: 'hit-to-body',
+    },
+  },
+  stats: {
+    speed: 1.0,
+    health: 100,
+    attackDamage: 30,
+    collisionRadius: 0.5,
+    combat: {
+      attackDamageMin: 18,
+      attackDamageMax: 30,
+      damageType: 'pierce',
+      armor: 2,
+      armorType: 'heavy',
+      attackSpeed: 1200,
+      healthRegen: 0.3,
+      critChance: 0.25,
+      critMultiplier: 2.0,
+      attackRange: 1.5, // Melee fallback range
+    },
+  },
+  appearance: {
+    scale: 1.0,
+    rotation: Math.PI / 2,
+  },
+
+  ai: {
+    type: 'chase',
+    targeting: {
+      preferredTargets: ['enemy'],
+      detectionRange: 30.0,
+      attackRange: 12.0,
+    },
+    movement: {
+      speed: 4.0,
+    },
+  },
+
+  rangedAttack: {
+    projectileId: 'apple',
+    animation: 'throw',
+    range: 12.0,
+    cooldown: 1500,
+    staminaCost: 0,
+    actionDelay: 400,
+    ammoType: 'apple',
+    canTargetGround: false,
+    spawnBone: 'mixamorigRightHand',
+    spawnOffset: { x: 0.2, y: -0.1, z: 0 },
+  },
+};

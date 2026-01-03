@@ -249,14 +249,15 @@ export const createAIBehaviorController = (
             updateUnitMovement(unit, tempTargetPosition, deltaTime);
 
             // Check if close enough to attack
+            // Use unit-specific attack range from AI config, or default
+            const unitAttackRange = unit.definition.ai?.targeting?.attackRange || attackRange;
             const distanceToTarget = unit.model.position.distanceTo(
               behaviorData.targetUnit.model.position,
             );
-            if (distanceToTarget <= attackRange) {
+            if (distanceToTarget <= unitAttackRange) {
               behaviorData.state = 'attack';
               behaviorData.isAttacking = true;
               behaviorData.isMoving = false;
-              behaviorData.resumeTime = elapsedTime + Math.random() * 3;
             }
           } else {
             behaviorData.state = 'return';
@@ -266,22 +267,70 @@ export const createAIBehaviorController = (
         }
 
         case 'attack': {
-          behaviorData.isMoving = false;
           if (behaviorData.targetUnit) {
+            // Use unit-specific attack range from AI config, or default
+            const unitAttackRange = unit.definition.ai?.targeting?.attackRange || attackRange;
             const distanceToTarget = unit.model.position.distanceTo(
               behaviorData.targetUnit.model.position,
             );
-            if (distanceToTarget > attackRange * 1.5) {
+
+            // Check if unit has ranged attack capability
+            const hasRangedAttack = unit.definition.rangedAttack !== undefined;
+            const rangedRange = unit.definition.rangedAttack?.range || 0;
+
+            // For ranged units, maintain distance between 3.0m and rangedRange
+            if (hasRangedAttack) {
+              const minRangedDistance = 3.0; // Minimum safe distance for ranged attacks
+
+              if (distanceToTarget < minRangedDistance) {
+                // Too close! Back away
+                behaviorData.isMoving = true;
+                const awayDirection = new THREE.Vector3()
+                  .subVectors(unit.model.position, behaviorData.targetUnit.model.position)
+                  .normalize();
+                const backupTarget = unit.model.position.clone()
+                  .add(awayDirection.multiplyScalar(1.0)); // Move 1m away
+                updateUnitMovement(unit, backupTarget, deltaTime);
+              } else {
+                // Good distance for ranged attack, stop moving
+                behaviorData.isMoving = false;
+              }
+            } else {
+              // Melee unit, don't move
+              behaviorData.isMoving = false;
+            }
+
+            if (distanceToTarget > unitAttackRange * 1.5) {
               // Target moved away, resume chase
               behaviorData.state = 'chase';
               behaviorData.isAttacking = false;
             } else {
-              // Perform actual attack using combat controller
-              if (combatController && combatController.canAttack(unit, 'light', elapsedTime * 1000)) {
-                combatController.performLightAttack(unit, elapsedTime * 1000);
+              // Prefer ranged attack if available and within range
+              if (hasRangedAttack && distanceToTarget <= rangedRange && distanceToTarget > 2.0) {
+                // Use ranged attack for distant targets
+                if (combatController && combatController.canPerformRangedAttack) {
+                  const canRanged = combatController.canPerformRangedAttack(
+                    unit,
+                    behaviorData.targetUnit,
+                    elapsedTime * 1000
+                  );
+                  if (canRanged) {
+                    combatController.performRangedAttack(
+                      unit,
+                      behaviorData.targetUnit,
+                      elapsedTime * 1000
+                    );
+                  }
+                }
+              } else {
+                // Use melee attack for close targets or if no ranged attack
+                if (combatController && combatController.canAttack(unit, 'light', elapsedTime * 1000)) {
+                  combatController.performLightAttack(unit, elapsedTime * 1000);
+                }
               }
             }
           } else {
+            behaviorData.isMoving = false;
             behaviorData.state = 'return';
             behaviorData.targetPosition.copy(behaviorData.homePosition);
           }
