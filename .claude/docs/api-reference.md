@@ -22,6 +22,7 @@ Complete API reference for THREE Play game engine.
 ### Support Systems
 - [Assets](assets.md) - Asset loading
 - [Floating Text](floating-text.md) - Temporary text in 3D space
+- [Interactions](interactions.md) - Collision and interaction system
 - [Utilities](utilities.md) - Shared utilities
 
 ## Factory Functions
