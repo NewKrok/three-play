@@ -127,6 +127,7 @@ fix(units): apply rotation to instance not wrapper
 - **[heightmap](docs/heightmap.md)** - Height queries for terrain
 - **[day-night](docs/day-night.md)** - Day/night cycle
 - **[skybox](docs/skybox.md)** - Skybox management
+- **[camera](docs/camera.md)** - Cinematic camera sequences
 
 ### Support Systems
 

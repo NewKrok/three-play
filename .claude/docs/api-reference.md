@@ -17,6 +17,7 @@ Complete API reference for THREE Play game engine.
 - [Heightmap](heightmap.md) - Height queries
 - [Day/Night](day-night.md) - Day/night cycle
 - [Skybox](skybox.md) - Skybox management
+- [Camera](camera.md) - Cinematic camera sequences
 
 ### Support Systems
 - [Assets](assets.md) - Asset loading
