@@ -1,5 +1,6 @@
 import type { TeamId, TeamManagerConfig } from '../../types/team.js';
 import type { Unit } from '../../types/units.js';
+import { AttackPriorityUtils } from './attack-priority-utils.js';
 
 /**
  * Check if two teams are enemies based on enemyTeams configuration
@@ -97,8 +98,7 @@ export const findNearestEnemy = (
   maxRange: number,
   config?: TeamManagerConfig,
 ): Unit | null => {
-  let nearestEnemy: Unit | null = null;
-  let nearestDistance = maxRange;
+  const enemies: Unit[] = [];
 
   for (const otherUnit of allUnits) {
     // Skip self
@@ -113,13 +113,13 @@ export const findNearestEnemy = (
     // Calculate distance
     const distance = unit.model.position.distanceTo(otherUnit.model.position);
 
-    if (distance < nearestDistance) {
-      nearestDistance = distance;
-      nearestEnemy = otherUnit;
+    if (distance <= maxRange) {
+      enemies.push(otherUnit);
     }
   }
 
-  return nearestEnemy;
+  // Use attack priority system to select best target
+  return AttackPriorityUtils.selectBestTarget(unit, enemies);
 };
 
 /**

@@ -16,3 +16,4 @@ export {
   DamageCalculatorUtils,
 } from './damage-calculator.js';
 export type { DamageCalculatorConfig } from './damage-calculator.js';
+export { AttackPriorityUtils } from './attack-priority-utils.js';

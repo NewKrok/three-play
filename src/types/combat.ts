@@ -10,8 +10,9 @@ export type DamageType = 'normal' | 'pierce' | 'siege' | 'magic' | 'chaos';
 
 /**
  * Armor types that units can have
+ * Based on Warcraft 3 armor classification system
  */
-export type ArmorType = 'unarmored' | 'light' | 'medium' | 'heavy' | 'fortified';
+export type ArmorType = 'unarmored' | 'light' | 'medium' | 'heavy' | 'hero' | 'fortified';
 
 /**
  * Configuration for a unit's combat statistics
@@ -72,6 +73,7 @@ export const DAMAGE_TYPE_EFFECTIVENESS: Record<
     light: 1.5,
     medium: 1.0,
     heavy: 1.0,
+    hero: 1.0,
     fortified: 0.7,
   },
   pierce: {
@@ -79,6 +81,7 @@ export const DAMAGE_TYPE_EFFECTIVENESS: Record<
     light: 2.0,
     medium: 0.75,
     heavy: 0.75,
+    hero: 0.5,
     fortified: 0.35,
   },
   siege: {
@@ -86,6 +89,7 @@ export const DAMAGE_TYPE_EFFECTIVENESS: Record<
     light: 0.5,
     medium: 1.0,
     heavy: 1.0,
+    hero: 0.5,
     fortified: 1.5,
   },
   magic: {
@@ -93,6 +97,7 @@ export const DAMAGE_TYPE_EFFECTIVENESS: Record<
     light: 1.0,
     medium: 2.0,
     heavy: 0.5,
+    hero: 0.5,
     fortified: 0.35,
   },
   chaos: {
@@ -100,6 +105,7 @@ export const DAMAGE_TYPE_EFFECTIVENESS: Record<
     light: 1.0,
     medium: 1.0,
     heavy: 1.0,
+    hero: 1.0,
     fortified: 1.0,
   },
 };
