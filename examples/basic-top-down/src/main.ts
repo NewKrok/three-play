@@ -1406,7 +1406,26 @@ worldInstance.onReady((assets) => {
           if (unit === character && appleIndices && isActive) {
             tree.isActive = false;
             removeApplesFromTree(appleIndices);
-            logger.info(`Collected ${appleIndices.length} apples from tree`);
+
+            // Show pickup notification using damage numbers system
+            const pos = character.model.position.clone();
+            pos.y += 2;
+            damageNumbersManager.showDamage(
+              pos,
+              {
+                finalDamage: appleIndices.length,
+                wasCritical: false,
+                baseDamage: appleIndices.length,
+                typeMultiplier: 1,
+                armorReduction: 0,
+              },
+              {
+                normalColor: '#22c55e', // Green for pickups
+                fontSize: 32,
+                duration: 1.2,
+              }
+            );
+
             gameState.collectedApples += appleIndices.length;
 
             // Add apples to inventory
@@ -1526,10 +1545,29 @@ worldInstance.onReady((assets) => {
 
             crate.isActive = false;
 
+            // Show pickup notification using damage numbers system
+            const pos = character.model.position.clone();
+            pos.y += 2;
+            damageNumbersManager.showDamage(
+              pos,
+              {
+                finalDamage: 30,
+                wasCritical: true, // Use critical styling for crates (bigger number)
+                baseDamage: 30,
+                typeMultiplier: 1,
+                armorReduction: 0,
+              },
+              {
+                normalColor: '#fbbf24', // Amber/gold for crates
+                criticalColor: '#fbbf24',
+                fontSize: 42,
+                duration: 1.5,
+              }
+            );
+
             // Add 30 apples when collecting a crate
             gameState.collectedApples += 30;
             uiManager.addItem('apple', 30);
-            logger.info('Collected crate with 30 apples');
             removeCrate(index);
           }
         }
