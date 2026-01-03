@@ -56,6 +56,9 @@ export { createLogger, LoggerUtils } from './core/utils/logger.js';
 // Day/Night utilities
 export { createDayNightManager } from './core/day-night/index.js';
 
+// Camera utilities
+export { createCinematicCameraController } from './core/camera/index.js';
+
 // Projectile utilities
 export {
   ProjectileUtils,
@@ -170,6 +173,11 @@ export type {
   LightIntensityConfig,
   SunPositionConfig,
 } from './types/day-night.js';
+export type {
+  CinematicCameraStep,
+  CinematicCameraConfig,
+  CinematicCameraController,
+} from './types/camera.js';
 export type {
   SkyboxConfig,
   SkyboxAssetConfig,

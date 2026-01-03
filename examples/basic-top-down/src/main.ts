@@ -2,6 +2,7 @@ import {
   createWorld,
   createHealthBarManager,
   createDamageNumbersManager,
+  createCinematicCameraController,
 } from '@newkrok/three-play';
 import type {
   ProjectileManager,
@@ -180,108 +181,6 @@ document.body.appendChild(labelRenderer.domElement);
  * @param {THREE.Vector3} params.position
  * @param {number} [params.duration=1000]
  */
-const createCinematicCameraController = (
-  camera,
-  sequence = [],
-  onComplete = null,
-) => {
-  let currentIndex = 0;
-  let currentTime = 0;
-  let playing = false;
-  let currentStep = null;
-
-  const play = () => {
-    if (sequence.length === 0) return;
-
-    playing = true;
-    currentIndex = 0;
-    currentTime = 0;
-    currentStep = sequence[0];
-
-    if (currentStep.from) {
-      camera.position.copy(currentStep.from);
-    } else {
-      currentStep.from = camera.position.clone();
-    }
-  };
-
-  const stop = () => {
-    playing = false;
-  };
-
-  const update = (delta) => {
-    if (!playing || !currentStep) return;
-
-    const step = currentStep;
-    const duration = step.duration ?? 1;
-    const wait = step.wait ?? 0;
-    currentTime += delta;
-
-    const t = Math.min(currentTime / duration, 1);
-    const smoothT = t * t * (3 - 2 * t);
-
-    if (step.from && step.to) {
-      camera.position.lerpVectors(step.from, step.to, smoothT);
-    }
-
-    let lookTarget;
-    if (step.lookAtFrom && step.lookAtTo) {
-      lookTarget = new THREE.Vector3().lerpVectors(
-        step.lookAtFrom,
-        step.lookAtTo,
-        smoothT,
-      );
-    } else if (step.lookAt) {
-      lookTarget = step.lookAt;
-    } else if (step.to && step.from) {
-      const forward = new THREE.Vector3()
-        .subVectors(step.to, step.from)
-        .normalize();
-      lookTarget = new THREE.Vector3().addVectors(camera.position, forward);
-    } else {
-      lookTarget = new THREE.Vector3(
-        camera.position.x,
-        camera.position.y,
-        camera.position.z - 1,
-      );
-    }
-
-    const targetQuat = new THREE.Quaternion();
-    const currentQuat = camera.quaternion.clone();
-    const lookMatrix = new THREE.Matrix4();
-
-    lookMatrix.lookAt(camera.position, lookTarget, camera.up);
-    targetQuat.setFromRotationMatrix(lookMatrix);
-
-    camera.quaternion.slerpQuaternions(currentQuat, targetQuat, 0.1);
-
-    if (currentTime >= duration + wait) {
-      currentIndex++;
-      if (currentIndex < sequence.length) {
-        currentStep = sequence[currentIndex];
-        currentTime = 0;
-
-        if (!currentStep.from) {
-          currentStep.from = camera.position.clone();
-        } else {
-          camera.position.copy(currentStep.from);
-        }
-      } else {
-        stop();
-        if (onComplete) onComplete();
-      }
-    }
-  };
-
-  const isPlaying = () => playing;
-
-  return {
-    play,
-    stop,
-    update,
-    isPlaying,
-  };
-};
 
 worldConfig.units = {
   enabled: true,
@@ -1878,22 +1777,25 @@ worldInstance.onReady((assets) => {
     });
   };
 
-  const cinamaticCameraController = createCinematicCameraController(camera, [
-    {
-      from: new THREE.Vector3(
-        startingPosition.x - 15,
-        11,
-        startingPosition.z - 15,
-      ),
-      to: new THREE.Vector3(startingPosition.x - 10, 12, startingPosition.z),
-      lookAt: new THREE.Vector3(
-        character?.model.position.x || 0,
-        12,
-        character?.model.position.z || 0,
-      ),
-      duration: 0.5,
-    },
-  ]);
+  const cinamaticCameraController = createCinematicCameraController({
+    camera,
+    sequence: [
+      {
+        from: new THREE.Vector3(
+          startingPosition.x - 15,
+          11,
+          startingPosition.z - 15,
+        ),
+        to: new THREE.Vector3(startingPosition.x - 10, 12, startingPosition.z),
+        lookAt: new THREE.Vector3(
+          character?.model.position.x || 0,
+          12,
+          character?.model.position.z || 0,
+        ),
+        duration: 0.5,
+      },
+    ],
+  });
 
   camera.lookAt(150, 20, 200);
   cinamaticCameraController.play();
