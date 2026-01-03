@@ -40,7 +40,7 @@ import {
 } from './effects-config.js';
 import worldConfig from './world-config.js';
 import * as Constants from './constants.js';
-import { LIGHT_ATTACK_ACTION_DELAY } from './constants.js';
+import { LIGHT_ATTACK_ACTION_DELAY, STAMINA_FOR_RANGED_ATTACK } from './constants.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 // Destructure constants for easier access
@@ -1598,10 +1598,16 @@ worldInstance.onReady((assets) => {
     if (!character) return;
 
     // Always allow throwing when mouse is pressed (no aim mode check needed)
-    if (isMousePressed && mouseWorldPosition) {
+    if (isMousePressed && mouseWorldPosition && gameState.stamina >= STAMINA_FOR_RANGED_ATTACK) {
       const now = performance.now();
       // Combat system handles ammo checking and consumption via callbacks
-      unitManager.performRangedAttack(character, mouseWorldPosition, now);
+      const result = unitManager.performRangedAttack(character, mouseWorldPosition, now);
+
+      // Consume stamina only if attack was successful
+      if (result.success) {
+        gameState.stamina -= STAMINA_FOR_RANGED_ATTACK;
+        gameState.stamina = Math.max(gameState.stamina, 0);
+      }
     }
   };
 

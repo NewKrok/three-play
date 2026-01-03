@@ -7,7 +7,7 @@ export const WATER_LEVEL = 7.8;
 
 // Movement constants
 export const WALK_SPEED = 4;
-export const RUN_SPEED = 8;
+export const RUN_SPEED = 7.2;
 export const AIM_WALK_SPEED = 3.5;
 export const ROLL_SPEED = 5;
 export const FAST_ROLL_SPEED = 10;
@@ -40,14 +40,14 @@ export const APPLE_PUSH_FORCE = 60;
 
 // Player stats constants
 export const MAX_STAMINA = 100.0;
-export const STAMINA_RECOVERY = 1;
-export const STAMINA_DRAIN = 2;
+export const STAMINA_RECOVERY = 2;
+export const STAMINA_DRAIN = 8;
 export const MAX_HEALTH = 100.0;
 
 // Combat constants
 export const LIGHT_ATTACK_KNOCKBACK = 20;
 export const LIGHT_ATTACK_ACTION_DELAY = 500;
-export const STAMINA_FOR_LIGHT_ATTACK = 1;
+export const STAMINA_FOR_LIGHT_ATTACK = 5;
 export const LIGHT_ATTACK_COOLDOWN = 900;
 export const LIGHT_ATTACK_EFFECT_AREA = 3;
 export const LIGHT_ATTACK_STUN_DURATION = 0; // No stun on light attacks
@@ -58,6 +58,8 @@ export const STAMINA_FOR_HEAVY_ATTACK = 4;
 export const HEAVY_ATTACK_COOLDOWN = 3000;
 export const HEAVY_ATTACK_EFFECT_AREA = 8;
 export const HEAVY_ATTACK_STUN_DURATION = 3000;
+
+export const STAMINA_FOR_RANGED_ATTACK = 3;
 
 // Misc constants
 export const startingPosition = { x: 88, y: 0, z: 132 };
