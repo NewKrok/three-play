@@ -1390,6 +1390,35 @@ worldInstance.onReady((assets) => {
     if (rollActive && !isRolling) {
       if (now - lastRollTime > rollCooldown) {
         isRolling = true;
+
+        // Determine roll direction based on movement input
+        const moveLeft = inputManager.isActionActive('moveLeft');
+        const moveRight = inputManager.isActionActive('moveRight');
+        const moveUp = inputManager.isActionActive('moveUp');
+        const moveDown = inputManager.isActionActive('moveDown');
+        const hasMovementInput = moveLeft || moveRight || moveUp || moveDown;
+
+        let rollDirection: THREE.Vector3;
+
+        if (hasMovementInput) {
+          // Roll in the direction of input (world space)
+          rollDirection = new THREE.Vector3(0, 0, 0);
+          if (moveUp) rollDirection.z -= 1;    // North
+          if (moveDown) rollDirection.z += 1;  // South
+          if (moveLeft) rollDirection.x -= 1;  // West
+          if (moveRight) rollDirection.x += 1; // East
+          rollDirection.normalize();
+        } else {
+          // Roll forward relative to character facing (no input = standing still)
+          rollDirection = new THREE.Vector3(1, 0, 0);
+          rollDirection.applyQuaternion(character.model.quaternion);
+        }
+
+        // Store roll direction and rotate character to face it
+        character.userData.rollDirection = rollDirection.clone();
+        const rollAngle = Math.atan2(rollDirection.x, rollDirection.z) - Math.PI / 2;
+        character.model.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rollAngle);
+
         unitManager.playAnimation(character, 'roll');
         lastRollTime = now;
       }
@@ -1399,12 +1428,13 @@ worldInstance.onReady((assets) => {
         // Approximate roll duration
         isRolling = false;
         unitManager.playAnimation(character, 'idle');
+        delete character.userData.rollDirection;
       } else {
-        const forward = new THREE.Vector3(1, 0, 0);
-        forward.applyQuaternion(character.model.quaternion);
+        // Use stored roll direction
+        const rollDirection = character.userData.rollDirection || new THREE.Vector3(1, 0, 0);
         character.userData.oldPos = character.model.position.clone();
         character.model.position.addScaledVector(
-          forward,
+          rollDirection,
           (inputManager.isActionActive('run') ? FAST_ROLL_SPEED : ROLL_SPEED) *
             cycleData.delta,
         );
