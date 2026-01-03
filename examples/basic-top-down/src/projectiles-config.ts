@@ -5,13 +5,11 @@ import type { ProjectileDefinition } from '@newkrok/three-play';
  * Creates the apple projectile definition
  * @param appleGeometry - The geometry to use for the apple projectile
  * @param appleMaterial - The material to use for the apple projectile
- * @param throwSpread - The horizontal spread for throwing
  * @returns The apple projectile definition
  */
 export const createAppleProjectileDefinition = (
   appleGeometry: THREE.SphereGeometry,
   appleMaterial: THREE.MeshStandardMaterial,
-  throwSpread: number,
 ): ProjectileDefinition => {
   return {
     id: 'apple',
@@ -37,7 +35,7 @@ export const createAppleProjectileDefinition = (
       checkObjects: true,
     },
     spread: {
-      horizontal: throwSpread,
+      horizontal: 0.02,
       vertical: 0.02,
       velocityVariance: 0.02,
     },

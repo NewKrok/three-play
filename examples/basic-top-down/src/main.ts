@@ -151,7 +151,6 @@ let isTurning = false;
 const rollCooldown = 500;
 const dashCooldown = 800;
 const dashDuration = 200;
-const throwSpread = 0.02; // Used by projectile config
 const rotationTargetQuaternion = new THREE.Quaternion();
 const dummy = new THREE.Object3D();
 const mousePosition = new THREE.Vector2();
@@ -848,7 +847,6 @@ worldInstance.onReady((assets) => {
   const appleProjectileDefinition = createAppleProjectileDefinition(
     appleGeometry,
     appleMaterial,
-    throwSpread,
   );
 
   projectileManager = worldInstance.getProjectileManager();
