@@ -36,7 +36,6 @@ import {
 } from './effects-config.js';
 import worldConfig from './world-config.js';
 import * as Constants from './constants.js';
-import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/Addons.js';
 import { LIGHT_ATTACK_ACTION_DELAY } from './constants.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -167,20 +166,6 @@ const gameState = {
   maxStamina: MAX_STAMINA,
 };
 
-const labelRenderer = new CSS2DRenderer();
-labelRenderer.setSize(window.innerWidth, window.innerHeight);
-labelRenderer.domElement.style.position = 'absolute';
-labelRenderer.domElement.style.top = '0px';
-labelRenderer.domElement.style.pointerEvents = 'none';
-document.body.appendChild(labelRenderer.domElement);
-
-/**
- * Show floating label at position
- * @param {Object} params
- * @param {string} params.text
- * @param {THREE.Vector3} params.position
- * @param {number} [params.duration=1000]
- */
 
 worldConfig.units = {
   enabled: true,
@@ -387,28 +372,6 @@ worldInstance.onReady((assets) => {
     delta: 0,
   };
 
-  const showFloatingLabel = ({ text, position, duration = 1000 }) => {
-    const div = document.createElement('div');
-    div.textContent = text;
-    div.style.color = 'yellow';
-    div.style.fontSize = '20px';
-    div.style.fontFamily = 'sans-serif';
-    div.style.fontWeight = 'bold';
-    div.style.pointerEvents = 'none';
-    div.style.transition = 'opacity 1s ease-out';
-    div.style.opacity = '1';
-
-    const label = new CSS2DObject(div);
-    label.position.copy(position);
-    scene.add(label);
-
-    setTimeout(() => {
-      div.style.opacity = '0';
-      setTimeout(() => {
-        scene.remove(label);
-      }, 1000);
-    }, duration);
-  };
 
   // Create player character using unit manager
   character = decorateUnit(
@@ -1443,10 +1406,7 @@ worldInstance.onReady((assets) => {
           if (unit === character && appleIndices && isActive) {
             tree.isActive = false;
             removeApplesFromTree(appleIndices);
-            showFloatingLabel({
-              text: `+${appleIndices.length} apples`,
-              position: character.model.position,
-            });
+            logger.info(`Collected ${appleIndices.length} apples from tree`);
             gameState.collectedApples += appleIndices.length;
 
             // Add apples to inventory
@@ -1569,10 +1529,7 @@ worldInstance.onReady((assets) => {
             // Add 30 apples when collecting a crate
             gameState.collectedApples += 30;
             uiManager.addItem('apple', 30);
-            showFloatingLabel({
-              text: '+30 apples',
-              position: character.model.position,
-            });
+            logger.info('Collected crate with 30 apples');
             removeCrate(index);
           }
         }
@@ -1862,9 +1819,6 @@ worldInstance.onReady((assets) => {
     damageNumbersManager.update(deltaTime, elapsedTime);
 
     cinamaticCameraController.update(cycleData.delta);
-
-    // Render CSS2D labels
-    labelRenderer.render(scene, camera);
   });
 
   // Start the THREE Play update loop
