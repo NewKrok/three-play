@@ -16,6 +16,7 @@ The utilities module provides:
 - **Object Pool** - Efficient memory management
 - **Damage Calculator** - Combat damage calculation system
 - **Team Utils** - Team-based targeting utilities
+- **Attack Priority Utils** - Warcraft 3-style target prioritization
 
 ---
 
@@ -721,10 +722,245 @@ function performAttack(attacker: Unit, target: Unit) {
 }
 ```
 
+---
+
+## Attack Priority Utils
+
+Warcraft 3-style target prioritization system for intelligent AI targeting.
+
+### Location
+- [src/core/utils/attack-priority-utils.ts](../../src/core/utils/attack-priority-utils.ts)
+
+### Core Concept
+
+The attack priority system implements Warcraft 3's armor type-based target selection. Units prioritize targets based on their armor type, then by distance for equal priorities.
+
+**Priority Order (highest to lowest):**
+1. **Hero** (100) - Heroes are always targeted first
+2. **Heavy** (80) - Heavy combat units
+3. **Medium** (75) - Medium combat units
+4. **Light** (70) - Light combat units
+5. **Unarmored** (30) - Workers, non-combat units
+6. **Fortified** (10) - Buildings (lowest priority)
+
+### `getAttackPriority(unit: Unit): number`
+
+Get attack priority value for a unit based on its armor type.
+
+**Parameters:**
+- `unit`: Unit - Unit to get priority for
+
+**Returns:**
+- `number` - Priority value (higher = higher priority)
+
+**Example:**
+```typescript
+import { AttackPriorityUtils } from '@three-play/core/utils';
+
+const unit = unitManager.getUnit('hero_1');
+const priority = AttackPriorityUtils.getAttackPriority(unit);
+console.log(priority); // 100 (if unit has hero armor type)
+```
+
+### `selectBestTarget(attacker: Unit, potentialTargets: Unit[]): Unit | null`
+
+Select the best target from a list based on attack priority and distance.
+
+**Parameters:**
+- `attacker`: Unit - Unit doing the attacking
+- `potentialTargets`: Unit[] - Array of potential targets
+
+**Returns:**
+- `Unit | null` - Best target unit, or null if no valid targets
+
+**Example:**
+```typescript
+import { AttackPriorityUtils } from '@three-play/core/utils';
+
+// Get all enemies in range
+const enemies = unitManager.getUnitsInRange(unit.model.position, 10, unit);
+
+// Select best target (prioritizes heroes, then combat units, then distance)
+const bestTarget = AttackPriorityUtils.selectBestTarget(unit, enemies);
+
+if (bestTarget) {
+  console.log(`Attacking: ${bestTarget.id}`);
+}
+```
+
+### `getPrioritizedTargets(attacker: Unit, potentialTargets: Unit[], maxTargets?: number): Unit[]`
+
+Get a sorted list of targets by priority.
+
+**Parameters:**
+- `attacker`: Unit - Unit doing the attacking
+- `potentialTargets`: Unit[] - Array of potential targets
+- `maxTargets`: number (optional) - Maximum number of targets to return
+
+**Returns:**
+- `Unit[]` - Array of targets sorted by priority
+
+**Example:**
+```typescript
+// Get top 3 priority targets
+const topTargets = AttackPriorityUtils.getPrioritizedTargets(
+  unit,
+  allEnemies,
+  3
+);
+
+console.log('Top 3 targets:', topTargets.map(t => t.id));
+```
+
+### `isHighPriorityTarget(unit: Unit): boolean`
+
+Check if a unit is a high priority target (combat units and heroes).
+
+**Returns:**
+- `boolean` - True if unit is high priority (priority >= 70)
+
+**Example:**
+```typescript
+if (AttackPriorityUtils.isHighPriorityTarget(enemy)) {
+  console.log('High priority threat detected!');
+  // Alert player or trigger special behavior
+}
+```
+
+### `isLowPriorityTarget(unit: Unit): boolean`
+
+Check if a unit is a low priority target (workers, buildings).
+
+**Returns:**
+- `boolean` - True if unit is low priority (priority <= 30)
+
+**Example:**
+```typescript
+if (AttackPriorityUtils.isLowPriorityTarget(target)) {
+  console.log('Targeting worker or building');
+  // Only attack if no other targets available
+}
+```
+
+### Setting Armor Types
+
+Armor types are defined in the unit's combat stats:
+
+```typescript
+const heroUnit: UnitDefinition = {
+  id: 'paladin',
+  type: 'player',
+  stats: {
+    speed: 1.0,
+    health: 200,
+    combat: {
+      attackDamageMin: 30,
+      attackDamageMax: 40,
+      armorType: 'hero',     // High priority target
+      damageType: 'normal',
+      armor: 5,
+      // ... other stats
+    }
+  }
+};
+
+const workerUnit: UnitDefinition = {
+  id: 'peasant',
+  type: 'npc',
+  stats: {
+    speed: 1.0,
+    health: 100,
+    combat: {
+      attackDamageMin: 5,
+      attackDamageMax: 8,
+      armorType: 'unarmored', // Low priority target
+      damageType: 'normal',
+      armor: 0,
+      // ... other stats
+    }
+  }
+};
+
+const buildingUnit: UnitDefinition = {
+  id: 'barracks',
+  type: 'npc',
+  stats: {
+    speed: 0,
+    health: 500,
+    combat: {
+      attackDamageMin: 0,
+      attackDamageMax: 0,
+      armorType: 'fortified', // Lowest priority target
+      damageType: 'normal',
+      armor: 10,
+      // ... other stats
+    }
+  }
+};
+```
+
+### Integration with AI
+
+The priority system is automatically integrated with `TeamUtils.findNearestEnemy()`:
+
+```typescript
+// AI automatically uses priority system
+const nearestEnemy = TeamUtils.findNearestEnemy(
+  unit,
+  allUnits,
+  detectionRange
+);
+// Returns highest priority enemy within range,
+// or nearest if multiple units have same priority
+```
+
+### Complete Example
+
+```typescript
+import { AttackPriorityUtils, TeamUtils } from '@three-play/core/utils';
+
+// Custom targeting logic
+function selectCustomTarget(attacker: Unit, allUnits: Unit[]): Unit | null {
+  // Get all enemies in detection range
+  const enemies = allUnits.filter(unit =>
+    unit.team !== attacker.team &&
+    unit.stats.health > 0
+  );
+
+  // Filter to only high priority targets (combat units + heroes)
+  const highPriorityEnemies = enemies.filter(enemy =>
+    AttackPriorityUtils.isHighPriorityTarget(enemy)
+  );
+
+  if (highPriorityEnemies.length > 0) {
+    // Attack high priority targets first
+    return AttackPriorityUtils.selectBestTarget(attacker, highPriorityEnemies);
+  }
+
+  // No high priority targets, attack anything available
+  return AttackPriorityUtils.selectBestTarget(attacker, enemies);
+}
+
+// Use in AI behavior
+world.onUpdate(() => {
+  const aiUnits = unitManager.getUnitsByType('enemy');
+  const allUnits = unitManager.getAllUnits();
+
+  for (const unit of aiUnits) {
+    const target = selectCustomTarget(unit, allUnits);
+    if (target) {
+      // AI attacks selected target
+      console.log(`${unit.id} targeting ${target.id}`);
+    }
+  }
+});
+```
+
 ## See Also
 
 - [World Module](world.md) - Uses logger and easing
-- [Units Module](units.md) - Uses damage calculator
+- [Units Module](units.md) - Uses damage calculator and attack priority
 - [Projectiles Module](projectiles.md) - Uses object pooling
 - [Input Module](input.md) - Uses easing for smooth input
+- [Combat Types](../../src/types/combat.ts) - Armor and damage types
 - [API Reference](api-reference.md) - Complete API index
