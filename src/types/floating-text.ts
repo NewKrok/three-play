@@ -76,4 +76,10 @@ export type FloatingTextManager = {
    * Get all active floating texts
    */
   getActiveTexts: () => FloatingText[];
+
+  /**
+   * Remove a specific floating text
+   * @param floatingText - The floating text instance to remove
+   */
+  remove: (floatingText: FloatingText) => void;
 };

@@ -128,9 +128,11 @@ export const createFloatingTextManager = (
     const sprite = new THREE.Sprite(material);
     sprite.position.copy(position);
 
-    // Scale based on config
+    // Scale based on config and canvas aspect ratio
     const baseScale = 0.5 * fullConfig.scale;
-    sprite.scale.set(baseScale, baseScale, 1);
+    const canvas = texture.image as HTMLCanvasElement;
+    const aspectRatio = canvas.width / canvas.height;
+    sprite.scale.set(baseScale * aspectRatio, baseScale, 1);
 
     scene.add(sprite);
 
@@ -209,10 +211,24 @@ export const createFloatingTextManager = (
     return [...activeTexts];
   };
 
+  /**
+   * Remove a specific floating text
+   */
+  const remove = (floatingText: FloatingText): void => {
+    const index = activeTexts.indexOf(floatingText);
+    if (index !== -1) {
+      scene.remove(floatingText.sprite);
+      floatingText.sprite.material.map?.dispose();
+      floatingText.sprite.material.dispose();
+      activeTexts.splice(index, 1);
+    }
+  };
+
   return {
     show,
     update,
     clear,
     getActiveTexts,
+    remove,
   };
 };

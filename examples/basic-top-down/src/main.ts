@@ -125,6 +125,7 @@ let character: Unit | null = null;
 let crates = [];
 let nearbyCreateOutlines = new Map();
 let crateProxyMeshes = new Map(); // Individual meshes for outlined crates
+let crateFloatingTexts = new Map(); // Floating texts for crate hints
 let lastRollTime = 0;
 let lastDashTime = 0;
 let isMousePressed = false;
@@ -794,11 +795,12 @@ worldInstance.onReady((assets) => {
           const pos = character.model.position.clone();
           pos.y += 2;
           floatingTextManager.show(pos, {
-            text: `+${tree.appleIndices.length}`,
+            text: `+${tree.appleIndices.length} Apple`,
             color: '#22c55e', // Green for pickups
-            fontSize: 32,
+            fontSize: 64,
             duration: 1.2,
             floatHeight: 1.5,
+            scale: 2.0,
           });
 
           gameState.collectedApples += tree.appleIndices.length;
@@ -1031,17 +1033,19 @@ worldInstance.onReady((assets) => {
         nearbyCreateOutlines.set(i, outlineId);
         crateProxyMeshes.set(i, proxyMesh);
 
-        // Show "Press E" hint
-        const pos = character.model.position.clone();
-        pos.y += 2.5;
-        floatingTextManager.show(pos, {
-          text: 'Press E',
+        // Show "Press E to pick up" hint (persistent)
+        const pos = crate.position.clone();
+        pos.y += 2.0;
+        const floatingText = floatingTextManager.show(pos, {
+          text: 'Press E to pick up',
           color: '#ffffff',
-          fontSize: 28,
-          duration: 0.5,
+          fontSize: 56,
+          duration: 999,
           floatHeight: 0,
-          fadeOut: true,
+          fadeOut: false,
+          scale: 1.6,
         });
+        crateFloatingTexts.set(i, floatingText);
       },
       onInteractionExit: (unit, interactable) => {
         if (unit !== character) return;
@@ -1066,6 +1070,13 @@ worldInstance.onReady((assets) => {
             crateMesh.instanceMatrix.needsUpdate = true;
           }
         }
+
+        // Remove floating text hint
+        if (crateFloatingTexts.has(i)) {
+          const floatingText = crateFloatingTexts.get(i);
+          floatingTextManager.remove(floatingText);
+          crateFloatingTexts.delete(i);
+        }
       },
       onInteract: (unit, interactable) => {
         if (unit === character && crate.isActive) {
@@ -1080,6 +1091,13 @@ worldInstance.onReady((assets) => {
             crateProxyMeshes.delete(i);
           }
 
+          // Remove floating text hint
+          if (crateFloatingTexts.has(i)) {
+            const floatingText = crateFloatingTexts.get(i);
+            floatingTextManager.remove(floatingText);
+            crateFloatingTexts.delete(i);
+          }
+
           crate.isActive = false;
           interactable.isActive = false;
 
@@ -1087,17 +1105,17 @@ worldInstance.onReady((assets) => {
           const pos = character.model.position.clone();
           pos.y += 2;
           floatingTextManager.show(pos, {
-            text: '+30',
+            text: '+10 Apple',
             color: '#fbbf24', // Amber/gold for crates
-            fontSize: 48,
+            fontSize: 96,
             duration: 1.5,
             floatHeight: 2.0,
-            scale: 1.2, // Make crate pickups bigger
+            scale: 2.4, // Make crate pickups bigger (doubled from 1.2)
           });
 
-          // Add 30 apples when collecting a crate
-          gameState.collectedApples += 30;
-          uiManager.addItem('apple', 30);
+          // Add 10 apples when collecting a crate
+          gameState.collectedApples += 10;
+          uiManager.addItem('apple', 10);
           removeCrate(i);
         }
       },
