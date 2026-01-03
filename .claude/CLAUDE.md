@@ -132,6 +132,7 @@ fix(units): apply rotation to instance not wrapper
 ### Support Systems
 
 - **[assets](docs/assets.md)** - Asset loading and management
+- **[floating-text](docs/floating-text.md)** - Temporary text in 3D space
 - **[utils](docs/utilities.md)** - Shared utilities (easing, logger, object pool)
 
 ## Known Issues & Limitations
