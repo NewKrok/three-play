@@ -111,8 +111,8 @@ const inputConfig: InputManagerConfig = {
       },
       bindings: [
         {
-          type: 'keyboard',
-          key: 'KeyE',
+          type: 'mouse',
+          button: 2, // Right mouse button
         },
       ],
     },
@@ -137,6 +137,18 @@ const inputConfig: InputManagerConfig = {
         {
           type: 'mouse',
           button: 2, // 0=left, 1=middle, 2=right
+        },
+      ],
+    },
+    interact: {
+      action: {
+        type: 'trigger',
+        valueType: 'boolean',
+      },
+      bindings: [
+        {
+          type: 'keyboard',
+          key: 'KeyE',
         },
       ],
     },

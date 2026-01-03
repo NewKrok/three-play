@@ -4,6 +4,7 @@ import {
   createFloatingTextManager,
   createDamageNumbersManager,
   createCinematicCameraController,
+  createInteractionManager,
 } from '@newkrok/three-play';
 import type {
   ProjectileManager,
@@ -12,6 +13,7 @@ import type {
   HealthBarManager,
   FloatingTextManager,
   DamageNumbersManager,
+  InteractionManager,
 } from '@newkrok/three-play';
 import {
   updateParticleSystems,
@@ -123,6 +125,7 @@ let character: Unit | null = null;
 let crates = [];
 let nearbyCreateOutlines = new Map();
 let crateProxyMeshes = new Map(); // Individual meshes for outlined crates
+let isShowingInteractHint = false; // Track if "Press E" hint is currently visible
 let lastRollTime = 0;
 let lastDashTime = 0;
 let isMousePressed = false;
@@ -135,6 +138,7 @@ let uiManager: UIManager;
 let healthBarManager: HealthBarManager;
 let floatingTextManager: FloatingTextManager;
 let damageNumbersManager: DamageNumbersManager;
+let interactionManager: InteractionManager;
 let lastLightAttackTime = 0;
 let lastHeavyAttackTime = 0;
 let isRolling = false;
@@ -304,6 +308,15 @@ worldInstance.onReady((assets) => {
   floatingTextManager = createFloatingTextManager(scene);
   damageNumbersManager = createDamageNumbersManager(scene);
   logger.info('Health bar, floating text, and damage numbers managers initialized');
+
+  // Initialize interaction manager
+  interactionManager = createInteractionManager({
+    enableCollision: true,
+    enableInteraction: true,
+    defaultCollisionRadius: TREE_COLLISION_RADIUS,
+    defaultInteractionRadius: CRATE_INTERACTION_RADIUS,
+  });
+  logger.info('Interaction manager initialized');
 
   // Setup health bar manager for automatic cleanup on death
   unitManager.setHealthBarManager?.(healthBarManager);
@@ -764,6 +777,57 @@ worldInstance.onReady((assets) => {
     };
     trees.push(tree);
 
+    // Add tree to interaction manager with collision
+    interactionManager.addInteractable({
+      id: `tree-${i}`,
+      position: dummy.position.clone(),
+      collisionRadius: TREE_COLLISION_RADIUS,
+      blocksMovement: true,
+      canInteract: false,
+      userData: { type: 'tree', treeIndex: i },
+      onCollision: (unit) => {
+        // Apple collection happens on collision for player
+        if (unit === character && tree.appleIndices && tree.isActive) {
+          tree.isActive = false;
+          removeApplesFromTree(tree.appleIndices);
+
+          // Show pickup notification using floating text manager
+          const pos = character.model.position.clone();
+          pos.y += 2;
+          floatingTextManager.show(pos, {
+            text: `+${tree.appleIndices.length}`,
+            color: '#22c55e', // Green for pickups
+            fontSize: 32,
+            duration: 1.2,
+            floatHeight: 1.5,
+          });
+
+          gameState.collectedApples += tree.appleIndices.length;
+
+          // Add apples to inventory
+          uiManager.addItem('apple', tree.appleIndices.length);
+
+          const effect =
+            appleEffects[Math.floor(Math.random() * appleEffects.length)];
+          if (effect.stamina) {
+            gameState.stamina +=
+              Math.floor(
+                Math.random() * (effect.stamina.max - effect.stamina.min + 1),
+              ) + effect.stamina.min;
+            gameState.stamina = Math.min(gameState.stamina, MAX_STAMINA);
+          } else {
+            gameState.health +=
+              Math.floor(
+                Math.random() * (effect.health.max - effect.health.min + 1),
+              ) + effect.health.min;
+            gameState.health = Math.min(gameState.health, MAX_HEALTH);
+          }
+
+          tree.appleIndices = null;
+        }
+      },
+    });
+
     dummy.position.set(x, y + 1.5 * scale + 1 * scale, z);
     dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
     dummy.scale.set(scale, scale, scale);
@@ -883,6 +947,16 @@ worldInstance.onReady((assets) => {
       position: dummy.position.clone(),
     };
     largeRocks.push(largeRock);
+
+    // Add rock to interaction manager with collision
+    interactionManager.addInteractable({
+      id: `rock-${i}`,
+      position: dummy.position.clone(),
+      collisionRadius: LARGE_ROCK_COLLISION_RADIUS,
+      blocksMovement: true,
+      canInteract: false,
+      userData: { type: 'rock', rockIndex: i },
+    });
   }
   largeRockInstanceMesh.instanceMatrix.needsUpdate = true;
 
@@ -913,13 +987,61 @@ worldInstance.onReady((assets) => {
     const effect =
       crateEffects[Math.floor(Math.random() * crateEffects.length)];
 
-    const crate = {
+    const crate: any = {
       isActive: true,
       position: dummy.position.clone(),
       effect,
       index: i,
     };
     crates.push(crate);
+
+    // Add crate to interaction manager with interact callback
+    const crateInteractable = interactionManager.addInteractable({
+      id: `crate-${i}`,
+      position: dummy.position.clone(),
+      collisionRadius: CRATE_COLLISION_RADIUS,
+      interactionRadius: CRATE_INTERACTION_RADIUS,
+      blocksMovement: true,
+      canInteract: true,
+      userData: { type: 'crate', crateIndex: i, crate },
+      onInteract: (unit, interactable) => {
+        if (unit === character && crate.isActive) {
+          // Remove outline and proxy mesh when crate is collected
+          if (nearbyCreateOutlines.has(i)) {
+            const outlineId = nearbyCreateOutlines.get(i);
+            const proxyMesh = crateProxyMeshes.get(i);
+
+            worldInstance.removeOutline(outlineId);
+            scene.remove(proxyMesh);
+            nearbyCreateOutlines.delete(i);
+            crateProxyMeshes.delete(i);
+          }
+
+          crate.isActive = false;
+          interactable.isActive = false;
+
+          // Show pickup notification using floating text manager
+          const pos = character.model.position.clone();
+          pos.y += 2;
+          floatingTextManager.show(pos, {
+            text: '+30',
+            color: '#fbbf24', // Amber/gold for crates
+            fontSize: 48,
+            duration: 1.5,
+            floatHeight: 2.0,
+            scale: 1.2, // Make crate pickups bigger
+          });
+
+          // Add 30 apples when collecting a crate
+          gameState.collectedApples += 30;
+          uiManager.addItem('apple', 30);
+          removeCrate(i);
+        }
+      },
+    });
+
+    // Store reference to interactable for outline management
+    crate.interactable = crateInteractable;
   }
   crateMesh.instanceMatrix.needsUpdate = true;
 
@@ -1201,6 +1323,102 @@ worldInstance.onReady((assets) => {
     handleRollInput();
     handleDashInput();
     handleThrowInput();
+    handleInteractInput();
+  };
+
+  const handleInteractInput = () => {
+    if (!character) return;
+
+    // Check if interact key was just pressed
+    if (inputManager.isActionActive('interact')) {
+      const count = interactionManager.triggerInteraction(character);
+      if (count > 0) {
+        logger.info(`Interacted with ${count} object(s)`);
+      }
+    }
+
+    // Check for nearby interactables to manage outlines and hints
+    const nearbyInteractables = interactionManager.checkInteractions(character);
+    const nearbyCrateIds = new Set<number>();
+
+    // Find nearby crates and collect their indices
+    nearbyInteractables.forEach((interactable) => {
+      if (interactable.userData?.type === 'crate' && interactable.isActive) {
+        const crateIndex = interactable.userData.crateIndex;
+        nearbyCrateIds.add(crateIndex);
+
+        // Add outline if not already present
+        if (!nearbyCreateOutlines.has(crateIndex)) {
+          const crate = interactable.userData.crate;
+          // Create individual mesh for this crate to apply outline
+          const proxyMesh = new THREE.Mesh(crateGeometry, crateMaterial);
+          proxyMesh.position.copy(crate.position);
+          proxyMesh.castShadow = true;
+          proxyMesh.receiveShadow = true;
+          scene.add(proxyMesh);
+
+          // Hide the original instance by moving it far away
+          dummy.position.set(0, -1000, 0);
+          dummy.updateMatrix();
+          crateMesh.setMatrixAt(crateIndex, dummy.matrix);
+          crateMesh.instanceMatrix.needsUpdate = true;
+
+          // Add outline to the individual mesh
+          const outlineId = worldInstance.addOutline(proxyMesh, {
+            color: '#ffffff',
+            strength: 0.8,
+            thickness: 1.5,
+            glow: 0.3,
+            priority: 1,
+          });
+
+          nearbyCreateOutlines.set(crateIndex, outlineId);
+          crateProxyMeshes.set(crateIndex, proxyMesh);
+        }
+      }
+    });
+
+    // Show "Press E" hint when near crates (only once on enter)
+    if (nearbyCrateIds.size > 0 && !isShowingInteractHint) {
+      isShowingInteractHint = true;
+      const pos = character.model.position.clone();
+      pos.y += 2.5; // Higher than pickup notifications
+      floatingTextManager.show(pos, {
+        text: 'Press E',
+        color: '#ffffff',
+        fontSize: 28,
+        duration: 0.5, // Show for half a second
+        floatHeight: 0, // Don't float up
+        fadeOut: true,
+      });
+    } else if (nearbyCrateIds.size === 0 && isShowingInteractHint) {
+      // Reset flag when no longer near crates
+      isShowingInteractHint = false;
+    }
+
+    // Remove outlines for crates that are no longer nearby
+    nearbyCreateOutlines.forEach((outlineId, crateIndex) => {
+      if (!nearbyCrateIds.has(crateIndex)) {
+        const proxyMesh = crateProxyMeshes.get(crateIndex);
+        const crate = crates.find((c) => c.index === crateIndex);
+
+        if (proxyMesh && crate) {
+          worldInstance.removeOutline(outlineId);
+          scene.remove(proxyMesh);
+
+          // Restore original instance position
+          dummy.position.copy(crate.position);
+          dummy.rotation.set(0, 0, 0);
+          dummy.scale.set(1, 1, 1);
+          dummy.updateMatrix();
+          crateMesh.setMatrixAt(crateIndex, dummy.matrix);
+          crateMesh.instanceMatrix.needsUpdate = true;
+
+          nearbyCreateOutlines.delete(crateIndex);
+          crateProxyMeshes.delete(crateIndex);
+        }
+      }
+    });
   };
 
   const handleCombatInput = () => {
@@ -1387,180 +1605,11 @@ worldInstance.onReady((assets) => {
   };
 
   // Handle world object interactions
+  // NOTE: Collision detection and interactions are now handled by the InteractionManager
+  // This function is kept for potential future custom interactions that don't fit the manager pattern
   const handleWorldInteractions = () => {
-    if (!character) return;
-
-    const allUnits = unitManager.getAllUnits();
-
-    for (const unit of allUnits) {
-      // Skip dead units
-      if (unit.userData.isDead) continue;
-      // Handle tree collisions and apple collection
-      for (const tree of trees) {
-        const { position, appleIndices, isActive } = tree;
-        const dist = unit.model.position.distanceTo(position);
-
-        if (dist < TREE_COLLISION_RADIUS) {
-          const away = unit.model.position.clone().sub(position).normalize();
-          unit.model.position.addScaledVector(
-            away,
-            (TREE_COLLISION_RADIUS - dist) * 0.2,
-          );
-
-          if (unit === character && appleIndices && isActive) {
-            tree.isActive = false;
-            removeApplesFromTree(appleIndices);
-
-            // Show pickup notification using floating text manager
-            const pos = character.model.position.clone();
-            pos.y += 2;
-            floatingTextManager.show(pos, {
-              text: `+${appleIndices.length}`,
-              color: '#22c55e', // Green for pickups
-              fontSize: 32,
-              duration: 1.2,
-              floatHeight: 1.5,
-            });
-
-            gameState.collectedApples += appleIndices.length;
-
-            // Add apples to inventory
-            uiManager.addItem('apple', appleIndices.length);
-
-            const effect =
-              appleEffects[Math.floor(Math.random() * appleEffects.length)];
-            if (effect.stamina) {
-              gameState.stamina +=
-                Math.floor(
-                  Math.random() * (effect.stamina.max - effect.stamina.min + 1),
-                ) + effect.stamina.min;
-              gameState.stamina = Math.min(gameState.stamina, MAX_STAMINA);
-            } else {
-              gameState.health +=
-                Math.floor(
-                  Math.random() * (effect.health.max - effect.health.min + 1),
-                ) + effect.health.min;
-              gameState.health = Math.min(gameState.health, MAX_HEALTH);
-            }
-
-            tree.appleIndices = null;
-          }
-        }
-      }
-
-      // Handle large rock collisions
-      for (const rock of largeRocks) {
-        const { position } = rock;
-        const dist = unit.model.position.distanceTo(position);
-
-        if (dist < LARGE_ROCK_COLLISION_RADIUS) {
-          const away = unit.model.position.clone().sub(position).normalize();
-          unit.model.position.addScaledVector(
-            away,
-            (LARGE_ROCK_COLLISION_RADIUS - dist) * 0.2,
-          );
-        }
-      }
-
-      // Handle crate interactions
-      for (const crate of crates) {
-        const { position, index, isActive } = crate;
-        if (!isActive) continue;
-
-        const dist = unit.model.position.distanceTo(position);
-
-        // Check if player is nearby for outline effect
-        if (unit === character) {
-          const isNearby = dist < CRATE_INTERACTION_RADIUS;
-          const hasOutline = nearbyCreateOutlines.has(index);
-
-          if (isNearby && !hasOutline) {
-            // Create individual mesh for this crate to apply outline
-            const proxyMesh = new THREE.Mesh(crateGeometry, crateMaterial);
-            proxyMesh.position.copy(position);
-            proxyMesh.castShadow = true;
-            proxyMesh.receiveShadow = true;
-            scene.add(proxyMesh);
-
-            // Hide the original instance by moving it far away
-            dummy.position.set(0, -1000, 0);
-            dummy.updateMatrix();
-            crateMesh.setMatrixAt(index, dummy.matrix);
-            crateMesh.instanceMatrix.needsUpdate = true;
-
-            // Add outline to the individual mesh
-            const outlineId = worldInstance.addOutline(proxyMesh, {
-              color: '#ffffff',
-              strength: 0.8,
-              thickness: 1.5,
-              glow: 0.3,
-              priority: 1,
-            });
-
-            nearbyCreateOutlines.set(index, outlineId);
-            crateProxyMeshes.set(index, proxyMesh);
-          } else if (!isNearby && hasOutline) {
-            // Remove outline and restore original instance
-            const outlineId = nearbyCreateOutlines.get(index);
-            const proxyMesh = crateProxyMeshes.get(index);
-
-            worldInstance.removeOutline(outlineId);
-            scene.remove(proxyMesh);
-
-            // Restore original instance position
-            dummy.position.copy(position);
-            dummy.rotation.set(0, 0, 0);
-            dummy.scale.set(1, 1, 1);
-            dummy.updateMatrix();
-            crateMesh.setMatrixAt(index, dummy.matrix);
-            crateMesh.instanceMatrix.needsUpdate = true;
-
-            nearbyCreateOutlines.delete(index);
-            crateProxyMeshes.delete(index);
-          }
-        }
-
-        if (dist < CRATE_COLLISION_RADIUS) {
-          const away = unit.model.position.clone().sub(position).normalize();
-          unit.model.position.addScaledVector(
-            away,
-            (CRATE_COLLISION_RADIUS - dist) * 0.2,
-          );
-
-          if (unit === character && isActive) {
-            // Remove outline and proxy mesh when crate is collected
-            if (nearbyCreateOutlines.has(index)) {
-              const outlineId = nearbyCreateOutlines.get(index);
-              const proxyMesh = crateProxyMeshes.get(index);
-
-              worldInstance.removeOutline(outlineId);
-              scene.remove(proxyMesh);
-              nearbyCreateOutlines.delete(index);
-              crateProxyMeshes.delete(index);
-            }
-
-            crate.isActive = false;
-
-            // Show pickup notification using floating text manager
-            const pos = character.model.position.clone();
-            pos.y += 2;
-            floatingTextManager.show(pos, {
-              text: '+30',
-              color: '#fbbf24', // Amber/gold for crates
-              fontSize: 48,
-              duration: 1.5,
-              floatHeight: 2.0,
-              scale: 1.2, // Make crate pickups bigger
-            });
-
-            // Add 30 apples when collecting a crate
-            gameState.collectedApples += 30;
-            uiManager.addItem('apple', 30);
-            removeCrate(index);
-          }
-        }
-      }
-    }
+    // All tree, rock, and crate interactions are now handled by InteractionManager
+    // via interactionManager.checkCollisions() and interactionManager.triggerInteraction()
   };
 
   // Update particle effects based on character position
@@ -1811,6 +1860,10 @@ worldInstance.onReady((assets) => {
       updateCamera();
       handlePlayerInput();
     }
+
+    // Check collisions with interaction manager
+    const allUnits = unitManager.getAllUnits();
+    interactionManager.checkCollisions(allUnits);
 
     // Update world interactions
     handleWorldInteractions();
