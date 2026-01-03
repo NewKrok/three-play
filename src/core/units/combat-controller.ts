@@ -562,9 +562,11 @@ export const createCombatController = (
     const angleRadians = Math.acos(Math.max(-1, Math.min(1, dotProduct)));
     const angleDegrees = (angleRadians * 180) / Math.PI;
 
-    // Angle tolerance: More lenient for AI units (90 degrees), strict for player (10 degrees)
+    // Angle tolerance: Warcraft 3-inspired values
+    // Player units need precise aiming (10 degrees)
+    // AI units have small tolerance to account for smooth rotation (15 degrees)
     const isPlayerUnit = attacker.definition.type === 'player';
-    const angleToleranceDegrees = isPlayerUnit ? 10 : 90; // DEBUG: Very lenient for testing
+    const angleToleranceDegrees = isPlayerUnit ? 10 : 15;
 
     // If not facing target, don't start the attack
     if (angleDegrees > angleToleranceDegrees) {

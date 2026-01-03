@@ -292,8 +292,23 @@ export const createAIBehaviorController = (
                   .add(awayDirection.multiplyScalar(1.0)); // Move 1m away
                 updateUnitMovement(unit, backupTarget, deltaTime);
               } else {
-                // Good distance for ranged attack, stop moving
+                // Good distance for ranged attack, stop moving but keep rotating towards target
                 behaviorData.isMoving = false;
+
+                // Rotate towards target even when standing still (Warcraft 3 style)
+                const targetDirection = new THREE.Vector3()
+                  .subVectors(behaviorData.targetUnit.model.position, unit.model.position);
+                targetDirection.y = 0; // Keep rotation horizontal
+                targetDirection.normalize();
+
+                // Update rotation to face target
+                rotationTargetQuaternion
+                  .setFromUnitVectors(new THREE.Vector3(0, 0, 1), targetDirection)
+                  .multiply(adjustQuat);
+                unit.model.quaternion.slerp(
+                  rotationTargetQuaternion,
+                  deltaTime * rotationSpeed,
+                );
               }
             } else {
               // Melee unit, don't move
