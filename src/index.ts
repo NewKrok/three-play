@@ -82,6 +82,7 @@ export {
 // UI utilities
 export {
   createHealthBarManager,
+  createFloatingTextManager,
   createDamageNumbersManager,
 } from './core/ui/index.js';
 
@@ -239,6 +240,9 @@ export type {
   HealthBar,
   HealthBarConfig,
   HealthBarManager,
+  FloatingText,
+  FloatingTextConfig,
+  FloatingTextManager,
   DamageNumber,
   DamageNumberConfig,
   DamageNumbersManager,

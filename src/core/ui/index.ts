@@ -9,6 +9,13 @@ export type {
   HealthBarManager,
 } from './health-bar.js';
 
+export { createFloatingTextManager } from './floating-text.js';
+export type {
+  FloatingText,
+  FloatingTextConfig,
+  FloatingTextManager,
+} from '../../types/floating-text.js';
+
 export { createDamageNumbersManager } from './damage-numbers.js';
 export type {
   DamageNumber,

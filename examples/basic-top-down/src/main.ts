@@ -1,6 +1,7 @@
 import {
   createWorld,
   createHealthBarManager,
+  createFloatingTextManager,
   createDamageNumbersManager,
   createCinematicCameraController,
 } from '@newkrok/three-play';
@@ -9,6 +10,7 @@ import type {
   UnitManagerType,
   Unit,
   HealthBarManager,
+  FloatingTextManager,
   DamageNumbersManager,
 } from '@newkrok/three-play';
 import {
@@ -131,6 +133,7 @@ let unitManager: UnitManagerType;
 let projectileManager: ProjectileManager;
 let uiManager: UIManager;
 let healthBarManager: HealthBarManager;
+let floatingTextManager: FloatingTextManager;
 let damageNumbersManager: DamageNumbersManager;
 let lastLightAttackTime = 0;
 let lastHeavyAttackTime = 0;
@@ -296,10 +299,11 @@ worldInstance.onReady((assets) => {
 
   logger.info('UI Manager initialized');
 
-  // Initialize health bar and damage numbers managers
+  // Initialize health bar, floating text, and damage numbers managers
   healthBarManager = createHealthBarManager(scene);
+  floatingTextManager = createFloatingTextManager(scene);
   damageNumbersManager = createDamageNumbersManager(scene);
-  logger.info('Health bar and damage numbers managers initialized');
+  logger.info('Health bar, floating text, and damage numbers managers initialized');
 
   // Setup health bar manager for automatic cleanup on death
   unitManager.setHealthBarManager?.(healthBarManager);
@@ -1407,24 +1411,16 @@ worldInstance.onReady((assets) => {
             tree.isActive = false;
             removeApplesFromTree(appleIndices);
 
-            // Show pickup notification using damage numbers system
+            // Show pickup notification using floating text manager
             const pos = character.model.position.clone();
             pos.y += 2;
-            damageNumbersManager.showDamage(
-              pos,
-              {
-                finalDamage: appleIndices.length,
-                wasCritical: false,
-                baseDamage: appleIndices.length,
-                typeMultiplier: 1,
-                armorReduction: 0,
-              },
-              {
-                normalColor: '#22c55e', // Green for pickups
-                fontSize: 32,
-                duration: 1.2,
-              }
-            );
+            floatingTextManager.show(pos, {
+              text: `+${appleIndices.length}`,
+              color: '#22c55e', // Green for pickups
+              fontSize: 32,
+              duration: 1.2,
+              floatHeight: 1.5,
+            });
 
             gameState.collectedApples += appleIndices.length;
 
@@ -1545,25 +1541,17 @@ worldInstance.onReady((assets) => {
 
             crate.isActive = false;
 
-            // Show pickup notification using damage numbers system
+            // Show pickup notification using floating text manager
             const pos = character.model.position.clone();
             pos.y += 2;
-            damageNumbersManager.showDamage(
-              pos,
-              {
-                finalDamage: 30,
-                wasCritical: true, // Use critical styling for crates (bigger number)
-                baseDamage: 30,
-                typeMultiplier: 1,
-                armorReduction: 0,
-              },
-              {
-                normalColor: '#fbbf24', // Amber/gold for crates
-                criticalColor: '#fbbf24',
-                fontSize: 42,
-                duration: 1.5,
-              }
-            );
+            floatingTextManager.show(pos, {
+              text: '+30',
+              color: '#fbbf24', // Amber/gold for crates
+              fontSize: 48,
+              duration: 1.5,
+              floatHeight: 2.0,
+              scale: 1.2, // Make crate pickups bigger
+            });
 
             // Add 30 apples when collecting a crate
             gameState.collectedApples += 30;
@@ -1852,8 +1840,9 @@ worldInstance.onReady((assets) => {
     // Update debug display
     updateDebugDisplay();
 
-    // Update health bars and damage numbers
+    // Update health bars, floating texts, and damage numbers
     healthBarManager.updateHealthBars(camera);
+    floatingTextManager.update(deltaTime, elapsedTime);
     damageNumbersManager.update(deltaTime, elapsedTime);
 
     cinamaticCameraController.update(cycleData.delta);
