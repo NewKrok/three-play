@@ -132,9 +132,10 @@ fix(units): apply rotation to instance not wrapper
 ### Support Systems
 
 - **[assets](docs/assets.md)** - Asset loading and management
+- **[ui](docs/ui.md)** - Health bars, damage numbers, and visual feedback
 - **[floating-text](docs/floating-text.md)** - Temporary text in 3D space
 - **[interactions](docs/interactions.md)** - Collision and interaction system for world objects
-- **[utils](docs/utilities.md)** - Shared utilities (easing, logger, object pool)
+- **[utils](docs/utilities.md)** - Shared utilities (easing, logger, object pool, damage calculator, attack priority)
 
 ## Known Issues & Limitations
 

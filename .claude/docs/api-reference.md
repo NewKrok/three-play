@@ -21,6 +21,7 @@ Complete API reference for THREE Play game engine.
 
 ### Support Systems
 - [Assets](assets.md) - Asset loading
+- [UI](ui.md) - Health bars, damage numbers, and visual feedback
 - [Floating Text](floating-text.md) - Temporary text in 3D space
 - [Interactions](interactions.md) - Collision and interaction system
 - [Utilities](utilities.md) - Shared utilities
@@ -96,6 +97,15 @@ import {
 import { createInputManager } from '@three-play/core/input';
 ```
 
+### UI Module
+```typescript
+import {
+  createHealthBarManager,
+  createDamageNumbersManager,
+  createFloatingTextManager
+} from '@three-play/core/ui';
+```
+
 ### Utilities
 ```typescript
 import {
@@ -112,7 +122,9 @@ import {
   calculateDamage,
   applyCalculatedDamage,
   regenerateHealth,
-  DamageCalculatorUtils
+  DamageCalculatorUtils,
+  // Attack priority
+  AttackPriorityUtils
 } from '@three-play/core/utils';
 ```
 
@@ -344,4 +356,5 @@ if (!removed) {
 - [World Module](world.md) - Core orchestrator
 - [Units Module](units.md) - Character system
 - [Projectiles Module](projectiles.md) - Projectile system
+- [UI Module](ui.md) - Visual feedback components
 - [Utilities](utilities.md) - Helper functions
