@@ -152,6 +152,18 @@ const inputConfig: InputManagerConfig = {
         },
       ],
     },
+    throw: {
+      action: {
+        type: 'trigger',
+        valueType: 'boolean',
+      },
+      bindings: [
+        {
+          type: 'mouse',
+          button: 0, // Left mouse button
+        },
+      ],
+    },
   },
 };
 

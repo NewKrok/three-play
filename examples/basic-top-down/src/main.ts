@@ -30,6 +30,8 @@ import {
 import { decorateUnit, COLOR_THEMES } from './unit-decorators.js';
 import { createUIManager } from './ui/index.js';
 import type { UIManager } from './ui/index.js';
+import { createSpawnManager } from './spawn-manager.js';
+import type { SpawnManager } from './spawn-manager.js';
 
 import * as THREE from 'three';
 import {
@@ -41,7 +43,6 @@ import {
 import worldConfig from './world-config.js';
 import * as Constants from './constants.js';
 import { LIGHT_ATTACK_ACTION_DELAY, STAMINA_FOR_RANGED_ATTACK } from './constants.js';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 // Destructure constants for easier access
 const {
@@ -118,17 +119,13 @@ const crateEffects = [
   { damageBonus: { min: 1.5, max: 3.0 } },
 ];
 
-let trees = [];
-let largeRocks = [];
 let character: Unit | null = null;
 
-let crates = [];
 let nearbyCreateOutlines = new Map();
 let crateProxyMeshes = new Map(); // Individual meshes for outlined crates
 let crateFloatingTexts = new Map(); // Floating texts for crate hints
 let lastRollTime = 0;
 let lastDashTime = 0;
-let isMousePressed = false;
 let isDashing = false;
 
 // Unit and Projectile systems
@@ -139,12 +136,11 @@ let healthBarManager: HealthBarManager;
 let floatingTextManager: FloatingTextManager;
 let damageNumbersManager: DamageNumbersManager;
 let interactionManager: InteractionManager;
+let spawnManager: SpawnManager;
 let lastLightAttackTime = 0;
 let lastHeavyAttackTime = 0;
 let isRolling = false;
 let lastSpawnTime = 0;
-let zombieCount = 0;
-let soldierCount = 0;
 // Note: isAttacking is now tracked in character.combat.isAttacking
 const isAttacking = () => character?.combat?.isAttacking ?? false;
 // Character is always in aim mode now - no need for isAiming toggle
@@ -350,21 +346,6 @@ worldInstance.onReady((assets) => {
     event.preventDefault();
   });
 
-  // Mouse button press/release handlers for throwing
-  renderer.domElement.addEventListener('mousedown', (event) => {
-    // Left click (button 0)
-    if (event.button === 0) {
-      isMousePressed = true;
-    }
-  });
-
-  renderer.domElement.addEventListener('mouseup', (event) => {
-    // Left click (button 0)
-    if (event.button === 0) {
-      isMousePressed = false;
-    }
-  });
-
   // Get crosshair element
   const crosshairElement = document.getElementById('crosshair');
 
@@ -461,134 +442,25 @@ worldInstance.onReady((assets) => {
 
       // Decrease counter when unit dies
       if (target.definition?.type === 'enemy') {
-        zombieCount--;
+        spawnManager.decrementZombieCount();
       } else if (target.definition?.type === 'npc') {
-        soldierCount--;
+        spawnManager.decrementSoldierCount();
       }
     }
   };
 
-  // Spawn a single zombie (can be melee or ranged)
-  const spawnZombie = (isRanged = false) => {
-    if (zombieCount >= Constants.MAX_ZOMBIES) return;
-
-    // Randomize spawn position within 2 meter radius
-    const randomOffset = new THREE.Vector2(
-      (Math.random() - 0.5) * 4, // -2 to +2 meters on X
-      (Math.random() - 0.5) * 4  // -2 to +2 meters on Z
-    );
-
-    const position = zombieSpawnPos.clone();
-    position.x += randomOffset.x;
-    position.z += randomOffset.y;
-    position.y = heightmapUtils.getHeightFromPosition(position);
-
-    const definitionId = isRanged ? 'zombie-ranged-enemy' : 'zombie-enemy';
-    const enemy = decorateUnit(
-      unitManager.createUnit({
-        definitionId,
-        position,
-      }),
-      COLOR_THEMES.zombie,
-    );
-
-    if (enemy) {
-      // Initialize health tracking (3 hits to kill)
-      enemy.userData.health = 3;
-      enemy.userData.isDead = false;
-
-      // Initialize AI behavior for enemy - spawn position as home
-      unitManager.initializeAIBehavior(enemy, position);
-
-      // Manually set AI to move to target position (as if returning home)
-      const behaviorData = unitManager.getAIBehaviorData(enemy);
-      if (behaviorData) {
-        behaviorData.state = 'return'; // Use 'return' state which uses 'run' animation
-        behaviorData.homePosition.copy(zombieTargetPos); // Set target as "home"
-        behaviorData.targetPosition.copy(zombieTargetPos); // Set immediate target
-        behaviorData.isMoving = true; // Start moving immediately
-      }
-
-      // Initialize combat for enemy
-      // Ranged units don't need ammo (infinite apples for NPCs)
-      unitManager.initializeCombat(enemy, 100, {
-        rangedAttack: {
-          enableAmmo: false, // NPCs have infinite ammo
-        },
-        onDamage: handleUnitDamage,
-      });
-
-      // Add health bar to enemy
-      healthBarManager.createHealthBar(enemy, {
-        yOffset: 2.2,
-        alwaysShow: false,
-      });
-
-      zombieCount++;
-      logger.info(`Spawned ${isRanged ? 'ranged' : 'melee'} zombie (${zombieCount}/${Constants.MAX_ZOMBIES})`);
-    }
-  };
-
-  // Spawn a single soldier (can be melee or ranged)
-  const spawnSoldier = (isRanged = false) => {
-    if (soldierCount >= Constants.MAX_SOLDIERS) return;
-
-    // Randomize spawn position within 2 meter radius
-    const randomOffset = new THREE.Vector2(
-      (Math.random() - 0.5) * 4, // -2 to +2 meters on X
-      (Math.random() - 0.5) * 4  // -2 to +2 meters on Z
-    );
-
-    const position = soldierSpawnPos.clone();
-    position.x += randomOffset.x;
-    position.z += randomOffset.y;
-    position.y = heightmapUtils.getHeightFromPosition(position);
-
-    const definitionId = isRanged ? 'soldier-ranged-ally' : 'soldier-ally';
-    const soldier = decorateUnit(
-      unitManager.createUnit({
-        definitionId,
-        position,
-      }),
-      COLOR_THEMES.soldier,
-    );
-
-    if (soldier) {
-      // Initialize health tracking
-      soldier.userData.health = 5; // Soldiers are tougher than zombies
-      soldier.userData.isDead = false;
-
-      // Initialize AI behavior for soldier - spawn position as home
-      unitManager.initializeAIBehavior(soldier, position);
-
-      // Manually set AI to move to target position (as if returning home)
-      const behaviorData = unitManager.getAIBehaviorData(soldier);
-      if (behaviorData) {
-        behaviorData.state = 'return'; // Use 'return' state which uses 'run' animation
-        behaviorData.homePosition.copy(soldierTargetPos); // Set target as "home"
-        behaviorData.targetPosition.copy(soldierTargetPos); // Set immediate target
-        behaviorData.isMoving = true; // Start moving immediately
-      }
-
-      // Initialize combat for soldier
-      // Ranged units don't need ammo (infinite apples for NPCs)
-      unitManager.initializeCombat(soldier, 100, {
-        rangedAttack: {
-          enableAmmo: false, // NPCs have infinite ammo
-        },
-        onDamage: handleUnitDamage,
-      });
-
-      // Add health bar to soldier
-      healthBarManager.createHealthBar(soldier, {
-        yOffset: 2.2,
-        alwaysShow: false,
-      });
-
-      soldierCount++;
-      logger.info(`Spawned ${isRanged ? 'ranged' : 'melee'} soldier (${soldierCount}/${Constants.MAX_SOLDIERS})`);
-    }
-  };
+  // Initialize spawn manager
+  spawnManager = createSpawnManager({
+    unitManager,
+    heightmapUtils,
+    healthBarManager,
+    logger,
+    zombieSpawnPos,
+    zombieTargetPos,
+    soldierSpawnPos,
+    soldierTargetPos,
+    onDamage: handleUnitDamage,
+  });
 
   // Initialize combat for player character
   if (character) {
@@ -775,7 +647,6 @@ worldInstance.onReady((assets) => {
       position: dummy.position.clone(),
       appleIndices: null,
     };
-    trees.push(tree);
 
     // Add tree to interaction manager with collision
     interactionManager.addInteractable({
@@ -943,12 +814,6 @@ worldInstance.onReady((assets) => {
     dummy.updateMatrix();
     largeRockInstanceMesh.setMatrixAt(i, dummy.matrix);
 
-    // Store large rock data for collision detection
-    const largeRock = {
-      position: dummy.position.clone(),
-    };
-    largeRocks.push(largeRock);
-
     // Add rock to interaction manager with collision
     interactionManager.addInteractable({
       id: `rock-${i}`,
@@ -994,7 +859,6 @@ worldInstance.onReady((assets) => {
       effect,
       index: i,
     };
-    crates.push(crate);
 
     // Add crate to interaction manager with enter/exit/interact callbacks
     const crateInteractable = interactionManager.addInteractable({
@@ -1597,8 +1461,8 @@ worldInstance.onReady((assets) => {
   const handleThrowInput = () => {
     if (!character) return;
 
-    // Always allow throwing when mouse is pressed (no aim mode check needed)
-    if (isMousePressed && mouseWorldPosition && gameState.stamina >= STAMINA_FOR_RANGED_ATTACK) {
+    // Use InputManager to check if throw action is active
+    if (inputManager.isActionActive('throw') && mouseWorldPosition && gameState.stamina >= STAMINA_FOR_RANGED_ATTACK) {
       const now = performance.now();
       // Combat system handles ammo checking and consumption via callbacks
       const result = unitManager.performRangedAttack(character, mouseWorldPosition, now);
@@ -1609,14 +1473,6 @@ worldInstance.onReady((assets) => {
         gameState.stamina = Math.max(gameState.stamina, 0);
       }
     }
-  };
-
-  // Handle world object interactions
-  // NOTE: Collision detection and interactions are now handled by the InteractionManager
-  // This function is kept for potential future custom interactions that don't fit the manager pattern
-  const handleWorldInteractions = () => {
-    // All tree, rock, and crate interactions are now handled by InteractionManager
-    // via interactionManager.checkCollisions() and interactionManager.triggerInteraction()
   };
 
   // Update particle effects based on character position
@@ -1851,14 +1707,14 @@ worldInstance.onReady((assets) => {
     // Handle unit spawning
     if (elapsedTime - lastSpawnTime >= Constants.SPAWN_INTERVAL) {
       // Spawn 2 melee zombies + 1 ranged zombie
-      spawnZombie(false); // melee
-      spawnZombie(false); // melee
-      spawnZombie(true);  // ranged
+      spawnManager.spawnZombie(false); // melee
+      spawnManager.spawnZombie(false); // melee
+      spawnManager.spawnZombie(true);  // ranged
 
       // Spawn 2 melee soldiers + 1 ranged soldier
-      spawnSoldier(false); // melee
-      spawnSoldier(false); // melee
-      spawnSoldier(true);  // ranged
+      spawnManager.spawnSoldier(false); // melee
+      spawnManager.spawnSoldier(false); // melee
+      spawnManager.spawnSoldier(true);  // ranged
 
       lastSpawnTime = elapsedTime;
     }
@@ -1871,9 +1727,6 @@ worldInstance.onReady((assets) => {
     // Check collisions with interaction manager
     const allUnits = unitManager.getAllUnits();
     interactionManager.checkCollisions(allUnits);
-
-    // Update world interactions
-    handleWorldInteractions();
 
     // Update particle effects
     updateParticleEffects();
