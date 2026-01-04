@@ -143,19 +143,24 @@ describe('Heightmap Integration', () => {
         models: {},
       };
 
-      // Mock console.warn to avoid test output noise
-      const consoleSpy = jest
-        .spyOn(console, 'warn')
-        .mockImplementation(() => {});
+      const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        isLevelEnabled: jest.fn(),
+      };
 
-      const manager = createHeightmapManager(mockConfig, mockLoadedAssets);
-
-      expect(manager.utils).toBeNull();
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Heightmap texture with ID 'test-heightmap' not found in loaded assets",
+      const manager = createHeightmapManager(
+        mockConfig,
+        mockLoadedAssets,
+        mockLogger,
       );
 
-      consoleSpy.mockRestore();
+      expect(manager.utils).toBeNull();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        "Heightmap texture with ID 'test-heightmap' not found in loaded assets",
+      );
     });
 
     it('should clean up resources when destroyed', () => {

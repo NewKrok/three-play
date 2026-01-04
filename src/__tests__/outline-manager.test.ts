@@ -104,36 +104,48 @@ describe('Outline Manager', () => {
     });
 
     it('should warn when outline pass is not available', () => {
-      const consoleWarn = jest
-        .spyOn(console, 'warn')
-        .mockImplementation(() => {});
-      const managerWithoutPass = createOutlineManager({ outlinePass: null });
+      const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        isLevelEnabled: jest.fn(),
+      };
+      const managerWithoutPass = createOutlineManager({
+        outlinePass: null,
+        logger: mockLogger,
+      });
 
       const result = managerWithoutPass.addOutline(testObjects[0], {});
 
       expect(result).toBe('');
-      expect(consoleWarn).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         'Outline pass is not available. Make sure useComposer is enabled.',
       );
 
-      consoleWarn.mockRestore();
       managerWithoutPass.destroy();
     });
 
     it('should warn when manager is destroyed', () => {
-      const consoleWarn = jest
-        .spyOn(console, 'warn')
-        .mockImplementation(() => {});
-      outlineManager.destroy();
+      const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        isLevelEnabled: jest.fn(),
+      };
+      const managerWithLogger = createOutlineManager({
+        outlinePass,
+        logger: mockLogger,
+      });
 
-      const result = outlineManager.addOutline(testObjects[0], {});
+      managerWithLogger.destroy();
+      const result = managerWithLogger.addOutline(testObjects[0], {});
 
       expect(result).toBe('');
-      expect(consoleWarn).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         'Cannot add outline: outline manager is destroyed',
       );
-
-      consoleWarn.mockRestore();
     });
   });
 
@@ -155,18 +167,24 @@ describe('Outline Manager', () => {
     });
 
     it('should warn when manager is destroyed', () => {
-      const consoleWarn = jest
-        .spyOn(console, 'warn')
-        .mockImplementation(() => {});
-      outlineManager.destroy();
+      const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        isLevelEnabled: jest.fn(),
+      };
+      const managerWithLogger = createOutlineManager({
+        outlinePass,
+        logger: mockLogger,
+      });
 
-      outlineManager.removeOutline('test');
+      managerWithLogger.destroy();
+      managerWithLogger.removeOutline('test');
 
-      expect(consoleWarn).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         'Cannot remove outline: outline manager is destroyed',
       );
-
-      consoleWarn.mockRestore();
     });
   });
 
@@ -187,32 +205,44 @@ describe('Outline Manager', () => {
     });
 
     it('should warn when outline ID not found', () => {
-      const consoleWarn = jest
-        .spyOn(console, 'warn')
-        .mockImplementation(() => {});
+      const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        isLevelEnabled: jest.fn(),
+      };
+      const managerWithLogger = createOutlineManager({
+        outlinePass,
+        logger: mockLogger,
+      });
 
-      outlineManager.updateOutline('nonexistent', { strength: 5 });
+      managerWithLogger.updateOutline('nonexistent', { strength: 5 });
 
-      expect(consoleWarn).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         'Outline with ID nonexistent not found',
       );
-
-      consoleWarn.mockRestore();
     });
 
     it('should warn when manager is destroyed', () => {
-      const consoleWarn = jest
-        .spyOn(console, 'warn')
-        .mockImplementation(() => {});
-      outlineManager.destroy();
+      const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        isLevelEnabled: jest.fn(),
+      };
+      const managerWithLogger = createOutlineManager({
+        outlinePass,
+        logger: mockLogger,
+      });
 
-      outlineManager.updateOutline('test', {});
+      managerWithLogger.destroy();
+      managerWithLogger.updateOutline('test', {});
 
-      expect(consoleWarn).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         'Cannot update outline: outline manager is destroyed',
       );
-
-      consoleWarn.mockRestore();
     });
   });
 
@@ -227,18 +257,24 @@ describe('Outline Manager', () => {
     });
 
     it('should warn when manager is destroyed', () => {
-      const consoleWarn = jest
-        .spyOn(console, 'warn')
-        .mockImplementation(() => {});
-      outlineManager.destroy();
+      const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        isLevelEnabled: jest.fn(),
+      };
+      const managerWithLogger = createOutlineManager({
+        outlinePass,
+        logger: mockLogger,
+      });
 
-      outlineManager.clearOutlines();
+      managerWithLogger.destroy();
+      managerWithLogger.clearOutlines();
 
-      expect(consoleWarn).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         'Cannot clear outlines: outline manager is destroyed',
       );
-
-      consoleWarn.mockRestore();
     });
   });
 
@@ -266,19 +302,25 @@ describe('Outline Manager', () => {
     });
 
     it('should warn and return empty array when manager is destroyed', () => {
-      const consoleWarn = jest
-        .spyOn(console, 'warn')
-        .mockImplementation(() => {});
-      outlineManager.destroy();
+      const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        isLevelEnabled: jest.fn(),
+      };
+      const managerWithLogger = createOutlineManager({
+        outlinePass,
+        logger: mockLogger,
+      });
 
-      const result = outlineManager.getOutlines();
+      managerWithLogger.destroy();
+      const result = managerWithLogger.getOutlines();
 
       expect(result).toEqual([]);
-      expect(consoleWarn).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         'Cannot get outlines: outline manager is destroyed',
       );
-
-      consoleWarn.mockRestore();
     });
   });
 

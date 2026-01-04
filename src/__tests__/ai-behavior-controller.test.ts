@@ -300,7 +300,7 @@ describe('AIBehaviorUtils', () => {
       expect(typeof AIBehaviorUtils.createDefault).toBe('function');
       expect(typeof AIBehaviorUtils.createAggressive).toBe('function');
       expect(typeof AIBehaviorUtils.createPassive).toBe('function');
-      expect(typeof AIBehaviorUtils.getAnimationForState).toBe('function');
+      expect(typeof AIBehaviorUtils.getAnimationForBehavior).toBe('function');
     });
 
     it('should create default AI behavior controller', () => {
@@ -321,21 +321,61 @@ describe('AIBehaviorUtils', () => {
       expect(typeof controller.initializeBehavior).toBe('function');
     });
 
-    it('should get animation for AI state', () => {
-      const idleAnim = AIBehaviorUtils.getAnimationForState('idle');
-      expect(idleAnim).toBe('idle');
+    it('should get animation for AI behavior data', () => {
+      // Test idle state when not moving
+      const idleData: AIBehaviorData = {
+        state: 'idle',
+        target: null,
+        patrolPoints: [],
+        currentPatrolIndex: 0,
+        homePosition: new THREE.Vector3(),
+        pauseTimer: 0,
+        isMoving: false,
+        targetUpdateTimer: 0,
+      };
+      expect(AIBehaviorUtils.getAnimationForBehavior(idleData)).toBe('idle');
 
-      const patrolAnim = AIBehaviorUtils.getAnimationForState('patrol');
-      expect(patrolAnim).toBe('walk');
+      // Test patrol state when moving
+      const patrolData: AIBehaviorData = {
+        ...idleData,
+        state: 'patrol',
+        isMoving: true,
+      };
+      expect(AIBehaviorUtils.getAnimationForBehavior(patrolData)).toBe('walk');
 
-      const chaseAnim = AIBehaviorUtils.getAnimationForState('chase');
-      expect(chaseAnim).toBe('run');
+      // Test patrol state when not moving (paused)
+      const patrolPausedData: AIBehaviorData = {
+        ...idleData,
+        state: 'patrol',
+        isMoving: false,
+      };
+      expect(AIBehaviorUtils.getAnimationForBehavior(patrolPausedData)).toBe(
+        'idle',
+      );
 
-      const attackAnim = AIBehaviorUtils.getAnimationForState('attack');
-      expect(attackAnim).toBe('attack');
+      // Test chase state when moving
+      const chaseData: AIBehaviorData = {
+        ...idleData,
+        state: 'chase',
+        isMoving: true,
+      };
+      expect(AIBehaviorUtils.getAnimationForBehavior(chaseData)).toBe('run');
 
-      const returnAnim = AIBehaviorUtils.getAnimationForState('return');
-      expect(returnAnim).toBe('walk');
+      // Test attack state (always attack regardless of isMoving)
+      const attackData: AIBehaviorData = {
+        ...idleData,
+        state: 'attack',
+        isMoving: false,
+      };
+      expect(AIBehaviorUtils.getAnimationForBehavior(attackData)).toBe('attack');
+
+      // Test return state when moving
+      const returnData: AIBehaviorData = {
+        ...idleData,
+        state: 'return',
+        isMoving: true,
+      };
+      expect(AIBehaviorUtils.getAnimationForBehavior(returnData)).toBe('run');
     });
   });
 });

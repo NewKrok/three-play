@@ -302,7 +302,7 @@ describe('World Outline System', () => {
       world.updateOutline('non-existent-id', { color: '#ff0000' });
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        'Outline with ID non-existent-id not found',
+        expect.stringContaining('Outline with ID non-existent-id not found'),
       );
 
       consoleSpy.mockRestore();

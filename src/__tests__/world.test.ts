@@ -224,14 +224,18 @@ describe('createWorld', () => {
   });
 
   it('should log the configuration during creation', () => {
-    createTrackedWorld(mockConfig);
+    const configWithDebugLogging = {
+      ...mockConfig,
+      logging: { level: 'debug' as const },
+    };
+    createTrackedWorld(configWithDebugLogging);
 
     // Logger system now handles the logging with timestamp and prefix
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining(
         '[THREE-Play] [DEBUG] Creating world with config:',
       ),
-      mockConfig,
+      configWithDebugLogging,
     );
   });
 
@@ -868,7 +872,9 @@ describe('createWorld', () => {
       worldInstance.updateOutline('invalid-id', { strength: 5.0 });
 
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Outline pass is not available. Make sure useComposer is enabled.',
+        expect.stringContaining(
+          'Outline pass is not available. Make sure useComposer is enabled.',
+        ),
       );
       expect(consoleWarnSpy).toHaveBeenCalledTimes(2);
 

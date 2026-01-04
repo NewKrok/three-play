@@ -45,23 +45,29 @@ describe('InputManager', () => {
     });
 
     test('should warn when registering duplicate action', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        isLevelEnabled: jest.fn(),
+      };
 
-      inputManager.registerAction('duplicate', {
+      const managerWithLogger = createInputManager({ logger: mockLogger });
+
+      managerWithLogger.registerAction('duplicate', {
         type: 'continuous',
         valueType: 'boolean',
       });
 
-      inputManager.registerAction('duplicate', {
+      managerWithLogger.registerAction('duplicate', {
         type: 'trigger',
         valueType: 'number',
       });
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         "Action 'duplicate' is already registered. Overwriting.",
       );
-
-      consoleSpy.mockRestore();
     });
   });
 
@@ -108,7 +114,15 @@ describe('InputManager', () => {
     });
 
     test('should error when binding to non-existent action', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        isLevelEnabled: jest.fn(),
+      };
+
+      const managerWithLogger = createInputManager({ logger: mockLogger });
 
       const binding = {
         type: 'keyboard' as const,
@@ -116,32 +130,41 @@ describe('InputManager', () => {
       };
 
       expect(() => {
-        inputManager.bindInput('non-existent', binding);
+        managerWithLogger.bindInput('non-existent', binding);
       }).not.toThrow();
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
         "Cannot bind input to unknown action 'non-existent'. Register the action first.",
       );
-
-      consoleSpy.mockRestore();
     });
 
     test('should warn when binding duplicate input', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        isLevelEnabled: jest.fn(),
+      };
+
+      const managerWithLogger = createInputManager({ logger: mockLogger });
+
+      managerWithLogger.registerAction('move-forward', {
+        type: 'continuous',
+        valueType: 'number',
+      });
 
       const binding = {
         type: 'keyboard' as const,
         key: 'KeyW',
       };
 
-      inputManager.bindInput('move-forward', binding);
-      inputManager.bindInput('move-forward', binding);
+      managerWithLogger.bindInput('move-forward', binding);
+      managerWithLogger.bindInput('move-forward', binding);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         "Binding already exists for action 'move-forward'.",
       );
-
-      consoleSpy.mockRestore();
     });
   });
 
@@ -206,15 +229,21 @@ describe('InputManager', () => {
     });
 
     test('should warn when removing non-existent action', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        isLevelEnabled: jest.fn(),
+      };
 
-      inputManager.removeAction('non-existent');
+      const managerWithLogger = createInputManager({ logger: mockLogger });
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      managerWithLogger.removeAction('non-existent');
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         "Action 'non-existent' does not exist.",
       );
-
-      consoleSpy.mockRestore();
     });
 
     test('should clear all bindings from action', () => {

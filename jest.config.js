@@ -14,4 +14,5 @@ export default {
   testMatch: ['**/__tests__/**/*.test.ts'],
   collectCoverage: true,
   coverageReporters: ['text', 'lcov'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 };
