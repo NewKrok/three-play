@@ -24,6 +24,7 @@ Complete API reference for THREE Play game engine.
 - [UI](ui.md) - Health bars, damage numbers, and visual feedback
 - [Floating Text](floating-text.md) - Temporary text in 3D space
 - [Interactions](interactions.md) - Collision and interaction system
+- [Minimap](minimap.md) - 2D minimap system
 - [Utilities](utilities.md) - Shared utilities
 
 ## Factory Functions
@@ -106,6 +107,11 @@ import {
 } from '@three-play/core/ui';
 ```
 
+### Minimap Module
+```typescript
+import { createMinimapManager } from '@three-play/core/minimap';
+```
+
 ### Utilities
 ```typescript
 import {
@@ -148,6 +154,7 @@ type WorldConfig = {
   skybox?: SkyboxConfig;
   projectiles?: WorldProjectilesConfig;
   units?: UnitManagerConfig;
+  minimap?: MinimapConfig;
 };
 ```
 

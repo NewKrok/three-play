@@ -33,6 +33,7 @@ const assetConfig: AssetsConfig = {
     },
     heightmap: {
       url: 'assets/textures/heightmap-island-256.webp',
+      //url: 'assets/textures/heightmap-test-256.webp',
     },
     'noise-a': {
       url: 'assets/textures/noise-a-256.webp',
@@ -128,7 +129,7 @@ const assetConfig: AssetsConfig = {
     'right-turn': {
       url: 'assets/models/extra-low-poly-animations/right-turn.fbx',
     },
-    'throw': {
+    throw: {
       url: 'assets/models/extra-low-poly-animations/throw.fbx',
     },
     'left-strafe': {

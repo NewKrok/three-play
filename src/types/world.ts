@@ -16,6 +16,7 @@ import type { SkyboxConfig } from './skybox.js';
 import type { ProjectileDefinition, ProjectileManager } from './projectiles.js';
 import type { UnitManagerConfig, UnitManager } from './units.js';
 import type { Pass } from 'three/examples/jsm/postprocessing/Pass.js';
+import type { MinimapConfig, MinimapManager } from './minimap.js';
 
 /**
  * Update callback function type
@@ -72,6 +73,7 @@ export type WorldConfig = {
   skybox?: SkyboxConfig;
   projectiles?: WorldProjectilesConfig;
   units?: UnitManagerConfig;
+  minimap?: MinimapConfig;
 };
 
 /**
@@ -95,6 +97,7 @@ export type WorldInstance = {
   getSkyboxManager(): any | null; // Skybox manager if enabled
   getProjectileManager(): ProjectileManager | null; // Projectile manager if enabled
   getUnitManager(): UnitManager | null; // Unit manager if enabled
+  getMinimapManager(): MinimapManager | null; // Minimap manager if enabled
 
   // Simple outline system methods
   addOutline(

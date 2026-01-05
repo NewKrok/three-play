@@ -16,10 +16,12 @@ import { createDayNightManager } from '../day-night/index.js';
 import { createSkyboxManager } from '../skybox/index.js';
 import { createProjectileManager } from '../projectiles/index.js';
 import { createUnitManager } from '../units/index.js';
+import { createMinimapManager } from '../minimap/index.js';
 import type { InputManager } from '../../types/input.js';
 import type { DayNightManager } from '../../types/day-night.js';
 import type { ProjectileManager } from '../../types/projectiles.js';
 import type { UnitManager } from '../../types/units.js';
+import type { MinimapManager } from '../../types/minimap.js';
 import {
   createTerrainInstance,
   prepareTerrainConfig,
@@ -115,6 +117,10 @@ const createWorld = (config: WorldConfig): WorldInstance => {
   // Get units configuration
   const unitsConfig = config.units;
   let unitManager: UnitManager | null = null;
+
+  // Get minimap configuration
+  const minimapConfig = config.minimap;
+  let minimapManager: MinimapManager | null = null;
 
   // Create renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -344,6 +350,30 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       logger.debug('Unit manager initialized');
     }
 
+    // Initialize minimap manager if configured
+    if (minimapConfig?.enabled) {
+      minimapManager = createMinimapManager(minimapConfig, config.world.size);
+
+      // Set terrain data if heightmap is available
+      if (heightmapManager?.utils?.heightmapData) {
+        const { heightmap } = heightmapManager.utils.heightmapData;
+        const resolution = heightmapManager.utils.config.resolution;
+
+        // Convert Float32Array heightmap to 2D array
+        const heightData: number[][] = [];
+        for (let x = 0; x < resolution; x++) {
+          heightData[x] = [];
+          for (let z = 0; z < resolution; z++) {
+            heightData[x][z] = heightmap[x + z * resolution];
+          }
+        }
+
+        minimapManager.setTerrainData(heightData, config.world.size);
+      }
+
+      logger.debug('Minimap manager initialized');
+    }
+
     readyCallbacks.forEach((callback) => {
       try {
         callback(assets);
@@ -405,6 +435,13 @@ const createWorld = (config: WorldConfig): WorldInstance => {
     // Update unit manager if available
     if (unitManager) {
       unitManager.update(deltaTime, elapsedTime);
+    }
+
+    // Update minimap if available
+    if (minimapManager) {
+      const units = unitManager?.getAllUnits() || [];
+      const interactables: any[] = []; // TODO: Get from interaction manager when available
+      minimapManager.update(camera, units, interactables, elapsedTime * 1000);
     }
 
     // Call all update callbacks
@@ -580,6 +617,14 @@ const createWorld = (config: WorldConfig): WorldInstance => {
      */
     getUnitManager(): UnitManager | null {
       return unitManager;
+    },
+
+    /**
+     * Get minimap manager instance if enabled
+     * @returns Minimap manager or null if not enabled
+     */
+    getMinimapManager(): MinimapManager | null {
+      return minimapManager;
     },
 
     /**
@@ -830,6 +875,12 @@ const createWorld = (config: WorldConfig): WorldInstance => {
       if (unitManager) {
         unitManager.dispose();
         unitManager = null;
+      }
+
+      // Cleanup minimap manager
+      if (minimapManager) {
+        minimapManager.dispose();
+        minimapManager = null;
       }
 
       // Cleanup post-processing

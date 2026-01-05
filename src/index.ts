@@ -89,6 +89,9 @@ export {
 // Interaction utilities
 export { createInteractionManager } from './core/interactions/index.js';
 
+// Minimap utilities
+export { createMinimapManager } from './core/minimap/index.js';
+
 // Unit management utilities
 export {
   CharacterAssetUtils,
@@ -261,3 +264,9 @@ export type {
   InteractionExitCallback,
   InteractionCallback,
 } from './types/interactions.js';
+export type {
+  MinimapConfig,
+  MinimapManager,
+  MinimapState,
+  MinimapPosition,
+} from './types/minimap.js';
